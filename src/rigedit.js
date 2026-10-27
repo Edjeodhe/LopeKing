@@ -215,6 +215,8 @@ async function autoFit() {
 const MOTIONS = {
   idle: t => [A.idle(t), 0, 0],
   run: t => [A.run(t * 1.7), 125, 0],
+  heroIdle: t => [A.heroIdle(t), 0, 0],
+  heroRun: t => [A.heroRun(t * 1.7), 125, 0],
   jump: () => [A.JUMP, 40, -200],
   fall: () => [A.FALL, 40, 250],
   slashDown: t => [A.slash(t % 0.6, 90, 1), 0, 0],

@@ -1,0 +1,195 @@
+{
+ "cell": [
+  640,
+  768
+ ],
+ "scale": 0.03096,
+ "cloak": true,
+ "parts": {
+  "head": {
+   "pivot": [
+    430,
+    540
+   ],
+   "src": "parts/head.png",
+   "size": 1.0
+  },
+  "torso": {
+   "pivot": [
+    380,
+    548
+   ],
+   "joints": {
+    "neck": [
+     370,
+     228
+    ],
+    "shoulderN": [
+     325,
+     300
+    ],
+    "shoulderF": [
+     318,
+     300
+    ],
+    "cape": [
+     300,
+     228
+    ]
+   },
+   "src": "parts/torso.png"
+  },
+  "hips": {
+   "pivot": [
+    318,
+    470
+   ],
+   "joints": {
+    "waist": [
+     315,
+     236
+    ],
+    "hipN": [
+     320,
+     470
+    ],
+    "hipF": [
+     306,
+     470
+    ]
+   },
+   "src": "parts/hips.png"
+  },
+  "cape": {
+   "pivot": [
+    332,
+    172
+   ],
+   "src": "parts/cape.png"
+  },
+  "upperArm": {
+   "pivot": [
+    350,
+    200
+   ],
+   "joints": {
+    "elbow": [
+     340,
+     505
+    ]
+   },
+   "src": "parts/upperArm.png"
+  },
+  "foreArm": {
+   "pivot": [
+    320,
+    196
+   ],
+   "joints": {
+    "hand": [
+     332.9,
+     502.5
+    ]
+   },
+   "src": "parts/foreArm.png"
+  },
+  "thigh": {
+   "pivot": [
+    330,
+    182
+   ],
+   "joints": {
+    "knee": [
+     300,
+     528
+    ]
+   },
+   "src": "parts/thigh.png"
+  },
+  "shin": {
+   "pivot": [
+    290,
+    192
+   ],
+   "joints": {
+    "sole": [
+     276.0,
+     582.0
+    ]
+   },
+   "src": "parts/shin.png"
+  }
+ },
+ "weapon": {
+  "src": "weapon_cut.png",
+  "cell": [
+   233,
+   1325
+  ],
+  "grip": [
+   137.0,
+   184.1
+  ],
+  "rot": 0,
+  "tip": [
+   74.0,
+   1309.0
+  ],
+  "size": 0.45
+ },
+ "death": {
+  "frames": [
+   {
+    "src": "death/death_0.png",
+    "pivot": [
+     277.3,
+     481.0
+    ],
+    "w": 419,
+    "h": 485
+   },
+   {
+    "src": "death/death_1.png",
+    "pivot": [
+     210.8,
+     385.0
+    ],
+    "w": 374,
+    "h": 393
+   },
+   {
+    "src": "death/death_2.png",
+    "pivot": [
+     323.5,
+     352.0
+    ],
+    "w": 647,
+    "h": 360
+   },
+   {
+    "src": "death/death_3.png",
+    "pivot": [
+     352.0,
+     146.0
+    ],
+    "w": 704,
+    "h": 154
+   }
+  ],
+  "size": 0.09145,
+  "times": [
+   0,
+   0.12,
+   0.34,
+   0.6
+  ]
+ },
+ "ref": {
+  "src": "full_side_key.png",
+  "foot": [
+   553.0,
+   1481.0
+  ],
+  "k": 1.0
+ }
+}

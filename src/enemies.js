@@ -109,7 +109,7 @@ export class Enemy {
   damage(G, dmg, hit) {
     if (this.dead) return;
     this.hp -= dmg;
-    this.flashT = 0.08;
+    this.flashT = 0.08; this.shudder = 0.18;   // 맞은 몸이 좌우로 떨림 (main.js 그릴 때, 타격 멈춤 중에도)
     blood(this.x, this.cy, hit.ang, 10, 0.9);
     if (this.hp <= 0) { G.killEnemy(this, hit); return; }
     this.stun = 0.35; this.state = 'chase'; this.alert = 3;

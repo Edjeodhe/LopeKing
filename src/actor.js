@@ -29,8 +29,11 @@ export async function loadActorType(dir, opts = {}) {
   const rig = await loadRig(dir, rigDef, images);
   const pal = new Palette([...kmeans(sampleColors(rig), opts.colors || 16), ...(opts.keep || [])]);
   const death = rigDef.death ? await loadDeath(dir, rigDef.death).catch(e => (console.warn('사망 통그림 없음', dir, e.message), null)) : null;
+  // 프레임 애니메이션 (대기·달리기 등, 리그 대신 장면 그림을 그대로): rig.json anims = { 이름: { frames, size, fps } }
+  const anims = {};
+  for (const [n, def] of Object.entries(rigDef.anims || {})) anims[n] = await loadDeath(dir, def).then(a => ({ ...a, fps: def.fps || 10 })).catch(e => (console.warn('프레임 애니메이션 없음', dir, n, e.message), null));
   return {
-    dir, rigDef, rig, pal, death, placeholder: !images ? false : true,
+    dir, rigDef, rig, pal, death, anims, placeholder: !images ? false : true,
     outline: opts.outline ?? 2, sat: opts.sat ?? 1.05, rim: !!opts.rim, tint: opts.tint || null, scale: opts.scale ?? 1,
   };
 }
@@ -43,7 +46,7 @@ async function loadDeath(dir, def) {
     const img = await cachedImage(`${dir}/${f.src}`);
     return { img, pivot: f.pivot, w: f.w || img.width, h: f.h || img.height, scaled: new Map() };
   }));
-  return { frames, size: def.size, times: def.times || [0, 0.1, 0.3, 0.55] };
+  return { frames: frames.map((f, i) => ({ ...f, mouth: def.frames[i].mouth })), size: def.size, times: def.times || [0, 0.1, 0.3, 0.55] };
 }
 export const deathFrame = (type, t) => { const T = type.death.times; let i = 0; while (i < T.length - 1 && t >= T[i + 1]) i++; return i; };
 export const deathDone = (type, t) => !type.death || t >= type.death.times[type.death.times.length - 1];
@@ -52,9 +55,18 @@ function scaledFrame(f, k) {
   if (!f.scaled.has(key)) f.scaled.set(key, downscale(f.img, f.w * k, f.h * k));
   return f.scaled.get(key);
 }
-export function bakeDeath(type, t, facing, low) {
-  const f = type.death.frames[deathFrame(type, t)];
-  const k = type.death.size * SS * type.scale;
+export function bakeDeath(type, t, facing, low) { bakeCut(type, type.death, type.death.frames[deathFrame(type, t)], facing, low); }
+// 프레임 애니메이션 한 장 굽기 (대기·달리기). 돌려주는 값 = 그 장의 입 자리(low px, 가면 숨 steam.js 용)
+export function bakeFrame(type, name, i, facing, low) {
+  const set = type.anims[name], f = set.frames[i % set.frames.length];
+  bakeCut(type, set, f, facing, low);
+  if (!f.mouth) return null;
+  const k = set.size * type.scale;
+  return [low.ax + (f.mouth[0] - f.pivot[0]) * k * (facing < 0 ? -1 : 1), low.ay + (f.mouth[1] - f.pivot[1]) * k];
+}
+// 통그림 한 장(사망 컷·프레임 애니메이션)을 발 기준점에 맞춰 리그와 같은 굽기(팔레트·외곽선)로
+function bakeCut(type, set, f, facing, low) {
+  const k = set.size * SS * type.scale;
   const c = scaledFrame(f, k);
   const { hi, hctx, ax, ay } = hiFor(low);
   hctx.clearRect(0, 0, hi.width, hi.height);

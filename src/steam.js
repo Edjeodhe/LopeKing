@@ -7,8 +7,9 @@ const RAMP = { w: ['#ffffff', '#f2dce2', '#c4b0c0', '#8a7a92'], r: ['#ff6a5a', '
 const BREATH = 3.2, EXHALE = 0.55;   // anim.js idle 과 같은 주기·내쉬는 자리
 let seep = 0;
 
-// 가면 입: 머리 기준점(목)에서 보는 쪽 앞·위 (게임 px, art/dokkaebi 머리 그림 + SD 배율 기준)
-const mouth = p => [p.sock.head[0] + (p.drawFacing ?? p.facing) * 5, p.sock.head[1] - 3];
+// 가면 입: 머리 기준점(목)에서 보는 쪽 앞·위 (게임 px, art/dokkaebi 사람 비율 머리 그림 기준)
+// 프레임 애니메이션 중엔 그 장에서 잰 입 자리(p.sock.mouth)
+const mouth = p => p.sock.mouth || [p.sock.head[0] + (p.drawFacing ?? p.facing) * 3, p.sock.head[1] - 3.5];
 
 function puff(x, y, vx, vy, big, kind) {
   puffs.push({ x, y, vx, vy, t: 0, kind, life: (big ? 0.85 : 0.55) + Math.random() * 0.35, r: big ? 2.6 + Math.random() * 1.4 : 1.2 + Math.random() * 0.8 });
@@ -22,7 +23,7 @@ export function stepSteam(dt, p) {
     q.x += q.vx * dt; q.y += q.vy * dt;
   }
   for (let i = puffs.length - 1; i >= 0; i--) if (puffs[i].t >= puffs[i].life) puffs.splice(i, 1);
-  if (p.dead || p.mask !== 'dokkaebi' || !p.sock?.head || (p.idleT || 0) < 0.35) return;
+  if (p.dead || p.mask !== 'dokkaebi' || !(p.sock?.head || p.sock?.mouth) || (p.idleT || 0) < 0.35) return;
   const f = p.drawFacing ?? p.facing, [mx, my] = mouth(p);
   // 내쉼: 숨 주기의 EXHALE 자리를 지나는 순간 앞·아래로 크게 뿜음 (흰 김 사이로 붉은 기운)
   const ph = (p.t / BREATH) % 1, prev = ((p.t - dt) / BREATH) % 1;

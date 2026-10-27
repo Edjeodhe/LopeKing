@@ -135,6 +135,7 @@ export class Boss {
     if (dmg > 10) dmg = 3;   // 쿠나이 관통(즉사용 99)은 보스에겐 3
     const back = Math.sign(Math.cos(hit.ang)) === this.facing;   // 맞은 방향이 보스가 보는 쪽 = 등 뒤에서 옴
     if (back) dmg *= 2;
+    this.shudder = 0.2;   // 맞은 몸 떨림
     if (this.state === 'stagger') dmg *= 2;
     this.hp -= dmg; this.flashT = 0.08;
     blood(this.x - Math.cos(hit.ang) * 6, this.cy, hit.ang, 10 + dmg * 3, 1);

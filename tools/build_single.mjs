@@ -32,6 +32,7 @@ for (const [, dir] of mods.get('main.js').matchAll(/loadActorType\('([^']+)'/g))
   for (const n of PARTS) { const p = `${dir}/${def.parts?.[n]?.src || `parts/${n}.png`}`; if (existsSync(p)) assets.add(p); }
   if (def.weapon?.src) assets.add(`${dir}/${def.weapon.src}`);
   for (const f of def.death?.frames || []) assets.add(`${dir}/${f.src}`);
+  for (const an of Object.values(def.anims || {})) for (const f of an.frames) assets.add(`${dir}/${f.src}`);   // 프레임 애니메이션(대기·달리기)
 }
 const assetMap = Object.fromEntries([...assets].map(p => [p, dataUrl(p)]));
 

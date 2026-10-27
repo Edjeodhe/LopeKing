@@ -181,6 +181,7 @@ def main():
             sb = bbox(key_magenta(os.path.join(root, 'sd_ref.png')))
             ref_h = sb[3] - sb[1]
         slice_death(root, rig, old, keep, ref_h)
+    slice_anims(root, rig, full_h)
     finish(root, cid, rig, old, keep, full, fx0, fy0, fx1, fy1, parts, cell, rig_path)
 
 
@@ -203,6 +204,49 @@ def slice_death(root, rig, old, keep, full_h):
     death_scale = full_h / max(1, (h0[3] - h0[1]) * 1.04)
     rig['death'] = old.get('death') if keep and old.get('death') else {
         'frames': frames, 'size': round(rig['scale'] * death_scale, 5), 'times': [0, 0.12, 0.34, 0.6]}
+
+
+ANIM_SHEETS = {'idle': ('pose_idle.png', 8, 6), 'run': ('pose_run.png', 8, 12)}   # 이름: (시트, 장수, 초당 장수) — 4×2 칸
+
+
+def slice_anims(root, rig, full_h):
+    """프레임 애니메이션 시트(4×2 칸) → anims/<이름>_<n>.png + rig['anims'].
+    장마다 발 기준점을 같게 둬야 재생할 때 안 떨림: 바닥 = 시트 전체에서 가장 아래 발끝, 가로 = 장마다 몸통(키의 30~60% 줄) 가운데의 가운데값.
+    입 자리(mouth): 머리 쪽 붉은 가면 덩어리의 앞 끝 아래 — 가면 숨(steam.js)이 나오는 곳.
+    축척: 대기 첫 장 키 ≈ 통 이미지 키 (달리기도 같은 축척)"""
+    out, size = {}, None
+    for name, (src, n, fps) in ANIM_SHEETS.items():
+        path = os.path.join(root, src)
+        if not os.path.exists(path):
+            continue
+        sheet = key_magenta(path)
+        cells, _ = slice_grid(sheet, 4, 2, [f'{name}_{i}' for i in range(n)], 0)
+        imgs = [cells[f'{name}_{i}'] for i in range(n) if f'{name}_{i}' in cells]
+        boxes = [bbox(im) for im in imgs]
+        ground = max(b[3] for b in boxes)
+        mids = []
+        for im, (x0, y0, x1, y1) in zip(imgs, boxes):
+            h = y1 - y0
+            mids.append(row_center(im, y0 + h * 0.3, y0 + h * 0.6))
+        ax = float(np.median(mids))
+        if size is None:
+            size = round(rig['scale'] * full_h / max(1, (boxes[0][3] - boxes[0][1]) * 1.02), 5)
+        os.makedirs(os.path.join(root, 'anims'), exist_ok=True)
+        frames = []
+        for i, (im, (x0, y0, x1, y1)) in enumerate(zip(imgs, boxes)):
+            cx0, cy0 = max(0, x0 - 8), max(0, y0 - 8)
+            c = im[cy0:y1 + 8, cx0:x1 + 8]
+            save(c, os.path.join(root, 'anims', f'{name}_{i}.png'))
+            # 가면(진홍) 덩어리: 키의 위 25% 안 붉은 점들 → 앞(오른쪽) 끝, 세로 가운데보다 조금 아래
+            top = im[y0:y0 + int((y1 - y0) * 0.25)]
+            r, g, b, a = [top[..., k].astype(int) for k in range(4)]
+            ys, xs = np.nonzero((a > 128) & (r > 140) & (g < 90) & (b < 90))
+            mouth = [round(float(xs.max()) + x0 - cx0 - 1, 1), round(float(np.median(ys)) + y0 + 3 - cy0, 1)] if len(xs) else None
+            frames.append({'src': f'anims/{name}_{i}.png', 'pivot': [round(ax - cx0, 1), float(ground - cy0)], 'w': c.shape[1], 'h': c.shape[0], 'mouth': mouth})
+        out[name] = {'frames': frames, 'size': size, 'fps': fps}
+        print(name, len(frames), '장, 축척', size)
+    if out:
+        rig['anims'] = out
 
 
 def finish(root, cid, rig, old, keep, full, fx0, fy0, fx1, fy1, parts, cell, rig_path):

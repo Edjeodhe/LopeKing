@@ -35,7 +35,7 @@ export class Player {
     this.cling = 0; this.clingDir = 0; this.ceil = 0; this.zipCd = 0; this.throwT = 0; this.airJump = 1; this.flipT = 0;
     this.t = 0; this.runPh = 0; this.landT = 0;
     this.cape = A.newCape();
-    this.pose = { ...A.IDLE };
+    this.pose = { ...A.HERO_IDLE };
     this.safe = { x, y };
     this.hurtT = 0;
     this.mouse = [x + 50, y - 20];
@@ -405,7 +405,7 @@ export class Player {
 
   hurt(G, dmg, from) {
     if (this.dead || this.inv > 0) return false;
-    this.hp -= dmg; this.inv = TUNE.iframes; this.hurtT = 0.25;
+    this.hp -= dmg; this.inv = TUNE.iframes; this.hurtT = 0.25; this.shudder = 0.22;
     const k = this.x < from.x ? -1 : 1;
     this.vx = k * 170; this.vy = -170;
     if (this.rope?.state === 'zip' || this.rope?.state === 'fly') this.rope = null;
@@ -420,6 +420,7 @@ export class Player {
   animate(dt) {
     if (this.dead) return;
     let target, idle = false;
+    this.frameAnim = null;   // 대기·달리기는 장면 그림으로 (main.js render) — 리그 자세(target)는 그대로 계산해 둠 (자세 이어짐용)
     const r = this.rope;
     if (this.hurtT > 0) target = A.HURT;
     else if (this.atkT >= 0) target = A.comboPose(this.combo, this.atkT, this.aim);
@@ -436,7 +437,7 @@ export class Player {
     else if (this.ceil > 0) target = A.hang(180, 0, true);
     else if (this.throwT > 0 && r) {
       // 던지는 팔: 빈손을 던진 쪽으로 쭉 뻗음
-      const base = this.onGround ? (Math.abs(this.vx) > 12 ? A.run(this.runPh) : A.IDLE) : A.FALL;
+      const base = this.onGround ? (Math.abs(this.vx) > 12 ? A.heroRun(this.runPh) : A.HERO_IDLE) : A.FALL;
       target = { ...base, fU: 90 - Math.atan2(r.dy ?? 0, (r.dx ?? 1) * this.facing) * 180 / Math.PI, fF: 0 };
     } else if (this.dashT > 0) {
       // 대시: 몸을 대시 방향으로 눕힘 (위로 대시면 세우고, 아래면 숙임)
@@ -450,8 +451,8 @@ export class Player {
     }
     else if (!this.onGround) target = this.wall && this.vy > 0 ? A.WALL : this.vy < -40 ? A.JUMP : A.FALL;
     else if (this.landT > 0) target = A.LAND;
-    else if (Math.abs(this.vx) > 12) { this.runPh += dt * Math.max(Math.abs(this.vx), 110) / 70; target = A.run(this.runPh); }   // 막 출발할 때도 걷지 않고 달리는 발놀림
-    else { target = A.idle(this.t); idle = true; }
+    else if (Math.abs(this.vx) > 12) { this.runPh += dt * Math.max(Math.abs(this.vx), 110) / 70; target = A.heroRun(this.runPh); this.frameAnim = { name: 'run', ph: this.runPh }; }   // 막 출발할 때도 걷지 않고 달리는 발놀림
+    else { target = A.heroIdle(this.t); idle = true; this.frameAnim = { name: 'idle', t: this.t }; }
     this.idleT = idle ? this.idleT + dt : 0;   // 가만히 선 시간 (가면 증기)
     this.throwT = Math.max(0, this.throwT - dt);
     // 벽 타기·매달림은 벽 반대쪽을 봄

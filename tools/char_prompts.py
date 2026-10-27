@@ -82,6 +82,8 @@ CHARS = {
                   'diamond pattern; gold pommel with a short crimson tassel. Total length about 760 px. Blade edge faces RIGHT.',
         'death': True,
         # 가면은 얼굴에 붙은 채 — 기본 문구('모자가 벗겨져 떨어짐') 때문에 머리째 떨어져 그려졌음
+        'real': True,   # 사람 비율 (사용자: SD 말고 산나비처럼). SD 판은 art/dokkaebi_sd
+        'pixel': True,  # 진짜 도트 그림 (일러스트판은 줄이면 깨져서). 일러스트 사람 비율판은 art/dokkaebi_art
         'death_head': 'the dokkaebi MASK stays firmly on the face and the HEAD stays firmly attached to the neck in EVERY frame '
                       '(no gap between head and body, no decapitation, nothing falls off)',
     },
@@ -175,15 +177,41 @@ SAME = ('- The attached reference image shows THIS EXACT CHARACTER. Keep the ide
 CELLS = ['HEAD', 'TORSO', 'HIPS', 'CAPE', 'UPPER ARM', 'FOREARM + HAND', 'THIGH', 'SHIN + BOOT']
 
 
+# 사람 비율 (산나비 주인공처럼): 캐릭터에 'real': True 면 SD 대신 이 비율·축척
+REAL_STYLE = (
+    '- PROPORTIONS: REALISTIC adult human proportions like the heroes of the pixel action games Sanabi or Katana Zero (NOT chibi, NOT SD): '
+    'about 6.5 heads tall, a normal-size head, slim athletic body, long legs (legs about half of the full height), normal-length arms.\n'
+    + COMMON_STYLE[COMMON_STYLE.index('- RENDERING'):])
+REAL_SCALE = ('- Scale: as if the whole figure is 1150 px tall from boot sole to the top of the head/headgear '
+              '(head with mask about 180 px tall, thigh about 290 px long, shin with boot about 300 px long).\n')
+
+
+# 진짜 도트 그림: 'pixel': True 면 일러스트 대신 처음부터 저해상도 도트로 그리게 함 (일러스트를 44px 로 줄이면 금테·주름이 자잘한 점으로 깨짐)
+# 그림 속 도트 한 칸 = 큰 정사각 덩어리 (최근접 확대) → 게임 크기로 줄여도 깨끗함
+PIXEL_RENDER = (
+    '- RENDERING: authentic PIXEL ART sprite, like the hero sprites of Katana Zero or Sanabi. Drawn at LOW RESOLUTION: the standing '
+    'character is only about 48 pixels tall in sprite pixels, and every sprite pixel is shown as a crisp SOLID SQUARE block '
+    '(nearest-neighbor upscale, all blocks the same size, aligned to one grid). NO anti-aliasing, NO gradients, NO soft edges, NO blur, '
+    'NO thin lines thinner than one block. A limited palette of about 16 colors, 2-3 flat tones per material, a 1-block dark outline '
+    'around the silhouette. Simple readable shapes; details like gold trim are single blocks or omitted.\n')
+
+
 def style(c):
     note = f'- BODY: {c["scale_note"]}\n' if c.get('scale_note') else ''
-    return f'- CHARACTER: {c["who"]}\n' + COMMON_STYLE + note + f'- PALETTE: {c["palette"]}\n'
+    base = REAL_STYLE if c.get('real') else COMMON_STYLE
+    if c.get('pixel'):
+        base = base[:base.index('- RENDERING')] + PIXEL_RENDER
+    return f'- CHARACTER: {c["who"]}\n' + base + note + f'- PALETTE: {c["palette"]}\n'
+
+
+def scale(c):
+    return REAL_SCALE if c.get('real') else SCALE
 
 
 def prompts(c):
     p = {
         # 통 이미지: 리그 부위를 맞출 때 겹쳐 비교하는 기준 자세 (팔다리 곧게 내림)
-        'full_side': '- 1024x1536 portrait.\n' + BG + style(c) + SCALE +
+        'full_side': '- 1024x1536 portrait.\n' + BG + style(c) + scale(c) +
         '- ONE full-body figure, pure SIDE VIEW, FACING RIGHT (face and toes point to the right), centered, with clear magenta margin all around.\n'
         '- NEUTRAL RIG REFERENCE POSE: standing straight and still, both arms hanging perfectly straight DOWN along the body (the far arm hidden '
         'behind the near arm), hands closed into fists, both legs straight and vertical, feet slightly apart front-to-back, the cape hanging '
@@ -192,11 +220,11 @@ def prompts(c):
         'parts_side': '- 1536x1024, an exact grid of 4 columns x 2 rows (each cell 384x512).\n' + BG +
         '- Each drawing sits centered in its own cell with a clear magenta margin; drawings must NOT touch or cross cell borders.\n'
         '- Cut-out body parts for a 2D paper-doll (cutout) rig. Arms and legs hang perfectly straight DOWN and vertical, with a flat clean cut '
-        'at each joint (rounded joint caps so rotation hides seams).\n' + SAME + style(c) + SCALE +
+        'at each joint (rounded joint caps so rotation hides seams).\n' + SAME + style(c) + scale(c) +
         'Every part is a pure SIDE VIEW, FACING RIGHT.\nCells, left to right, top to bottom:\n'
         'Row 1: 1. HEAD  2. TORSO  3. HIPS  4. CAPE\nRow 2: 5. UPPER ARM  6. FOREARM + HAND  7. THIGH  8. SHIN + BOOT\n' +
         ''.join(f' {k}: {c["parts"][k]}\n' for k in CELLS),
-        'weapon': '- 1024x1536 portrait.\n' + BG + SAME + style(c) + SCALE +
+        'weapon': '- 1024x1536 portrait.\n' + BG + SAME + style(c) + scale(c) +
         '- ONE weapon only, VERTICAL, pointing straight DOWN, handle/grip at the TOP, centered with clear magenta margin.\n'
         f'- WEAPON: {c["weapon"]}\n',
     }
@@ -217,8 +245,10 @@ def prompts(c):
             f' 4. (bottom-right) LYING: lying flat on the back on the ground, limbs relaxed, {ground}, '
             'cape spread under the body. Long and low, fits the cell width.\n' +
             (f'- IMPORTANT: {keep}.\n' if keep else '') +
-            '- NO blood pools, NO weapon. Keep EXACTLY the SD proportions of the reference (very big head with its headgear or mask about 1/3 of the height, '
-            'short sturdy body, short legs) - it is the in-game rig, not a realistic figure.\n')
+            ('- NO blood pools, NO weapon. Keep EXACTLY the realistic adult proportions of the reference (normal-size head, long legs).\n'
+             if c.get('real') else
+             '- NO blood pools, NO weapon. Keep EXACTLY the SD proportions of the reference (very big head with its headgear or mask about 1/3 of the height, '
+             'short sturdy body, short legs) - it is the in-game rig, not a realistic figure.\n'))
     return p
 
 

@@ -1,0 +1,23 @@
+Use your built-in image generation tool to create ONE image and save it as PNG to: pose_run.png (in the current working directory). Do not write code to draw it; it must be a generated illustration. After saving, reply only with the file name.
+
+Image spec:
+- 1536x1024, an exact grid of 4 columns x 2 rows (each cell 384x512).
+- Solid flat MAGENTA background (#FF00FF) everywhere behind the drawings. No text, no letters, no numbers, no labels, no grid lines, no frames, no cast shadows, no ground.
+- The attached reference image shows THIS EXACT CHARACTER (the in-game rig reference, with its big-head SD proportions). Keep the identical design, colors, proportions and scale.
+- CHARACTER: an original masked swordsman hero in his "DOKKAEBI MASK" form (original design, do NOT copy any existing character or skin). His whole face is hidden behind a fierce Korean DOKKAEBI (goblin-demon) MASK: glossy deep-CRIMSON lacquer, two short thick curved horns on the forehead, a heavy furrowed brow, narrow eye slits glowing red-orange, a wide snarling mouth with small GOLD fangs, thin gold trim lines along the mask edges. Long straight BLACK hair tied high at the back of the head, flowing backward in a thick tail. Outfit in the sleek "oni weapon skin" style of modern tactical shooters - GLOSSY BLACK LACQUER armor pieces with crimson cloth and thin GOLD trim - mixed with Joseon-era warrior clothing: a fitted black jacket with a crimson inner collar, layered black lacquer tassets with gold edges over dark trousers, a crimson waist sash tied with a white braided rope and tassel, crimson leg wraps, black boots with small gold toe caps. A separate tattered CRIMSON short cloak with a black lining hangs from the shoulders down to about the knees, with a ragged torn hem.
+- PROPORTIONS: stylized chibi-action "SD" proportions, about 3 heads tall: the head (with headgear) is BIG (about 33% of the full height), short sturdy body, SHORT legs (legs about 35% of the height), short limbs, a slightly oversized look like a modern pixel action game character (Sanabi / Katana Zero era). NOT cute, no big anime eyes.
+- RENDERING: flat CEL SHADING, every material exactly THREE flat tones (shadow, base, light) with hard edges, plus a thin cold moonlight rim light ON the upper-right edges of each shape (inside the shape, not a glow around it). NO outlines, NO black linework, NO gradients, NO texture noise, NO glow halos, NO tiny details. Big simple readable shapes with a few bold cloth folds: it will be shrunk to a 40-pixel-tall sprite.
+- PALETTE: glossy black lacquer (with cool highlights), deep crimson red, small gold trim, ivory-white rope, and ONE glow accent: red-orange glowing mask eyes.
+- He holds his demon KATANA in the NEAR (right) hand: slim curved glossy black blade with a thin glowing crimson edge line, gold demon-face guard, black-and-crimson wrapped grip.
+- Every figure is a pure SIDE VIEW, FACING RIGHT, at the same scale (standing height about 420 px), feet on the same ground line near the bottom of its cell. Keep EXACTLY the SD proportions of the reference: very big masked head about 1/3 of the height, short sturdy body, short legs.
+- These are KEY POSES for a fast 2D action game in the spirit of Katana Zero (original character, do NOT copy any existing character). Clear readable silhouettes, limbs clearly separated from the body where the pose allows.
+- Each drawing sits centered in its own cell with a clear magenta margin; drawings must NOT touch or cross cell borders.
+- An 8-frame RUN CYCLE, left to right then top to bottom, like the Katana Zero hero sprinting: a fast full sprint, upper body leaning FORWARD about 20 degrees, head up looking ahead, arms pumping hard opposite to the legs, the katana held in the near hand pointing BACKWARD and slightly down behind him as he runs, long stride, the cape and the ponytail streaming far back to the LEFT.
+ 1. CONTACT: front (near) foot just touching the ground far ahead, back leg extended behind.
+ 2. DOWN: body lowest, front knee bent taking the weight.
+ 3. PASS: back leg swinging forward under the body, knee high.
+ 4. UP / FLIGHT: pushing off, both feet off the ground, body highest.
+ 5. CONTACT (other leg): the far foot touching down ahead, near leg extended behind.
+ 6. DOWN (other leg).
+ 7. PASS (other leg).
+ 8. UP / FLIGHT (other leg).

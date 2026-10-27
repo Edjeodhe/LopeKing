@@ -20,6 +20,9 @@ const motions = {
   keys: KEYS,
   idle: { fps: 12, loop: true, frames: sample(t => A.idle(t), 3.2, 12) },
   run: { fps: A.RUN_FRAMES, loop: true, note: '한 바퀴 = 8장, 재생 속도는 달리는 속도/70 (player.js runPh)', frames: Array.from({ length: A.RUN_FRAMES }, (_, i) => pose(A.run(i / A.RUN_FRAMES))) },
+  // 주인공(도깨비 가면 폼) 전용 대기·달리기 — 적·보스는 위 idle·run
+  heroIdle: { fps: 12, loop: true, frames: sample(t => A.heroIdle(t), 3.2, 12) },
+  heroRun: { fps: A.RUN_FRAMES, loop: true, note: '재생 속도 = max(달리는 속도, 110)/70 (player.js runPh)', frames: Array.from({ length: A.RUN_FRAMES }, (_, i) => pose(A.heroRun(i / A.RUN_FRAMES))) },
   poses: Object.fromEntries(['IDLE', 'JUMP', 'FALL', 'LAND', 'WALL', 'CLING', 'DASH', 'HURT', 'ZIP'].map(n => [n, pose(A[n])])),
   // 베기: 겨눈 방향(aim, 뼈 기준 90 = 정면 수평, 180 = 위)마다 · dir 1 = 위→아래, -1 = 아래→위. 30fps
   slash: {

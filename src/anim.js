@@ -4,10 +4,8 @@ import { ZERO, lerpPose, CAPE_SEGS } from './rig.js';
 
 export const P = o => ({ ...ZERO, ...o });
 
-// 대기: 낮은 겨눔 자세(와키가마에) — 다리를 넓게 벌려 앞무릎을 굽히고 몸을 숙인 채, 칼은 허리춤에서 칼끝을 뒤·아래로 눕혀 숨기고
-// 빈손은 주먹을 앞에 세워 막음. 고개는 들어 앞을 노려봄. (칼 세상 각도 = nU + nF + sw - torso, 뼈 기준 0 아래·-90 뒤)
-// 몸통만 숙이면 큰 머리·엉덩이에 묻혀 안 보여서 몸 전체(rot)도 앞으로 조금 기울임
-export const IDLE = P({ rot: -7, torso: 20, head: -18, nU: 30, nF: 42, sw: -124, fU: 40, fF: 66, nT: 54, nS: -76, fT: -44, fS: -10, y: 5 });
+// 대기 (적·보스 공용 — 주인공은 아래 heroIdle): 칼을 몸 앞 낮게 들고 무릎을 살짝 굽힌 자세 (꼿꼿하면 허수아비 같음)
+export const IDLE = P({ torso: 8, head: -4, nU: 18, nF: 52, sw: 34, fU: -12, fF: 34, nT: 16, nS: -16, fT: -14, fS: -4, y: 0.5 });
 
 // 대기 숨쉬기 (약 3초 주기)
 export function idle(t) {
@@ -17,23 +15,49 @@ export function idle(t) {
   return { ...IDLE, br: q, y: IDLE.y - q * 0.4, torso: IDLE.torso - q, nU: IDLE.nU + q * 2, fU: IDLE.fU + q * 2, sw: IDLE.sw + q };
 }
 
-// 달리기 (닌자 달리기): 상체를 45° 가까이 숙이고 고개는 들어 앞을 봄, 두 팔은 뒤로 곧게 뻗고 칼은 등 뒤로 수평에 가깝게 끎.
-// 보폭이 크고 낮게, 디딜 때 몸이 툭 떨어졌다 차오름. 8장
+// 달리기 (적·보스 공용 — 주인공은 heroRun): 상체 숙이고 칼은 몸 뒤로 낮게 끌고, 디딜 때 몸이 툭 떨어졌다 차오름. 8장
 export const RUN_FRAMES = 8;
 export function run(p) {
   p = Math.floor((((p % 1) + 1) % 1) * RUN_FRAMES) / RUN_FRAMES;
   const s = Math.sin(p * Math.PI * 2), c = Math.cos(p * Math.PI * 2);
   const leg = q => {   // 한 다리: 허벅지 앞뒤 + 뒤로 찰 때 무릎 굽힘
     const a = Math.sin(q * Math.PI * 2), b = Math.cos(q * Math.PI * 2);
-    return { T: 50 * a - 4, S: -14 - 62 * Math.max(0, -b) - 22 * Math.max(0, a) };   // 큰 보폭, 뒤로 찰 때 발이 엉덩이까지
+    return { T: 38 * a - 4, S: -12 - 46 * Math.max(0, -b) - 18 * Math.max(0, a) };
   };
   const n = leg(p), f = leg(p + 0.5);
-  const bob = Math.abs(c) < 0.5 ? 1.5 : 0;
+  const bob = Math.abs(c) < 0.5 ? 1.2 : 0;
   return P({
-    rot: -22, torso: 26, head: -30, y: bob + 0.5,   // 몸 전체를 앞으로 눕혀야 숙인 게 보임 (몸통만 숙이면 머리·엉덩이에 묻힘)
-    nU: -76 + 5 * s, nF: 8, sw: 2,              // 칼 든 팔은 뒤로 곧게, 칼은 등 뒤로 수평에 가깝게
-    fU: -72 - 5 * s, fF: 12,                     // 빈손도 뒤로 곧게 (흔들지 않음)
-    nT: n.T + 6, nS: n.S, fT: f.T + 6, fS: f.S,
+    torso: 20, head: -12, y: bob - 0.5,
+    nU: -38 + 8 * s, nF: 30, sw: -70,           // 칼 든 팔은 뒤로, 칼은 뒤쪽 아래로 끔
+    fU: 32 * s + 10, fF: 50 - 10 * s,              // 빈손은 다리와 반대로 흔듦
+    nT: n.T, nS: n.S, fT: f.T, fS: f.S,
+  });
+}
+
+// ---------- 주인공 대기·달리기 (카타나 제로풍) ----------
+// art/dokkaebi/pose_idle.png · pose_run.png (Codex 로 뽑은 자세 참고 시트)에 리그를 맞춘 값 (tools/posefit.js).
+// 대기: 힘 빼고 살짝 구부정하게 서서 칼을 옆에 낮게 늘어뜨림 — 칼끝은 앞·아래 땅 쪽. 4장을 평균 내 기본 자세로 두고 숨만 얹음
+export const HERO_IDLE = P({ torso: 1.5, head: -9.5, nU: -15, nF: 19, sw: 70, fU: -5.5, fF: 1, nT: 8.5, nS: -16, fT: -21, fS: -3.5, y: 0.5 });
+export function heroIdle(t) {
+  const ph = (t / 3.2) % 1;   // steam.js 숨 주기와 같음
+  const b = ph < 0.55 ? Math.sin(ph / 0.55 * Math.PI / 2) * 2 - 1 : Math.cos((ph - 0.55) / 0.45 * Math.PI / 2) * 2 - 1;
+  const q = Math.round(b * 2) / 2;   // 숨도 3단으로 끊음 (들이쉼 = 어깨가 올라가고 가슴이 부풂)
+  const I = HERO_IDLE;
+  return { ...I, br: q, y: I.y - q * 0.4, torso: I.torso - q, head: I.head + q, nU: I.nU + q * 2.5, fU: I.fU + q * 2.5, sw: I.sw - q };
+}
+// 달리기: 윗몸은 참고 시트 8장에 맞춘 값의 가운데값(조금 덜 눕힘 — 고개를 들고 앞을 봄), 칼 든 팔은 뒤로 칼을 수평에 가깝게 끌고
+// 빈손 주먹은 앞에서 다리와 반대로 크게 흔듦. 다리는 손으로 짠 8장 전력 질주 (참고 시트의 접지 → 내려앉음 → 밀기 → 차올림 → 지나감 → 무릎 올림 → 뻗음)
+// [허벅지 T, 정강이 S] — 한쪽 다리의 8장, 반대 다리는 4장 늦게
+const SPRINT = [[52, -12], [28, -34], [-8, -16], [-40, -24], [-32, -96], [22, -112], [70, -84], [62, -30]];
+const SPRINT_Y = [1.5, 2.5, 0.5, -1.5];   // 디딜 때 낮고 떠 있을 때 높음 (반 바퀴마다 되풀이)
+export function heroRun(p) {
+  const i = Math.floor((((p % 1) + 1) % 1) * RUN_FRAMES), s = Math.sin(i / RUN_FRAMES * Math.PI * 2);
+  const [nT, nS] = SPRINT[i], [fT, fS] = SPRINT[(i + 4) % 8];
+  return P({
+    rot: -14, torso: 17, head: -24, y: SPRINT_Y[i % 4],
+    nU: -21 - 8 * s, nF: 26, sw: -93 + 6 * s,     // 칼은 등 뒤로 (칼 세상 각도 ≈ -100)
+    fU: 70 + 22 * s, fF: 60 - 12 * s,              // 빈손 주먹은 앞에서 크게 흔듦
+    nT, nS, fT, fS,
   });
 }
 
