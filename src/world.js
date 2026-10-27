@@ -1,6 +1,7 @@
 // 타일 월드: 충돌 · 로프 레이캐스트 · 한쪽 발판 · 가시 · 갈고리 고리.
 // 맵은 그림이 아니라 데이터(levels/*.json: 사각형 채우기 + 점 배치)로 짓는다 → 같은 데이터를 유니티 타일맵으로 옮길 수 있게.
 export const TILE = 16;
+const POLE_NEAR = 20;   // 쿠나이가 대나무 줄기에 꽂히는 최소 거리 (손 바로 옆 줄기는 지나침 — 로프 최소 길이 hookMin 18 쯤)
 
 // 타일 종류. hook = 로프가 박히는가
 export const T = {
@@ -132,9 +133,10 @@ export class World {
       const t = this.at(i, j);
       if (SOLID(t)) return { x: x + dx * d, y: y + dy * d, d, tile: t, hook: HOOKABLE(t), nx, ny };
       if (poles && t === T.BAMBOO && i !== i0) {
-        // 줄기 가운데에 꽂힘
-        const px = i * TILE + TILE / 2, dd = Math.abs(dx) > 1e-6 ? Math.max(d, (px - x) / dx) : d;
-        return { x: px, y: y + dy * dd, d: dd, tile: t, hook: true, pole: true, nx: 0, ny: 0 };
+        // 줄기 가운데에 꽂힘. 가운데 줄까지 실제로 가는 경우만 — 칸 경계에 서서 위·아래로 던지면(가로 성분 0) 옆 줄기 칸에 d=0 으로 걸리던 것,
+        // 손 바로 옆(POLE_NEAR 안) 줄기에 쿠나이가 손에서 바로 꽂히던 것은 지나침
+        const px = i * TILE + TILE / 2, dd = Math.abs(dx) > 1e-6 ? (px - x) / dx : -1;
+        if (dd >= POLE_NEAR && dd <= len) return { x: px, y: y + dy * dd, d: dd, tile: t, hook: true, pole: true, nx: 0, ny: 0 };
       }
       if (tx < ty) { d = tx; tx += tdx; i += si; nx = -si; ny = 0; }
       else { d = ty; ty += tdy; j += sj; nx = 0; ny = -sj; }
