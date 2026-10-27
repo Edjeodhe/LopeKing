@@ -1,6 +1,6 @@
 # LopeKing 인수인계 (HANDOFF) — 2026-10-27 (14차까지)
 
-구조·조작·그림 파이프라인은 [README.md](README.md), 유니티 이전 설계는 [docs/unity_port.md](docs/unity_port.md). 이 문서는 **지금 상태와 바로 이어 할 일**, 그 아래는 차수별 기록(최근 것이 위).
+구조·조작·그림 파이프라인은 [README.md](README.md), 유니티 이전 설계는 [docs/unity_port.md](docs/unity_port.md), 스토리·세계관·보스 기획은 [docs/story.md](docs/story.md). 이 문서는 **지금 상태와 바로 이어 할 일**, 그 아래는 차수별 기록(최근 것이 위).
 
 ## ⚠ 커밋 상태
 14차(로프 자동 길이)까지 `58e8f3e`. 대나무 줄기 쿠나이 버그 수정도 커밋함. 이어 받으면 `git status` 로 커밋 안 된 게 있는지 먼저 볼 것.
