@@ -83,4 +83,5 @@ python tools/server.py 5320
 ## 유니티로 옮길 때
 설계·순서·좌표 규칙은 [docs/unity_port.md](docs/unity_port.md), 데이터 형식은 [docs/schema/](docs/schema/).
 - `node tools/export_unity.mjs` → `data/unity/motions.json`(모션 각도 프레임) · `tuning.json`(이동·로프·적·보스 수치). 웹에서 고친 뒤 다시 뽑으면 됨
+- `node tools/build_single.mjs` → `out/lopeking.html` (서버 없이 열리는 단일 HTML, 약 7MB). 모듈은 importmap 의 data: URL, 그림·레벨·글꼴은 `window.__ASSETS` 로 넣음
 - `rig.json`·부위 PNG·사망 컷·`levels/*.json` 은 그대로 가져감
