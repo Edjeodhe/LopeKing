@@ -131,10 +131,10 @@ function draw(ctx, p, dark) {
 // ---------- 자세 ----------
 // 각도는 도(deg). 팔다리는 0 = 곧게 아래, + = 앞으로(보는 쪽) 돌아감. 몸통·머리는 + = 앞으로 숙임.
 // n = 가까운 쪽(near, 칼 든 팔), f = 먼 쪽(far, 로프 쏘는 팔). U 위팔 · F 아래팔(팔꿈치 굽힘) · T 허벅지 · S 정강이
-// sw = 칼 각도(손 기준), swLen = 칼 길이 배율, rot = 몸 전체 회전(+ = 등 쪽으로 넘어감), br = 숨
+// sw = 칼 각도(손 기준), swLen = 칼 길이 배율, swBack = 1 이면 칼을 몸 뒤 층에 (눕힌 칼이 먼 쪽을 지날 때), rot = 몸 전체 회전(+ = 등 쪽으로 넘어감), br = 숨
 // cape = 망토 마디별 세상 기준 각도 배열 (0 = 아래로 늘어짐, - = 뒤로 날림, 보는 쪽 기준)
 export const ZERO = {
-  x: 0, y: 0, torso: 0, head: 0, br: 0, swLen: 1, rot: 0,
+  x: 0, y: 0, torso: 0, head: 0, br: 0, swLen: 1, swBack: 0, rot: 0,
   nU: 0, nF: 0, sw: 0, fU: 0, fF: 0,
   nT: 0, nS: 0, fT: 0, fS: 0,
 };
@@ -280,7 +280,7 @@ export function drawRig(ctx, P, pose, ax, ay, facing, scale = 1) {
     if (shown(pose, 'head')) draw(ctx, P.head, false);
   }));
   ly.at(Z.nearUpperArm, () => arm('shoulderN', pose.nU, pose.nF, false, 'upper'));
-  if (P.sword) ly.at(Z.sword, () => arm('shoulderN', pose.nU, pose.nF, false, 'sword', pose.sw));
+  if (P.sword) ly.at(pose.swBack > 0.5 ? Z.torso - 1 : Z.sword, () => arm('shoulderN', pose.nU, pose.nF, false, 'sword', pose.sw));
   ly.at(Z.nearForeArm, () => arm('shoulderN', pose.nU, pose.nF, false, 'fore'));
   ly.run();
   ctx.restore();

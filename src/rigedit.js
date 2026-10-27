@@ -219,6 +219,7 @@ const MOTIONS = {
   fall: () => [A.FALL, 40, 250],
   slashDown: t => [A.slash(t % 0.6, 90, 1), 0, 0],
   slashUp: t => [A.slash(t % 0.6, 120, -1), 0, 0],
+  combo: t => { const L = A.COMBO.map(A.moveLen), T = t % (L.reduce((a, b) => a + b) + 0.4); let i = 0, u = T; while (i < 3 && u >= L[i]) u -= L[i++]; return [A.comboPose(i, Math.min(u, L[i] - 0.001), 90), 0, 0]; },
   hang: t => [A.hang(170 + Math.sin(t * 2.5) * 30, Math.cos(t * 2.5), false), Math.cos(t * 2.5) * 150, 0],
   dash: () => [A.DASH, 330, 0],
   wall: () => [A.WALL, 0, 60],
@@ -246,7 +247,7 @@ function loop(now) {
     else low.getContext('2d').clearRect(0, 0, low.width, low.height);
   } else {
     const [pose, vx, vy] = MOTIONS[st.motion](t);
-    bakeActor(st.type, { ...pose, cape: A.stepCape(cape, vx, vy, 1, dt) }, 1, low);
+    bakeActor(st.type, { ...pose, cape: A.stepCape(cape, vx, vy, 1, dt) }, pose.turn ? -1 : 1, low);   // turn = 회전 베기 중 돌아선 프레임
   }
   x.imageSmoothingEnabled = false;
   x.drawImage(low, 0, 0, low.width * 6, low.height * 6);
@@ -263,10 +264,10 @@ function motionSheet() {
   const tmp = newBakeCanvas(), cp = A.newCape();
   names.forEach((n, row) => {
     for (let i = 0; i < N; i++) {
-      const t = n.startsWith('slash') ? i * 0.04 : i * 0.11;
+      const t = n.startsWith('slash') ? i * 0.04 : n === 'combo' ? i * 0.3 : i * 0.11;
       const [pose, vx, vy] = MOTIONS[n](t);
       for (let k = 0; k < 20; k++) A.stepCape(cp, vx, vy, 1, 1 / 60);
-      bakeActor(st.type, { ...pose, cape: A.stepCape(cp, vx, vy, 1, 1 / 60) }, 1, tmp);
+      bakeActor(st.type, { ...pose, cape: A.stepCape(cp, vx, vy, 1, 1 / 60) }, pose.turn ? -1 : 1, tmp);
       x.drawImage(tmp, (ACT.AX - cw / 2), ACT.AY - chh + 10, cw, chh, i * cw * Z, row * chh * Z, cw * Z, chh * Z);
     }
     x.fillStyle = '#fff'; x.font = '12px system-ui'; x.fillText(n, 4, row * chh * Z + 14);

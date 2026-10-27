@@ -113,7 +113,8 @@ export class Enemy {
     blood(this.x, this.cy, hit.ang, 10, 0.9);
     if (this.hp <= 0) { G.killEnemy(this, hit); return; }
     this.stun = 0.35; this.state = 'chase'; this.alert = 3;
-    this.vx = Math.cos(hit.ang) * 150; this.vy = -80;
+    const kb = hit.kb ?? 1;   // 밀려남 배율 (콤보 중간 타는 작게 → 다음 타가 닿게)
+    this.vx = Math.cos(hit.ang) * 150 * kb; this.vy = -80 * Math.min(1, kb);
     this.facing = Math.cos(hit.ang) > 0 ? -1 : 1;
   }
 

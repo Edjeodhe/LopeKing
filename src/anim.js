@@ -78,6 +78,69 @@ export function slash(t, aim, dir = 1) {
 }
 export const slashLen = () => SLASH.wind + SLASH.act + SLASH.rec;
 
+// ---------- 콤보 4타 (가로 베기 위주) ----------
+// 1 가로 베기: 칼을 눕혀 몸 뒤 → 가까운 쪽(카메라) → 앞으로 휩쓺 · 2 역방향: 앞 → 가까운 쪽 → 뒤로 되돌림
+// 3 올려 베기 = slash(dir -1) · 4 회전 마무리: 앞으로 내디디며 한 바퀴 (반 바퀴쯤 등이 보임 = turn)
+// 판정·이펙트는 wind ~ wind+act 동안 (main.js stepCombat). dmg = 피해, cd = 다음 타를 받기까지 (rec 끝물은 다음 타로 끊음)
+export const COMBO = [
+  { name: 'sweep', wind: 0.06, act: 0.08, rec: 0.16, dmg: 1 },
+  { name: 'sweepBack', wind: 0.04, act: 0.08, rec: 0.16, dmg: 1 },
+  { name: 'rise', ...SLASH, dmg: 1 },
+  { name: 'spin', wind: 0.08, act: 0.2, rec: 0.24, dmg: 2 },
+];
+export const COMBO_WINDOW = 0.35;   // 공격이 끝난 뒤 이 안에 다시 누르면 다음 타
+export const moveLen = m => m.wind + m.act + m.rec;
+export const moveCd = (m, i) => i === COMBO.length - 1 ? moveLen(m) + 0.15 : m.wind + m.act + m.rec * 0.5;
+
+// 눕힌 칼: 칼끝이 허리 높이의 납작한 타원 위 phi(도)에 있음 — 0 = 앞, 90 = 가까운 쪽(카메라), ±180 = 몸 뒤, -90 = 먼 쪽.
+// 앞/뒤로 뻗으면 칼이 길고, 카메라 쪽·먼 쪽이면 짧게(swLen) 줄여 누운 것처럼. 먼 쪽이면 칼을 몸 뒤 층에(swBack).
+// aim 만큼 타원을 기울임 (±45°)
+function flat(phi, aim, body) {
+  const a = phi * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+  const tilt = Math.max(-45, Math.min(45, aim - 90)) * Math.PI / 180;
+  // 화면 방향(앞 +, 아래 +) → 기울임 → 뼈 기준 각도(0 아래, 90 앞)
+  const rot = (x, y) => [x * Math.cos(tilt) + y * Math.sin(tilt), -x * Math.sin(tilt) + y * Math.cos(tilt)];
+  const deg = (x, y) => Math.atan2(x, y) * 180 / Math.PI;
+  const [bx, by] = rot(c, s * 0.3);
+  const [hx, hy] = rot(0.55 * c + 0.3, 0.55 + 0.15 * s);   // 손: 어깨 높이 앞에서 칼끝을 따라 작게 돎
+  const torso = body.torso;
+  const u = deg(hx, hy) + torso, nF = 35 * (1 - Math.abs(c));
+  return { ...body, nU: u, nF, sw: deg(bx, by) - u - nF + torso, swLen: Math.max(0.3, Math.hypot(c, s * 0.3)), swBack: s < -0.25 ? 1 : 0 };
+}
+const ease = k => 1 - (1 - k) * (1 - k);
+// 시간 t 동안 phi 를 wind(a0→a1) · act(a1→a2, 빠르게) · rec(a2→a3) 로 이음
+function phiAt(m, t, a0, a1, a2, a3) {
+  if (t < m.wind) return a0 + (a1 - a0) * (t / m.wind);
+  if (t < m.wind + m.act) return a1 + (a2 - a1) * ease((t - m.wind) / m.act);
+  return a2 + (a3 - a2) * Math.min(1, (t - m.wind - m.act) / m.rec);
+}
+const SWEEP_BODY = P({ torso: 14, head: -8, fU: -40, fF: 40, nT: 46, nS: -50, fT: -34, fS: -8, y: 2.5 });
+export function sweep(t, aim) {
+  t = Math.floor(t * ATTACK_FPS) / ATTACK_FPS;
+  const m = COMBO[0];
+  return flat(phiAt(m, t, 150, 178, -40, -55), aim, { ...SWEEP_BODY, torso: SWEEP_BODY.torso + (t < m.wind ? -10 : 6) });
+}
+export function sweepBack(t, aim) {
+  t = Math.floor(t * ATTACK_FPS) / ATTACK_FPS;
+  const m = COMBO[1];
+  return flat(phiAt(m, t, -45, -60, 175, 185), aim, { ...SWEEP_BODY, torso: SWEEP_BODY.torso + (t < m.wind ? 10 : -4), fU: 30, fF: 60, nT: 30, nS: -36, fT: -20 });
+}
+// 회전 마무리: 웅크렸다가 칼끝이 몸 뒤에서 한 바퀴 반 돌아 앞에서 멈춤, 몸은 가운데쯤 돌아섬(turn)
+export function spin(t, aim) {
+  t = Math.floor(t * ATTACK_FPS) / ATTACK_FPS;
+  const m = COMBO[3], k = Math.max(0, Math.min(1, (t - m.wind) / m.act));
+  const phi = phiAt(m, t, 150, 178, -370, -380);   // 몸 뒤에서 한 바퀴 반 돌아 앞에서 멈춤
+  const turn = k > 0.3 && k < 0.62 ? 1 : 0;
+  const body = P({ torso: t < m.wind ? 30 : 10, head: -10, fU: t < m.wind ? 40 : -60, fF: 30, nT: 56, nS: -70, fT: -40, fS: -20, y: t < m.wind ? 5 : 3 });
+  // 돌아선 동안엔 그림이 뒤집혀 그려지므로 칼끝 자리도 앞뒤를 바꿔 줌
+  const o = flat(turn ? 180 - phi : phi, turn ? 90 : aim, body);
+  return { ...o, turn };
+}
+// 콤보 i 번째 타의 자세
+export function comboPose(i, t, aim) {
+  return i === 0 ? sweep(t, aim) : i === 1 ? sweepBack(t, aim) : i === 2 ? slash(t, aim, -1) : spin(t, aim);
+}
+
 // 처형(로프로 끌려가 베기) 준비 자세: 칼을 몸 뒤로 크게 젖힘
 export const ZIP = P({ torso: 40, head: -24, nU: -110, nF: 20, sw: -50, fU: 95, fF: 0, nT: 30, nS: -70, fT: -50, fS: -40 });
 

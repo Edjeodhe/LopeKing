@@ -32,6 +32,8 @@ function tone(t0, dur, f0, f1, vol, type = 'square') {
 
 const SFX = {
   slash: t => { noise(t, 0.12, 5000, 900, 0.5, 0.8); },
+  sweep: t => { noise(t, 0.14, 3600, 700, 0.5, 0.7); },
+  spin: t => { noise(t, 0.28, 1200, 4800, 0.4, 0.8); tone(t, 0.22, 180, 420, 0.05, 'triangle'); },
   hit: t => { noise(t, 0.18, 1400, 200, 0.7, 0.6, 'lowpass'); tone(t, 0.08, 180, 60, 0.25); },
   gore: t => { noise(t, 0.35, 900, 120, 0.8, 0.5, 'lowpass'); noise(t + 0.03, 0.2, 2600, 400, 0.3, 2); tone(t, 0.2, 110, 40, 0.3, 'sine'); },
   exec: t => { noise(t, 0.08, 7000, 3000, 0.6, 1); tone(t, 0.5, 70, 30, 0.5, 'sine'); noise(t + 0.02, 0.5, 800, 80, 0.7, 0.5, 'lowpass'); },

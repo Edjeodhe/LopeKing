@@ -26,6 +26,17 @@ const motions = {
     fps: A.ATTACK_FPS, timing: A.SLASH, note: '판정은 wind ~ wind+act 동안 (main.js stepCombat)',
     variants: Object.fromEntries([0, 45, 90, 135, 180].flatMap(aim => [1, -1].map(dir => [`aim${aim}_dir${dir}`, sample(t => A.slash(t, aim, dir), A.slashLen(), A.ATTACK_FPS)]))),
   },
+  // 콤보 4타 (가로 베기 → 역방향 가로 → 올려 베기 → 회전 마무리). 겨눈 방향(aim)마다 · 30fps
+  // swLen = 칼 길이 배율(눕힌 칼은 짧게) · swBack = 1 이면 칼을 몸 뒤 층에 · turn = 1 이면 그 프레임만 반대쪽을 보고 그림
+  combo: {
+    fps: A.ATTACK_FPS, window: A.COMBO_WINDOW,
+    note: '공격이 끝나기 전(cd 가 풀린 뒤)이나 끝난 뒤 window 초 안에 다시 누르면 다음 타, 놓치면 1타. 판정·이펙트는 wind ~ wind+act (main.js stepCombat · comboFx). 이펙트 그림 = art/fx/fx_slash.png',
+    moves: A.COMBO.map((m, i) => ({
+      ...m, cd: round(A.moveCd(m, i)),
+      variants: Object.fromEntries((i === 3 ? [90] : [45, 90, 135]).map(aim => [`aim${aim}`,
+        Array.from({ length: Math.round(A.moveLen(m) * A.ATTACK_FPS) }, (_, k) => { const q = A.comboPose(i, k / A.ATTACK_FPS, aim); return { ...pose(q), ...(q.turn ? { turn: 1 } : {}) }; })])),
+    })),
+  },
   // 로프 매달림: 로프 방향(ang, 뼈 기준)과 흔들림(swing -1~1)으로 섞음
   hang: {
     note: 'A.hang(ang, swing, reel): ang 120~240 을 30도마다, swing -1/0/1',

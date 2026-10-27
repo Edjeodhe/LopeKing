@@ -1,7 +1,8 @@
 // 이펙트: 칼끝 궤적(smear) · 몸을 감싸는 고리(앞 반/뒤 반 나눠 그림) · 불티·먼지·피 입자 · 피 자국(타일에 묻음) · 속도선 · 화면 흔들림
-// 모두 1px 도트로 직접 찍는다 (반투명 없음, 사라질 땐 체크무늬) → 캐릭터 굽기와 같은 결
+// 모두 1px 도트로 직접 찍는다 (반투명 없음, 사라질 땐 체크무늬) → 캐릭터 굽기와 같은 결. 콤보 베기는 Codex 그림을 도트로 구워 씀 (pixfx.js)
+import { loadSheet, pixelFx } from './pixfx.js';
 
-export const fx = { smear: [], rings: [], parts: [], lines: [], flashes: [], texts: [], cuts: [] };
+export const fx = { smear: [], rings: [], parts: [], lines: [], flashes: [], texts: [], cuts: [], sprites: [] };
 export const cam = { x: 0, y: 0, shake: 0, kick: [0, 0] };
 let decal = null, decalCtx = null, world = null;
 
@@ -76,6 +77,24 @@ function drawRingHalf(ctx, R, front) {
   }
 }
 
+// ---------- 그림 이펙트 (art/fx/fx_slash.png 4×4 칸, 줄마다 4장 애니메이션) ----------
+// 줄: 0 가로 베기 초승달 · 1 회전 타원 고리 · 2 마무리 큰 초승달 · 3 타격 섬광. 그림 기준점 = 칸 가운데 · 위에서 40% (그림이 그 높이에 있음)
+// { row, x, y(follow 가 있으면 그 몸 기준), w(칸 가로 = 게임 px), ang(라디안, 15° 단위), flip, vflip, life,
+//   layer: 'front' 몸 앞 · 'back' 몸 뒤 · 'split' 위(먼) 반은 몸 뒤 + 아래(가까운) 반은 몸 앞 }
+let sheet = null;
+export async function loadSlashFx() { sheet = await loadSheet('art/fx/fx_slash.png', 4, 4); }
+export function slashFx(o) { fx.sprites.push({ t: 0, life: 0.2, w: 80, ang: 0, layer: 'front', ramp: [...SMEAR.cols].reverse(), ...o }); }
+function drawSprite(ctx, s, back) {
+  if (!sheet || (s.layer !== 'split' && (s.layer === 'back') !== back)) return;
+  const k = s.t / s.life, f = Math.min(3, Math.floor(k * 4));
+  const c = pixelFx(sheet[s.row][f], s.ramp, s.w, k > 0.9, { ang: s.ang, flip: s.flip, vflip: s.vflip, py: 0.4 });
+  const x = Math.round((s.follow?.x ?? 0) + s.x) - c.ax, y = Math.round((s.follow?.y ?? 0) + s.y) - c.ay;
+  if (s.layer !== 'split') { ctx.drawImage(c, x, y); return; }
+  const h = c.ay, top = !s.vflip;   // 뒤집으면 위·아래 반도 바뀜
+  if (back === top) ctx.drawImage(c, 0, 0, c.width, h, x, y, c.width, h);
+  else ctx.drawImage(c, 0, h, c.width, c.height - h, x, y + h, c.width, c.height - h);
+}
+
 // ---------- 입자 ----------
 // { x, y, vx, vy, g, life, col, size, blood(벽·바닥에 닿으면 자국), drag }
 export function spark(x, y, ang, n, o = {}) {
@@ -146,6 +165,8 @@ export function updateFx(dt) {
   cam.kick[0] *= Math.exp(-dt * 18); cam.kick[1] *= Math.exp(-dt * 18);
   for (const R of fx.rings) R.t += dt;
   fx.rings = fx.rings.filter(R => R.t < R.life);
+  for (const S of fx.sprites) S.t += dt;
+  fx.sprites = fx.sprites.filter(S => S.t < S.life);
   for (const p of fx.parts) {
     p.t += dt;
     p.vy += p.g * dt;
@@ -177,20 +198,16 @@ export function updateFlash(real) {
   fx.flashes = fx.flashes.filter(f => f.t < f.life);
 }
 
-// 캐릭터 뒤에 그릴 것 (고리 먼 반·속도선·궤적)
+// 캐릭터 뒤에 그릴 것 (속도선) — 조명을 받음
 export function drawFxBack(ctx, time) {
   for (const l of fx.lines) {
     const k = l.t / l.life, L = l.len * (1 - k);
     ctx.fillStyle = k > 0.5 ? '#8a86b0' : '#e8e4ff';
     for (let s = 0; s < L; s++) ctx.fillRect(Math.round(l.x + l.dx * (s + k * 14)), Math.round(l.y + l.dy * (s + k * 14)), 1, 1);
   }
-  for (const R of fx.rings) drawRingHalf(ctx, R, false);
 }
-// 캐릭터 앞에 그릴 것 (고리 가까운 반·칼끝 궤적·입자)
+// 캐릭터 앞에 그릴 것 (불티·피 입자) — 조명을 받음
 export function drawFxFront(ctx, time) {
-  drawSmear(ctx, time);
-  drawCuts(ctx);
-  for (const R of fx.rings) drawRingHalf(ctx, R, true);
   for (const p of fx.parts) {
     const k = p.t / p.life;
     if (k > 0.75 && !p.blood && (Math.round(p.x) + Math.round(p.y)) & 1) continue;
@@ -198,6 +215,44 @@ export function drawFxFront(ctx, time) {
     ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size);
   }
 }
+// 빛나는 이펙트 (칼끝 궤적·베기 그림·고리·관통 자국): 조명을 '받지 않고' 조명 뒤에 그대로 그림 → 어두운 화면에서 도드라짐.
+// 몸 뒤에 있어야 할 반(고리 먼 반·'back'·'split' 위 반)은 따로 그려 주인공 실루엣(occ)만큼 지운 뒤 얹음
+let glowBuf = null;
+export function drawFxGlow(ctx, time, cam, W, H, occ) {
+  if (!glowBuf) { glowBuf = document.createElement('canvas'); glowBuf.width = W; glowBuf.height = H; }
+  const g = glowBuf.getContext('2d');
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, W, H);
+  g.translate(-cam.x, -cam.y);
+  for (const R of fx.rings) drawRingHalf(g, R, false);
+  for (const S of fx.sprites) drawSprite(g, S, true);
+  if (occ?.img) { g.globalCompositeOperation = 'destination-out'; g.drawImage(occ.img, occ.x, occ.y); }
+  ctx.save();
+  ctx.drawImage(glowBuf, 0, 0);
+  ctx.translate(-cam.x, -cam.y);
+  drawSmear(ctx, time);
+  drawCuts(ctx);
+  for (const R of fx.rings) drawRingHalf(ctx, R, true);
+  for (const S of fx.sprites) drawSprite(ctx, S, false);
+  ctx.restore();
+}
+// 이펙트가 내는 빛: 베기 그림·고리·궤적·관통 자국 둘레를 비춤 (조명 패스에 넣음). 막 생겼을 때 가장 밝고 사라지며 약해짐
+const FX_LIGHT = [255, 150, 160];
+export function fxLights(out, time) {
+  const add = (x, y, r, k) => { if (k > 0.05) out.push({ x, y, r, col: FX_LIGHT, k, glow: 0.25 * k }); };
+  for (const S of fx.sprites) {
+    const k = 1 - S.t / S.life;
+    add((S.follow?.x ?? 0) + S.x, (S.follow?.y ?? 0) + S.y, S.row === 3 ? S.w * 0.6 : S.w * 0.75, k);
+  }
+  for (const R of fx.rings) add(R.x, R.y, R.rx * 1.6, 1 - R.t / R.life);
+  for (const c of fx.cuts) add((c.x0 + c.x1) / 2, (c.y0 + c.y1) / 2, 40, 1 - c.t / c.life);
+  const q = fx.smear[fx.smear.length - 1];
+  if (q) add(q.t[0], q.t[1], 44, 1 - (time - q.at) / (q.life || SMEAR.life));
+}
+// 새 베기가 시작되면 앞 타의 베기 그림은 바로 사라지는 끝물(체크무늬)로 넘김 — 겹쳐 지저분해지지 않고, 뚝 끊기지도 않게. 타격 섬광(줄 3)은 그대로
+export function fadeSlashFx(rows = [0, 1, 2]) { for (const S of fx.sprites) if (rows.includes(S.row)) S.t = Math.max(S.t, S.life * 0.9); }
+// 칼이 닿은 순간: 막 생긴 베기 그림을 가장 큰 장(2번째 칸)으로 → 타격 멈춤 화면에 다 그려진 궤적이 찍힘
+export function popSlashFx() { for (const S of fx.sprites) if (S.row < 3 && S.t < S.life * 0.25) S.t = S.life * 0.25; }
+
 export function drawFlash(ctx, W, H) {
   for (const f of fx.flashes) {
     const k = f.t / f.life;

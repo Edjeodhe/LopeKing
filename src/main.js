@@ -8,7 +8,7 @@ import { Player, TUNE } from './player.js';
 import { Enemy, drawEnemyMarks } from './enemies.js';
 import { Boss, drawBossMarks, stepHazards, drawHazards } from './boss.js';
 import * as A from './anim.js';
-import { fx, cam, initFx, updateFx, updateFlash, cutLine, speedLine, dust, drawFxBack, drawFxFront, drawFlash, decalCanvas, pushSmear, shake, ring, flash, spark, blood, BLOOD } from './fx.js';
+import { fx, cam, initFx, updateFx, updateFlash, cutLine, speedLine, dust, drawFxBack, drawFxFront, drawFxGlow, fxLights, fadeSlashFx, popSlashFx, drawFlash, decalCanvas, pushSmear, shake, ring, flash, spark, blood, BLOOD, slashFx, loadSlashFx } from './fx.js';
 import { initGore, updateGore, drawGore, killActor } from './gore.js';
 import { sfx } from './sfx.js';
 import { applyLight } from './light.js';
@@ -16,6 +16,7 @@ import { startMusic, setMood, toggleMute } from './music.js';
 import { loadFont, font } from './font.js';
 
 const W = 480, H = 270, STEP = 1 / 120;
+const AMBIENT = [96, 90, 150];   // 밤 환경색 (레벨에 ambient 가 없을 때). 어둡게 깔고 빛·이펙트 자리만 밝혀 명암을 또렷하게
 const canvas = document.getElementById('game');
 canvas.width = W; canvas.height = H;
 const ctx = canvas.getContext('2d');
@@ -46,7 +47,7 @@ globalThis.__G = G; G.cam = cam;   // 콘솔·자동 확인용
 let tilesImg = null, bg = null, levelDef = null, playerLow = newBakeCanvas(), deathT = 0, titleBg = null;
 
 async function boot() {
-  await loadFont();
+  await Promise.all([loadFont(), loadSlashFx()]);
   await Promise.all(LEVELS.map(async n => { levelDefs[n] = await (await fetch(`levels/${n}.json`, { cache: 'no-store' })).json(); }));
   setTheme('night'); titleBg = makeBackground(W, H);
   // 진짜 그림(art/<id>/rig.json)이 없으면 임시 그림으로 같은 파이프라인을 돌림
@@ -143,11 +144,13 @@ function segBox(ox, oy, dx, dy, x0, y0, x1, y1) {
 }
 
 // ---------- 전투 ----------
-// 주인공 베기: 시작할 때 등록, 칼이 지나가는 동안(active) 부채꼴 판정. exec = 로프로 끌려가 처형하는 적
+// 주인공 베기: 시작할 때 등록, 칼이 지나가는 동안(active) 판정. exec = 로프로 끌려가 처형하는 적
+// 콤보 타마다 판정 모양이 다름: 가로 베기 = 겨눈 쪽으로 납작한 타원 · 올려 베기 = 부채꼴 · 회전 = 몸 둘레 타원 + 끝에 앞쪽 큰 부채꼴
 G.onAttack = (p, exec) => {
   const a = p.aimRad;
-  G.atk = { id: p.atkId, ang: a, exec, hit: new Set() };
-  sfx('slash');
+  G.atk = { id: p.atkId, ang: a, exec, hit: new Set(), combo: p.combo, move: p.move, fx: 0 };
+  fadeSlashFx();
+  sfx(exec ? 'slash' : ['sweep', 'sweep', 'slash', 'spin'][p.combo]);
   if (exec) {
     // 처형: 끌려간 적은 바로 죽음 + 몸을 감싸는 붉은 고리(앞 반은 몸 앞, 뒤 반은 몸 뒤) + 번쩍 + 슬로모션
     const hitInfo = { kind: 'exec', ang: a, power: 1.3 };
@@ -162,34 +165,65 @@ G.onAttack = (p, exec) => {
     sfx('exec');
   }
 };
+// 콤보 이펙트 (fx_slash.png): 칼이 휘둘리기 시작하는 순간에 띄움. 가로 베기는 겨눈 만큼 기울임(15° 단위, ±45°)
+function comboFx(p, at, t) {
+  const f = p.facing, a = at.ang, m = at.move, ca = Math.cos(a), sa = Math.sin(a);
+  const tilt = Math.max(-45, Math.min(45, p.aim - 90)) * Math.PI / 180 * -f;
+  if (at.fx === 0 && t >= m.wind - 0.01) {   // 판정 창과 같이 시작 → 타격 멈춤 화면에 이펙트가 찍혀 있게
+    at.fx = 1;
+    // 1·2타: 납작한 초승달 (가까운 쪽 반 = 몸 앞). 2타는 거울로 뒤집어 앞 → 뒤로 쓸어 감
+    if (at.combo < 2) slashFx({ row: 0, follow: p, x: ca * 8, y: -22 + sa * 8, w: 84, ang: tilt, flip: (f < 0) !== (at.combo === 1), life: 0.2 });
+    // 4타: 몸을 감싸는 타원 고리 (먼 반은 몸 뒤, 가까운 반은 몸 앞)
+    if (at.combo === 3) { slashFx({ row: 1, follow: p, x: 0, y: -17, w: 116, flip: f < 0, life: m.act + 0.08, layer: 'split' }); G.flares.push({ x: p.x, y: p.cy, r: 50, col: [255, 200, 200], t: 0.2, glow: 0.1 }); }
+  }
+  // 4타 끝: 겨눈 쪽으로 큰 초승달 + 속도선
+  if (at.combo === 3 && at.fx === 1 && t >= m.wind + m.act * 0.7) {
+    at.fx = 2;
+    fadeSlashFx([1]);   // 고리는 사라지는 끝물로, 초승달이 주인공
+    const big = Math.max(-60, Math.min(60, p.aim - 90)) * Math.PI / 180 * -f;
+    slashFx({ row: 2, follow: p, x: ca * 26, y: -20 + sa * 26, w: 104, ang: big, flip: f < 0, life: 0.26 });
+    shake(3, ca * 3, sa * 3); sfx('slash');
+  }
+}
 function stepCombat(dt) {
   const p = G.player, at = G.atk;
   if (!at || p.atkT < 0 || at.id !== p.atkId) return;
-  const t = p.atkT;
-  if (t < A.SLASH.wind - 0.01 || t > A.SLASH.wind + A.SLASH.act + 0.03) return;
-  const R = at.exec ? 46 : 36, half = 1.35;
-  const ox = p.x, oy = p.cy;
-  const inArc = (x, y, pad = 0) => {
-    const dx = x - ox, dy = y - oy, d = Math.hypot(dx, dy);
+  const t = p.atkT, m = at.exec ? A.SLASH : at.move;
+  if (!at.exec) comboFx(p, at, t);
+  if (t < m.wind - 0.01 || t > m.wind + m.act + 0.03) return;
+  const ox = p.x, oy = p.cy, ca = Math.cos(at.ang), sa = Math.sin(at.ang);
+  const fan = (dx, dy, R, half, pad) => {
+    const d = Math.hypot(dx, dy);
     if (d > R + pad) return false;
     if (d < 10) return true;
     let da = Math.atan2(dy, dx) - at.ang; while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
     return Math.abs(da) < half;
   };
+  const oval = (u, v, rx, ry, pad) => (u / (rx + pad)) ** 2 + (v / (ry + pad)) ** 2 < 1;
+  const inside = (x, y, pad = 0) => {
+    const dx = x - ox, dy = y - oy;
+    if (at.exec || at.combo === 2) return fan(dx, dy, at.exec ? 46 : 36, 1.35, pad);
+    if (at.combo < 2) return oval(dx * ca + dy * sa - 8, -dx * sa + dy * ca, 40, 16, pad);   // 겨눈 쪽으로 납작한 타원
+    return oval(dx, dy + 6, 48, 22, pad) || (t > m.wind + m.act * 0.6 && fan(dx, dy, 58, 0.6, pad));
+  };
+  const fin = at.combo === 3 && !at.exec;
   for (const e of G.enemies) {
     if (e.dead || at.hit.has(e)) continue;
-    if (inArc(e.x, e.cy, 6) || inArc(e.x, e.y - 4, 6) || inArc(e.x, e.y - e.h + 2, 6)) {
+    if (inside(e.x, e.cy, 6) || inside(e.x, e.y - 4, 6) || inside(e.x, e.y - e.h + 2, 6)) {
       at.hit.add(e);
-      const hitInfo = { kind: 'slash', ang: at.ang, power: 1 };
+      const ang = at.combo === 3 ? Math.atan2(e.cy - oy, e.x - ox) : at.ang;   // 회전은 몸 바깥쪽으로 튕김
+      const hitInfo = { kind: 'slash', ang, power: fin ? 1.4 : 1, kb: at.exec ? 1 : fin ? 1.4 : 0.3 };
       const contact = [(ox + e.x) / 2, (oy + e.cy) / 2];
-      spark(contact[0], contact[1], at.ang, 8, { cols: ['#ffffff', '#ffe0e0', '#ff6060'], v: 220, life: 0.14 });
-      e.damage(G, 1, hitInfo);
-      if (!e.dead) { sfx('hit'); G.stop = Math.max(G.stop, 0.06); shake(2.5, Math.cos(at.ang) * 2, Math.sin(at.ang) * 2); }
+      spark(contact[0], contact[1], ang, fin ? 12 : 8, { cols: ['#ffffff', '#ffe0e0', '#ff6060'], v: fin ? 280 : 220, life: 0.14 });
+      popSlashFx();
+      slashFx({ row: 3, x: contact[0], y: contact[1], w: fin ? 56 : 40, life: 0.16 });
+      e.damage(G, at.exec ? 1 : m.dmg, hitInfo);
+      if (!e.dead) { sfx('hit'); G.stop = Math.max(G.stop, fin ? 0.11 : 0.06); shake(fin ? 4.5 : 2.5, Math.cos(ang) * 2, Math.sin(ang) * 2); }
     }
   }
   // 총알 되받아치기 (카타나 제로식)
   for (const b of G.bullets) {
-    if (b.owner !== 'enemy' || !inArc(b.x, b.y, 8)) continue;
+    if (b.owner !== 'enemy' || !inside(b.x, b.y, 8)) continue;
     const sp = 460;
     b.owner = 'player'; b.vx = Math.cos(at.ang) * sp; b.vy = Math.sin(at.ang) * sp; b.t = 0;
     spark(b.x, b.y, at.ang, 10, { cols: ['#ffffff', '#fff0a0', '#80e0ff'], v: 200, life: 0.15 });
@@ -417,13 +451,17 @@ function render(real) {
   ctx.restore();
 
   // 조명: 밤 환경색으로 곱하고 등불·주인공·총구·처형 섬광 자리만 밝힘
-  const lights = [{ x: p.x, y: p.cy, r: 56, col: [235, 225, 255], k: 0.75 }];
+  const lights = [{ x: p.x, y: p.cy, r: 60, col: [235, 225, 255], k: 0.8 }];
   for (const l of w.lamps) lights.push({ x: l.x, y: l.y + 4, r: 80 + Math.round(Math.sin(G.time * 9 + l.x)) * 2, col: [255, 200, 165], glow: 0.1 });
   for (const x of G.exits) lights.push({ x: x.x + 6, y: x.y - 20, r: 48, col: [255, 170, 150] });
   for (const b of G.bullets) lights.push({ x: b.x, y: b.y, r: 14, col: [255, 220, 150] });
+  for (const e of G.enemies) lights.push({ x: e.x, y: e.cy, r: e.kind === 'boss' ? 56 : 30, col: [200, 190, 235], k: 0.4 });   // 적은 어둠 속 실루엣이 겨우 읽힐 만큼
   for (const f of G.flares) lights.push(f);
   if (p.rope && p.rope.state !== 'back') lights.push({ x: p.rope.x, y: p.rope.y, r: 12, col: [255, 140, 140] });
-  if (!G.noLight) applyLight(ctx, W, H, { x: cx, y: cy }, G.world.def.ambient || [172, 164, 216], lights);
+  fxLights(lights, G.time);
+  if (!G.noLight) applyLight(ctx, W, H, { x: cx, y: cy }, G.world.def.ambient || AMBIENT, lights);
+  // 빛나는 이펙트는 조명 뒤에 그대로 (어두운 화면에서 도드라지게). 몸 뒤 반은 주인공 실루엣만큼 가림
+  drawFxGlow(ctx, G.time, { x: cx, y: cy }, W, H, p.dead || playerLow.__skip ? null : { img: playerLow, x: px - cx, y: py - cy });
 
   drawFlash(ctx, W, H);
   drawHud(p, prev);
@@ -480,6 +518,8 @@ function sampleBlade(p, bl, px, py) {
   if (!bl || p.atkT < 0) { p.preBlade = null; return; }
   const q = { g: [bl.g[0] + px, bl.g[1] + py], t: [bl.t[0] + px, bl.t[1] + py], at: G.time, id: p.atkId, dir: p.atkDir * (p.drawFacing ?? p.facing) };
   if (G.atk?.exec && G.atk.id === p.atkId) { q.cols = ['#ffffff', '#ffe8e0', '#ff5050', '#901020']; q.life = 0.2; q.inner = 0.1; q.reach = 1.25; }
+  // 칼끝 궤적은 올려 베기·처형만 (가로 베기·회전은 눕힌 칼이라 그림 이펙트로)
+  if (p.combo !== 2) return;
   if (p.atkT < A.SLASH.wind) { p.preBlade = q; return; }
   if (p.atkT > A.SLASH.wind + A.SLASH.act + 0.05) return;
   if (p.preBlade?.id === p.atkId) { pushSmear({ ...p.preBlade, at: G.time }); p.preBlade = null; }

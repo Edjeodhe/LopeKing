@@ -18,7 +18,7 @@ export const TUNE = {
   dash: 520, dashT: 0.2, dashCd: 0.32, dJump: 270, airJumps: 1,
   hookSpeed: 1300, hookMax: 230, hookMin: 18, reel: 150, pump: 520, ropeJump: 200,
   zip: 1050, zipCd: 0.12, zipKeep: 0.35, cling: 0.6, ceilHang: 0.35, leash: 300,
-  atkLunge: 190, atkCd: 0.3,
+  atkLunge: 190,
   hp: 5, iframes: 1.0,
 };
 
@@ -28,6 +28,7 @@ export class Player {
     this.hp = TUNE.hp; this.inv = 0; this.dead = false; this.deadT = 0;
     this.coyote = 0; this.buf = 0; this.airDash = true; this.airAtk = true; this.dashT = 0; this.dashCd = 0;
     this.atkT = -1; this.atkCd = 0; this.atkDir = 1; this.atkId = 0; this.aim = 90; this.aimRad = 0;
+    this.combo = 0; this.comboT = 0; this.move = A.COMBO[0];   // 콤보: 지금 타(0~3) · 다음 타를 받는 남은 시간 · 지금 동작 타이밍
     // 쿠나이: { state: 'fly' | 'stuck' | 'back' | 'zip', x, y(쿠나이 자리), dx, dy, tether(팽팽한 실), len, target(꽂힌 적), nx, ny(꽂힌 면) }
     this.rope = null;
     this.cling = 0; this.clingDir = 0; this.ceil = 0; this.zipCd = 0; this.throwT = 0; this.airJump = 1; this.flipT = 0;
@@ -47,7 +48,7 @@ export class Player {
     if (input.pressed.has('jump')) this.buf = TUNE.buffer;
     if (input.released.has('jump')) this.jumpRelease = true;
     if (input.pressed.has('dash')) this.dashReq = true;
-    if (input.mPressed[0]) this.atkReq = 0.12;
+    if (input.mPressed[0]) this.atkReq = 0.2;
     if (input.mPressed[2] || input.pressed.has('rope')) this.ropeReq = true;
     if (input.mReleased[2] || input.released.has('rope')) this.ropeRel = true;
     this.ropeHeld = input.mouse[2] || held('rope');
@@ -63,6 +64,7 @@ export class Player {
     this.zipBuf = Math.max(0, (this.zipBuf || 0) - dt);
     if (this.zipBuf > 0 && this.zipCd <= 0 && this.rope?.state === 'stuck') { this.zipBuf = 0; this.startZip(G); }
     this.atkCd = Math.max(0, this.atkCd - dt);
+    if (this.atkT < 0) this.comboT = Math.max(0, this.comboT - dt);
     this.buf = Math.max(0, this.buf - dt);
     if (this.atkReq) this.atkReq = Math.max(0, this.atkReq - dt);
     this.hurtT = Math.max(0, this.hurtT - dt);
@@ -211,7 +213,7 @@ export class Player {
     // ---- 공격 진행 ----
     if (this.atkT >= 0) {
       this.atkT += dt;
-      if (this.atkT >= A.slashLen()) this.atkT = -1;
+      if (this.atkT >= A.moveLen(this.move)) this.atkT = -1;
     }
 
     // ---- 피해: 가시 · 낙사 ----
@@ -222,14 +224,21 @@ export class Player {
     }
   }
 
+  // 콤보: 공격이 끝나기 전(cd 가 풀린 뒤)이나 끝난 뒤 COMBO_WINDOW 안에 다시 누르면 다음 타, 놓치면 1타부터.
+  // 처형(exec)은 올려 베기 자세로 하고 콤보는 처음으로
   startAttack(G, exec) {
-    this.atkT = 0; this.atkCd = TUNE.atkCd; this.atkId++; this.atkDir = -this.atkDir;
+    const n = A.COMBO.length;
+    this.combo = exec ? 2 : this.atkT >= 0 || this.comboT > 0 ? (this.combo + 1) % n : 0;
+    this.move = A.COMBO[this.combo];
+    this.atkT = 0; this.atkCd = A.moveCd(this.move, this.combo); this.atkId++; this.atkDir = this.combo === 2 ? -1 : 1;
+    this.comboT = exec || this.combo === n - 1 ? 0 : A.COMBO_WINDOW;
     const a = this.aimRad, dx = Math.cos(a), dy = Math.sin(a);
     if (Math.abs(dx) > 0.15) this.facing = dx > 0 ? 1 : -1;
     // 뼈 기준 조준각: 90 = 정면, 180 = 위, 0 = 아래
     this.aim = 90 - Math.atan2(dy, Math.abs(dx)) * 180 / Math.PI;
-    // 앞으로 내딛는 베기 (공중에선 마우스 방향 그대로 한 번 — 카타나 제로식)
-    if (this.onGround) this.vx = dx * TUNE.atkLunge * 0.7;
+    // 앞으로 내딛는 베기 (공중에선 마우스 방향 그대로 — 카타나 제로식). 회전 마무리는 보는 쪽으로 크게 내디딤
+    if (this.combo === n - 1 && !exec) this.vx = this.facing * TUNE.atkLunge * (this.onGround ? 1.3 : 1);
+    else if (this.onGround) this.vx = dx * TUNE.atkLunge * 0.7;
     else if (this.airAtk) { this.vx = dx * TUNE.atkLunge; this.vy = Math.min(this.vy, dy * TUNE.atkLunge * 0.8); if (dy < 0) this.airAtk = false; }
     // 처형은 칼이 지나가는 순간부터 시작 → 타격 멈춤 화면에 칼질·궤적이 찍혀 있게
     if (exec) this.atkT = A.SLASH.wind + A.SLASH.act * 0.4;
@@ -382,7 +391,7 @@ export class Player {
     let target;
     const r = this.rope;
     if (this.hurtT > 0) target = A.HURT;
-    else if (this.atkT >= 0) target = A.slash(this.atkT, this.aim, this.atkDir);
+    else if (this.atkT >= 0) target = A.comboPose(this.combo, this.atkT, this.aim);
     else if (r?.state === 'zip') {
       // 돌진: 몸을 날아가는 쪽으로 눕힘
       const a = Math.atan2(this.vy, Math.abs(this.vx)) * 180 / Math.PI;
@@ -413,7 +422,7 @@ export class Player {
     else target = A.idle(this.t);
     this.throwT = Math.max(0, this.throwT - dt);
     // 벽 타기·매달림은 벽 반대쪽을 봄
-    this.drawFacing = this.cling > 0 ? (this.pole ? -this.clingSide : -this.clingDir) : !this.onGround && this.wall && this.vy > 0 && !r ? -this.wall : this.facing;
+    this.drawFacing = target.turn ? -this.facing : this.cling > 0 ? (this.pole ? -this.clingSide : -this.clingDir) : !this.onGround && this.wall && this.vy > 0 && !r ? -this.wall : this.facing;
     // 공격·달리기는 끊어 보이게 바로, 나머지는 부드럽게 따라감
     const snap = this.atkT >= 0 || r?.state === 'zip' || this.dashT > 0 || this.flipT > 0 || (this.onGround && Math.abs(this.vx) > 12 && this.dashT <= 0);
     this.pose = snap ? { ...target } : A.follow(this.pose, target, dt);
