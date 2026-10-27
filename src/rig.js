@@ -9,7 +9,7 @@ export const SS = 4;
 // upperArm(elbow) · foreArm(hand) · thigh(knee) · shin(sole)
 export const PARTS = ['head', 'torso', 'hips', 'cape', 'upperArm', 'foreArm', 'thigh', 'shin'];
 const OPTIONAL = new Set(['cape']);
-export const CAPE_SEGS = 3;   // 망토를 세로로 몇 마디로 나눠 꺾을지 (사슬 물리, anim.js capeChain)
+export const CAPE_SEGS = 4;   // 망토를 세로로 몇 마디로 나눠 꺾을지 (사슬 물리, anim.js capeChain)
 
 function loadImage(src) {
   return new Promise((ok, fail) => {

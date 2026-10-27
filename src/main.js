@@ -178,6 +178,9 @@ function comboFx(p, at, t) {
     const D = Math.PI / 180, arc = { follow: p, x: ca * 10, y: -20 + sa * 10, rx: 56, ry: 17, tilt, f, dur: m.act, life: m.act + 0.18 };
     if (at.combo === 0) sweepArc({ ...arc, a0: 175 * D, a1: -45 * D });
     if (at.combo === 1) sweepArc({ ...arc, a0: -55 * D, a1: 180 * D });
+    // 3타 올려 베기: 가슴을 축으로 세운 원 — 칼(anim.js slash dir -1)이 뼈 각도 aim-115 → aim+95 를 지나므로 띠 각도 = 90° - 뼈 각도.
+    // 몸이 뛰어올라도 띠가 몸을 따라가 한 덩어리로 이어짐 (예전엔 매 프레임 칼 자리를 이어 붙여 위·아래 두 조각으로 갈라졌음)
+    if (at.combo === 2) sweepArc({ follow: p, y: -19, rx: 31, ry: 31, f, vert: true, th: 9, a0: (205 - p.aim) * D, a1: (-5 - p.aim) * D, dur: m.act, life: m.act + 0.17 });
     // 4타: 몸을 감싸며 한 바퀴 반 도는 띠 (먼 반은 몸 뒤, 가까운 반은 몸 앞)
     if (at.combo === 3) { sweepArc({ follow: p, y: -16, rx: 62, ry: 19, f, th: 7, a0: 178 * D, a1: -370 * D, dur: m.act, life: m.act + 0.12 }); G.flares.push({ x: p.x, y: p.cy, r: 50, col: [255, 200, 200], t: 0.2, glow: 0.1 }); }
   }
@@ -522,9 +525,8 @@ function sampleBlade(p, bl, px, py) {
   if (!bl || p.atkT < 0) { p.preBlade = null; return; }
   const q = { g: [bl.g[0] + px, bl.g[1] + py], t: [bl.t[0] + px, bl.t[1] + py], at: G.time, id: p.atkId, dir: p.atkDir * (p.drawFacing ?? p.facing) };
   if (G.atk?.exec && G.atk.id === p.atkId) { q.cols = ['#ffffff', '#ffe8e0', '#ff5050', '#901020']; q.life = 0.2; q.inner = 0.1; q.reach = 1.25; }
-  // 칼끝 궤적은 올려 베기·처형만 (가로 베기·회전은 눕힌 칼이라 그림 이펙트로)
-  if (p.combo !== 2) return;
-  if (!G.atk?.exec) { q.inner = 0.2; q.reach = 1.2; q.life = 0.15; }   // 올려 베기: 두껍고 길게
+  // 칼끝 궤적은 처형만 (콤보 1~4타는 몸을 따라가는 띠 sweepArc 로)
+  if (!G.atk?.exec || G.atk.id !== p.atkId) return;
   if (p.atkT < p.move.wind) { p.preBlade = q; return; }
   if (p.atkT > p.move.wind + p.move.act + 0.05) return;
   if (p.preBlade?.id === p.atkId) { pushSmear({ ...p.preBlade, at: G.time }); p.preBlade = null; }

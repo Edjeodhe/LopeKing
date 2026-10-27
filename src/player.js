@@ -16,9 +16,9 @@ export const TUNE = {
   grav: 900, maxFall: 420, jump: 292, jumpCut: 0.45, coyote: 0.08, buffer: 0.11,
   wallSlide: 70, wallJumpX: 175, wallJumpY: 270,
   dash: 1200, dashEnd: 240, dashT: 0.22, dashCd: 0.32, dJump: 345, flipT: 0.45, airJumps: 1,
-  hookSpeed: 1300, hookMax: 230, hookMin: 18, reel: 190, pump: 760, ropeJump: 200,
+  hookSpeed: 1500, hookMax: 320, hookMin: 18, reel: 190, pump: 760, ropeJump: 200,
   ropeSnap: 0.82, snapReel: 320, swingGrav: 1.2, swingMax: 560, ropeKeep: 0.92, ropeFling: 1.12,
-  zip: 1050, zipCd: 0.12, zipKeep: 0.35, cling: 0.6, ceilHang: 0.35, leash: 300,
+  zip: 1050, zipCd: 0.12, zipKeep: 0.35, cling: 0.6, ceilHang: 0.35, leash: 400,
   atkLunge: 190, riseHop: 150,
   hp: 5, iframes: 1.0,
 };
@@ -450,7 +450,7 @@ export class Player {
     }
     else if (!this.onGround) target = this.wall && this.vy > 0 ? A.WALL : this.vy < -40 ? A.JUMP : A.FALL;
     else if (this.landT > 0) target = A.LAND;
-    else if (Math.abs(this.vx) > 12) { this.runPh += dt * Math.abs(this.vx) / 70; target = A.run(this.runPh); }
+    else if (Math.abs(this.vx) > 12) { this.runPh += dt * Math.max(Math.abs(this.vx), 110) / 70; target = A.run(this.runPh); }   // 막 출발할 때도 걷지 않고 달리는 발놀림
     else { target = A.idle(this.t); idle = true; }
     this.idleT = idle ? this.idleT + dt : 0;   // 가만히 선 시간 (가면 증기)
     this.throwT = Math.max(0, this.throwT - dt);

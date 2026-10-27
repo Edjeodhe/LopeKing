@@ -85,7 +85,9 @@ function drawRingHalf(ctx, R, front) {
 // 각도: 0 = 앞, π/2 = 가까운 쪽(아래, 몸 앞), π = 몸 뒤, -π/2 = 먼 쪽(위, 몸 뒤). 굵기(th)는 화면에서 고르게(타원 법선 방향),
 // 머리 쪽이 두껍고 꼬리로 갈수록 가늘며, 바깥 가장자리(칼끝 쪽)가 희고 뜨거움. 그림 이펙트와 달리 잘리거나 얇아지지 않음
 export function sweepArc(o) { fx.arcs.push({ t: 0, life: 0.24, dur: 0.07, th: 8, tilt: 0, f: 1, x: 0, y: 0, cols: SMEAR.cols, ...o }); }
+// vert = 화면에 세운 원(올려 베기): 앞뒤로 나누지 않고 전부 몸 앞에
 function drawArc(ctx, A, front) {
+  if (A.vert && !front) return;
   const k = A.t / A.life, span = A.a1 - A.a0;
   const head = Math.min(1, A.t / A.dur);
   const tail = Math.max(0, Math.max((A.t - A.dur * 0.6) / (A.life - A.dur * 0.6), head - 1.7 * Math.PI / Math.abs(span)));   // 띠는 길어야 한 바퀴 조금 못 되게
@@ -100,7 +102,7 @@ function drawArc(ctx, A, front) {
     const nx = lx / A.rx, ny = ly / A.ry, rn = Math.hypot(nx, ny);
     if (rn > 1.02 || rn < 0.5) continue;
     const a = Math.atan2(ny, nx), ca = Math.cos(a), sa = Math.sin(a);
-    if ((sa >= 0) !== front) continue;
+    if (!A.vert && (sa >= 0) !== front) continue;
     const d = (1 - rn) / Math.hypot(ca / A.rx, sa / A.ry);   // 바깥 가장자리에서 안쪽으로 몇 px
     if (d < -0.3 || d > thin) continue;
     // 이 각도가 띠의 어디쯤인지 (한 바퀴 넘게 돌면 여러 번 지나므로 머리에 가장 가까운 것)

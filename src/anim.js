@@ -4,8 +4,10 @@ import { ZERO, lerpPose, CAPE_SEGS } from './rig.js';
 
 export const P = o => ({ ...ZERO, ...o });
 
-// 대기: 칼을 몸 앞 낮게 들고 무릎을 살짝 굽힌 자세 (꼿꼿하면 허수아비 같음)
-export const IDLE = P({ torso: 8, head: -4, nU: 18, nF: 52, sw: 34, fU: -12, fF: 34, nT: 16, nS: -16, fT: -14, fS: -4, y: 0.5 });
+// 대기: 낮은 겨눔 자세(와키가마에) — 다리를 넓게 벌려 앞무릎을 굽히고 몸을 숙인 채, 칼은 허리춤에서 칼끝을 뒤·아래로 눕혀 숨기고
+// 빈손은 주먹을 앞에 세워 막음. 고개는 들어 앞을 노려봄. (칼 세상 각도 = nU + nF + sw - torso, 뼈 기준 0 아래·-90 뒤)
+// 몸통만 숙이면 큰 머리·엉덩이에 묻혀 안 보여서 몸 전체(rot)도 앞으로 조금 기울임
+export const IDLE = P({ rot: -7, torso: 20, head: -18, nU: 30, nF: 42, sw: -124, fU: 40, fF: 66, nT: 54, nS: -76, fT: -44, fS: -10, y: 5 });
 
 // 대기 숨쉬기 (약 3초 주기)
 export function idle(t) {
@@ -15,22 +17,23 @@ export function idle(t) {
   return { ...IDLE, br: q, y: IDLE.y - q * 0.4, torso: IDLE.torso - q, nU: IDLE.nU + q * 2, fU: IDLE.fU + q * 2, sw: IDLE.sw + q };
 }
 
-// 달리기: 상체 숙이고 칼은 몸 뒤로 낮게 끌고, 디딜 때 몸이 툭 떨어졌다 차오름. 8장
+// 달리기 (닌자 달리기): 상체를 45° 가까이 숙이고 고개는 들어 앞을 봄, 두 팔은 뒤로 곧게 뻗고 칼은 등 뒤로 수평에 가깝게 끎.
+// 보폭이 크고 낮게, 디딜 때 몸이 툭 떨어졌다 차오름. 8장
 export const RUN_FRAMES = 8;
 export function run(p) {
   p = Math.floor((((p % 1) + 1) % 1) * RUN_FRAMES) / RUN_FRAMES;
   const s = Math.sin(p * Math.PI * 2), c = Math.cos(p * Math.PI * 2);
   const leg = q => {   // 한 다리: 허벅지 앞뒤 + 뒤로 찰 때 무릎 굽힘
     const a = Math.sin(q * Math.PI * 2), b = Math.cos(q * Math.PI * 2);
-    return { T: 38 * a - 4, S: -12 - 46 * Math.max(0, -b) - 18 * Math.max(0, a) };
+    return { T: 50 * a - 4, S: -14 - 62 * Math.max(0, -b) - 22 * Math.max(0, a) };   // 큰 보폭, 뒤로 찰 때 발이 엉덩이까지
   };
   const n = leg(p), f = leg(p + 0.5);
-  const bob = Math.abs(c) < 0.5 ? 1.2 : 0;
+  const bob = Math.abs(c) < 0.5 ? 1.5 : 0;
   return P({
-    torso: 20, head: -12, y: bob - 0.5,
-    nU: -38 + 8 * s, nF: 30, sw: -70,           // 칼 든 팔은 뒤로, 칼은 뒤쪽 아래로 끔
-    fU: 32 * s + 10, fF: 50 - 10 * s,              // 빈손은 다리와 반대로 흔듦
-    nT: n.T, nS: n.S, fT: f.T, fS: f.S,
+    rot: -22, torso: 26, head: -30, y: bob + 0.5,   // 몸 전체를 앞으로 눕혀야 숙인 게 보임 (몸통만 숙이면 머리·엉덩이에 묻힘)
+    nU: -76 + 5 * s, nF: 8, sw: 2,              // 칼 든 팔은 뒤로 곧게, 칼은 등 뒤로 수평에 가깝게
+    fU: -72 - 5 * s, fF: 12,                     // 빈손도 뒤로 곧게 (흔들지 않음)
+    nT: n.T + 6, nS: n.S, fT: f.T + 6, fS: f.S,
   });
 }
 
@@ -195,13 +198,14 @@ export { lerpPose };
 export function newCape() { return { a: Array(CAPE_SEGS).fill(0), w: Array(CAPE_SEGS).fill(0), t: Math.random() * 10 }; }
 export function stepCape(cape, vx, vy, facing, dt) {
   cape.t += dt;
-  const G = 260, K = 2.1;   // 바람 세기: 달리면(125px/s) 45° 남짓, 대시·로프 스윙이면 거의 수평으로 날림
+  const G = 260, K = 2.8;   // 바람 세기: 달리면(125px/s) 55° 남짓, 대시·로프 스윙이면 수평으로 날림
   const fx = -vx * K, fy = G - vy * K * 0.3;   // 떨어질 때 너무 크게 들리면 머리 위로 깃발처럼 솟음
   // 세상 각도(화면: 아래 0, 오른쪽 +) → 뼈 기준(보는 쪽 +)
   let target = Math.atan2(fx, fy) * 180 / Math.PI * facing;
   const speed = Math.hypot(vx, vy);
   for (let i = 0; i < cape.a.length; i++) {
-    const flutter = Math.sin(cape.t * (11 + i * 3) + i * 1.7) * Math.min(14, speed * 0.05) * (0.5 + i * 0.5);
+    // 펄럭임: 움직일수록 크고 빠르게, 가만히 있어도 밤바람에 끝자락이 살랑 (뒤 마디일수록 크게)
+    const flutter = Math.sin(cape.t * (11 + i * 3) + i * 1.7) * Math.min(22, 3 + speed * 0.08) * (0.5 + i * 0.5);
     const want = (i === 0 ? target * 0.75 : cape.a[i - 1] + (target - cape.a[i - 1]) * 0.6) + flutter;
     const k = 120 - i * 25, damp = 10 - i * 1.5;
     cape.w[i] += ((want - cape.a[i]) * k - cape.w[i] * damp) * dt;
