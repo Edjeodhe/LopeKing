@@ -17,7 +17,7 @@ export const TUNE = {
   wallSlide: 70, wallJumpX: 175, wallJumpY: 270,
   dash: 1200, dashEnd: 240, dashT: 0.22, dashCd: 0.32, dJump: 345, flipT: 0.45, airJumps: 1,
   hookSpeed: 1500, hookMax: 320, hookMin: 18, reel: 190, pump: 760, ropeJump: 200,
-  ropeSnap: 0.82, snapReel: 320, swingGrav: 1.2, swingMax: 560, ropeKeep: 0.92, ropeFling: 1.12,
+  swingLong: 140, swingShort: 56, swingClear: 26, autoReel: 520, swingGrav: 1.2, swingMax: 560, ropeKeep: 0.92, ropeFling: 1.12,
   zip: 1050, zipCd: 0.12, zipKeep: 0.35, cling: 0.6, ceilHang: 0.35, leash: 400,
   atkLunge: 190, riseHop: 150,
   hp: 5, iframes: 1.0,
@@ -280,7 +280,7 @@ export class Player {
         if (r.state === 'stuck') {
           shake(1);
           // 누른 채 꽂히면 실이 팽팽 → 스윙 (적에게 꽂혔으면 스윙 없음)
-          if (this.ropeHeld && !r.target) this.attachRope(r, ox, oy);
+          if (this.ropeHeld && !r.target) this.attachRope(r, ox, oy, G);
         }
         return;
       }
@@ -307,7 +307,7 @@ export class Player {
     // 매달림 (산나비식): 걸린 직전엔 목표 길이까지 빠르게 감겨 몸이 호를 그리며 끌려 들어감. W/S 로 감고 풀면 목표 길이가 바뀜
     if (held('up')) r.goal = Math.max(TUNE.hookMin, Math.min(r.goal, r.len) - TUNE.reel * dt);
     if (held('down')) r.goal = Math.min(TUNE.hookMax, Math.max(r.goal, r.len) + TUNE.reel * dt);
-    if (r.len > r.goal) r.len = Math.max(r.goal, r.len - (held('up') ? TUNE.reel : TUNE.snapReel) * dt);
+    if (r.len > r.goal) r.len = Math.max(r.goal, r.len - (held('up') ? TUNE.reel : TUNE.autoReel) * dt);
     else if (r.len < r.goal) r.len = Math.min(r.goal, r.len + TUNE.reel * dt);
     // A/D 흔들기: 접선 방향 힘. 아래쪽(진자 바닥)일수록 세고, 지금 흔들리는 쪽과 반대로 누르면 브레이크(약하게)
     if (dir && d >= r.len - 2) {
@@ -324,11 +324,27 @@ export class Player {
     // 실이 벽에 가려지면 팽팽함만 풀림 (쿠나이는 꽂힌 채)
     if (G.world.ray(this.cx, this.cy, -dx, -dy, d - 4, false)) r.tether = false;
   }
-  // 실이 팽팽해짐: 길이 = 지금 거리, 목표 길이 = 조금 짧게(고리가 위에 있을 때) → 걸리자마자 호를 그리며 끌려 올라감
-  attachRope(r, ox, oy) {
+  // 실이 팽팽해짐: 길이 = 지금 거리에서 시작, 목표 길이 = 자동 길이(fitRopeLen) → 길면 빠르게 감겨 호를 그리며 끌려 올라가고, 짧으면 자연스럽게 풀림
+  attachRope(r, ox, oy, G) {
     const d = Math.max(TUNE.hookMin, Math.hypot(r.x - ox, r.y - oy));
     r.tether = true; r.len = d;
-    r.goal = r.y < oy ? Math.max(TUNE.hookMin, d * TUNE.ropeSnap) : d;
+    r.goal = G ? this.fitRopeLen(G, r, d, oy) : d;
+  }
+  // 자동 길이 (산나비식 — 콤므의 게임연구소 영상 분석): 어떻게 던졌든 '기분 좋게 스윙할 수 있는 길이'로 맞춤.
+  // 너무 길게 던졌으면 스윙하기 좋은 최대 길이(swingLong)로 줄이고, 너무 짧으면 최소 길이(swingShort)까지 늘림.
+  // 화면의 지형도 봄: 고리 아래로 그리는 진자 호(아래·양옆 30°·50°)가 땅·벽에 닿으면 그 앞(몸 반 높이 swingClear)까지만.
+  // 고리가 몸보다 아래·옆이면 스윙이 아니니 거리 그대로. W/S 로 감고 푸는 건 그대로 덮어씀(선택)
+  fitRopeLen(G, r, d, oy = this.cy) {
+    if (r.y > oy - 8) return d;
+    let L = Math.max(TUNE.swingShort, Math.min(TUNE.swingLong, d));
+    const sx0 = r.x + (r.nx || 0) * 3, sy0 = r.y + (r.ny || 0) * 3 + 1;   // 꽂힌 면에서 살짝 떨어진 자리에서 훑음
+    for (const a of [0, -0.52, 0.52, -0.87, 0.87]) {
+      if (r.nx && Math.sign(Math.sin(a)) === -Math.sign(r.nx)) continue;   // 벽에 꽂혔으면 그 벽 쪽 호는 안 봄 (벽에 막혀 그쪽으론 못 감)
+      const hit = G.world.ray(sx0, sy0, Math.sin(a), Math.cos(a), L + TUNE.swingClear, false);
+      if (hit && hit.d > 4) L = Math.min(L, hit.d - TUNE.swingClear);
+    }
+    // 비좁은 곳(바로 아래가 턱)이라도 최소 스윙 길이(던진 거리가 더 짧으면 그만큼)는 남김 — 고리 밑에 몸이 달라붙지 않게
+    return Math.max(TUNE.hookMin, L, Math.min(d, TUNE.swingShort));
   }
   // 실을 놓음: 스윙 탄력을 살려 조금 더 멀리 던져짐 (산나비식 놓기)
   releaseRope() {
