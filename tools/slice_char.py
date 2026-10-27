@@ -5,6 +5,7 @@
 
 사용: python tools/slice_char.py art/<id> [--keep-joints]
   --keep-joints : rig.json 에 이미 있는 관절 값(리그 편집기에서 맞춘 것)은 건드리지 않고 그림만 다시 자름
+  --margin=N    : 칸 둘레 여유 px (기본 64). 그림이 옆 칸까지 크게 넘으면(가면 뿔·코 등) 키움
 출력: parts/<부위>.png · weapon_cut.png · death/death_<n>.png · full_side_key.png · rig.json · out/<id>_slice.png (확인용)
 """
 import json
@@ -127,6 +128,7 @@ def save(img, path):
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     keep = '--keep-joints' in sys.argv
+    margin = next((int(a.split('=')[1]) for a in sys.argv if a.startswith('--margin=')), MARGIN)
     root = args[0] if args else 'art/assassin'
     cid = os.path.basename(root.rstrip('/'))
     rig_path = os.path.join(root, 'rig.json')
@@ -141,7 +143,7 @@ def main():
 
     # 부위
     sheet = key_magenta(os.path.join(root, 'parts_side.png'))
-    parts, cell = slice_grid(sheet, *PARTS_GRID, MARGIN)
+    parts, cell = slice_grid(sheet, *PARTS_GRID, margin)
     rig = {'cell': cell, 'scale': old.get('scale', scale), 'cloak': True, 'parts': {}}
     for n, img in parts.items():
         save(img, os.path.join(root, 'parts', n + '.png'))

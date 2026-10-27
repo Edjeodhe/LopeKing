@@ -62,9 +62,9 @@ export function hang(ang, swing, reel) {
 // dir: 1 = 위에서 아래로 내리침, -1 = 아래에서 위로 올려 벰 (콤보 번갈아)
 export const SLASH = { wind: 0.05, act: 0.07, rec: 0.16 };
 export const ATTACK_FPS = 30;
-export function slash(t, aim, dir = 1) {
+export function slash(t, aim, dir = 1, m = SLASH) {
   t = Math.floor(t * ATTACK_FPS) / ATTACK_FPS;
-  const { wind, act, rec } = SLASH;
+  const { wind, act, rec } = m;
   const from = aim + dir * 115, to = aim - dir * 95;
   const lean = Math.max(-30, Math.min(40, (aim - 90) * -0.35 + 18));
   const body = P({ torso: lean, head: -lean * 0.5, fU: -30, fF: 50, nT: 40, nS: -40, fT: -30, fS: -10, y: 2 });
@@ -80,12 +80,13 @@ export const slashLen = () => SLASH.wind + SLASH.act + SLASH.rec;
 
 // ---------- 콤보 4타 (가로 베기 위주) ----------
 // 1 가로 베기: 칼을 눕혀 몸 뒤 → 가까운 쪽(카메라) → 앞으로 휩쓺 · 2 역방향: 앞 → 가까운 쪽 → 뒤로 되돌림
-// 3 올려 베기 = slash(dir -1) · 4 회전 마무리: 앞으로 내디디며 한 바퀴 (반 바퀴쯤 등이 보임 = turn)
+// 3 올려 베기 = slash(dir -1) 팔 + 깊이 웅크렸다 솟는 몸 · 4 회전 마무리: 앞으로 내디디며 한 바퀴 (반 바퀴쯤 등이 보임 = turn)
+// 1~3타는 몸을 감았다(wind) 크게 내디디며 풀고(act) 버티는(rec) 세 열쇠 자세(BODY)를 이어 액션이 큼직하게 보이게.
 // 판정·이펙트는 wind ~ wind+act 동안 (main.js stepCombat). dmg = 피해, cd = 다음 타를 받기까지 (rec 끝물은 다음 타로 끊음)
 export const COMBO = [
-  { name: 'sweep', wind: 0.06, act: 0.08, rec: 0.16, dmg: 1 },
-  { name: 'sweepBack', wind: 0.04, act: 0.08, rec: 0.16, dmg: 1 },
-  { name: 'rise', ...SLASH, dmg: 1 },
+  { name: 'sweep', wind: 0.07, act: 0.07, rec: 0.18, dmg: 1 },
+  { name: 'sweepBack', wind: 0.05, act: 0.07, rec: 0.18, dmg: 1 },
+  { name: 'rise', wind: 0.07, act: 0.08, rec: 0.18, dmg: 1 },
   { name: 'spin', wind: 0.08, act: 0.2, rec: 0.24, dmg: 2 },
 ];
 export const COMBO_WINDOW = 0.35;   // 공격이 끝난 뒤 이 안에 다시 누르면 다음 타
@@ -114,16 +115,47 @@ function phiAt(m, t, a0, a1, a2, a3) {
   if (t < m.wind + m.act) return a1 + (a2 - a1) * ease((t - m.wind) / m.act);
   return a2 + (a3 - a2) * Math.min(1, (t - m.wind - m.act) / m.rec);
 }
-const SWEEP_BODY = P({ torso: 14, head: -8, fU: -40, fF: 40, nT: 46, nS: -50, fT: -34, fS: -8, y: 2.5 });
+// 몸 열쇠 자세 [감기(wind 끝), 풀기(act 끝), 버팀(rec 끝)] — 팔·칼은 따로 (flat · slash)
+const BODY = {
+  // 가로: 상체를 뒤로 감고 앞발을 들었다가 → 크게 내디디며 상체를 앞으로 던짐
+  sweep: [
+    P({ torso: -8, head: 4, fU: 55, fF: 40, nT: 26, nS: -50, fT: -6, fS: -34, y: 3 }),
+    P({ torso: 32, head: -20, fU: -55, fF: 30, nT: 74, nS: -74, fT: -54, fS: -6, y: 5 }),
+    P({ torso: 24, head: -14, fU: -45, fF: 40, nT: 62, nS: -66, fT: -48, fS: -10, y: 4 }),
+  ],
+  // 역방향: 앞으로 던진 몸을 그대로 비틀어 되돌리며 뒷발로 버팀
+  sweepBack: [
+    P({ torso: 36, head: -18, fU: -65, fF: 30, nT: 68, nS: -72, fT: -50, fS: -8, y: 5 }),
+    P({ torso: 4, head: -2, fU: 65, fF: 50, nT: 34, nS: -34, fT: -62, fS: -22, y: 3 }),
+    P({ torso: 12, head: -8, fU: 45, fF: 50, nT: 40, nS: -42, fT: -52, fS: -16, y: 3 }),
+  ],
+  // 올려 베기: 깊이 웅크렸다가 몸을 펴며 솟구침 (땅에선 살짝 뜀 — player.js)
+  rise: [
+    P({ torso: 40, head: -22, fU: -40, fF: 40, nT: 84, nS: -112, fT: -40, fS: -54, y: 7 }),
+    P({ torso: -16, head: 12, fU: -85, fF: 20, nT: 34, nS: -24, fT: -18, fS: -12, y: -2 }),
+    P({ torso: -6, head: 4, fU: -60, fF: 30, nT: 42, nS: -52, fT: -24, fS: -22, y: 0 }),
+  ],
+};
+// 시간 t 의 몸: 대기 자세 → 감기(wind, 빠르게) → 풀기(act, 튕기듯) → 버팀(rec 앞 절반) 그대로
+function bodyAt(keys, m, t) {
+  if (t < m.wind) return lerpPose(IDLE, keys[0], ease(t / m.wind));
+  if (t < m.wind + m.act) return lerpPose(keys[0], keys[1], ease((t - m.wind) / m.act));
+  return lerpPose(keys[1], keys[2], Math.min(1, (t - m.wind - m.act) / (m.rec * 0.5)));
+}
 export function sweep(t, aim) {
   t = Math.floor(t * ATTACK_FPS) / ATTACK_FPS;
   const m = COMBO[0];
-  return flat(phiAt(m, t, 150, 178, -40, -55), aim, { ...SWEEP_BODY, torso: SWEEP_BODY.torso + (t < m.wind ? -10 : 6) });
+  return flat(phiAt(m, t, 150, 178, -40, -55), aim, bodyAt(BODY.sweep, m, t));
 }
 export function sweepBack(t, aim) {
   t = Math.floor(t * ATTACK_FPS) / ATTACK_FPS;
   const m = COMBO[1];
-  return flat(phiAt(m, t, -45, -60, 175, 185), aim, { ...SWEEP_BODY, torso: SWEEP_BODY.torso + (t < m.wind ? 10 : -4), fU: 30, fF: 60, nT: 30, nS: -36, fT: -20 });
+  return flat(phiAt(m, t, -45, -60, 175, 185), aim, bodyAt(BODY.sweepBack, m, t));
+}
+export function rise(t, aim) {
+  t = Math.floor(t * ATTACK_FPS) / ATTACK_FPS;
+  const m = COMBO[2], s = slash(t, aim, -1, m);
+  return { ...bodyAt(BODY.rise, m, t), nU: s.nU, nF: s.nF, sw: s.sw };
 }
 // 회전 마무리: 웅크렸다가 칼끝이 몸 뒤에서 한 바퀴 반 돌아 앞에서 멈춤, 몸은 가운데쯤 돌아섬(turn)
 export function spin(t, aim) {
@@ -138,7 +170,7 @@ export function spin(t, aim) {
 }
 // 콤보 i 번째 타의 자세
 export function comboPose(i, t, aim) {
-  return i === 0 ? sweep(t, aim) : i === 1 ? sweepBack(t, aim) : i === 2 ? slash(t, aim, -1) : spin(t, aim);
+  return i === 0 ? sweep(t, aim) : i === 1 ? sweepBack(t, aim) : i === 2 ? rise(t, aim) : spin(t, aim);
 }
 
 // 처형(로프로 끌려가 베기) 준비 자세: 칼을 몸 뒤로 크게 젖힘

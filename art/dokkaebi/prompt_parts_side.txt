@@ -1,0 +1,25 @@
+Use your built-in image generation tool to create ONE image and save it as PNG to: parts_side.png (in the current working directory). Do not write code to draw it; it must be a generated illustration. After saving, reply only with the file name.
+
+Image spec:
+- 1536x1024, an exact grid of 4 columns x 2 rows (each cell 384x512).
+- Solid flat MAGENTA background (#FF00FF) everywhere behind the drawings. No text, no letters, no numbers, no labels, no grid lines, no frames, no cast shadows, no ground.
+- Each drawing sits centered in its own cell with a clear magenta margin; drawings must NOT touch or cross cell borders.
+- Cut-out body parts for a 2D paper-doll (cutout) rig. Arms and legs hang perfectly straight DOWN and vertical, with a flat clean cut at each joint (rounded joint caps so rotation hides seams).
+- The attached reference image shows THIS EXACT CHARACTER. Keep the identical design, colors, proportions and scale.
+- CHARACTER: an original masked swordsman hero in his "DOKKAEBI MASK" form (original design, do NOT copy any existing character or skin). His whole face is hidden behind a fierce Korean DOKKAEBI (goblin-demon) MASK: glossy deep-CRIMSON lacquer, two short thick curved horns on the forehead, a heavy furrowed brow, narrow eye slits glowing red-orange, a wide snarling mouth with small GOLD fangs, thin gold trim lines along the mask edges. Long straight BLACK hair tied high at the back of the head, flowing backward in a thick tail. Outfit in the sleek "oni weapon skin" style of modern tactical shooters - GLOSSY BLACK LACQUER armor pieces with crimson cloth and thin GOLD trim - mixed with Joseon-era warrior clothing: a fitted black jacket with a crimson inner collar, layered black lacquer tassets with gold edges over dark trousers, a crimson waist sash tied with a white braided rope and tassel, crimson leg wraps, black boots with small gold toe caps. A separate tattered CRIMSON short cloak with a black lining hangs from the shoulders down to about the knees, with a ragged torn hem.
+- PROPORTIONS: stylized chibi-action "SD" proportions, about 3 heads tall: the head (with headgear) is BIG (about 33% of the full height), short sturdy body, SHORT legs (legs about 35% of the height), short limbs, a slightly oversized look like a modern pixel action game character (Sanabi / Katana Zero era). NOT cute, no big anime eyes.
+- RENDERING: flat CEL SHADING, every material exactly THREE flat tones (shadow, base, light) with hard edges, plus a thin cold moonlight rim light ON the upper-right edges of each shape (inside the shape, not a glow around it). NO outlines, NO black linework, NO gradients, NO texture noise, NO glow halos, NO tiny details. Big simple readable shapes with a few bold cloth folds: it will be shrunk to a 40-pixel-tall sprite.
+- PALETTE: glossy black lacquer (with cool highlights), deep crimson red, small gold trim, ivory-white rope, and ONE glow accent: red-orange glowing mask eyes.
+- Scale: as if the whole figure is 1150 px tall from boot sole to the top of the head/headgear (head with headgear about 360 px tall and at most 360 px wide, thigh about 190 px long, shin with boot about 230 px long).
+Every part is a pure SIDE VIEW, FACING RIGHT.
+Cells, left to right, top to bottom:
+Row 1: 1. HEAD  2. TORSO  3. HIPS  4. CAPE
+Row 2: 5. UPPER ARM  6. FOREARM + HAND  7. THIGH  8. SHIN + BOOT
+ HEAD: big head in side view wearing the crimson dokkaebi mask over the whole face (two short horns, furrowed brow, glowing eye slit, snarling mouth with gold fangs, gold trim), long black hair tied high and flowing back to the LEFT in a thick tail, short neck with a flat cut at the bottom. Horns and hair must fit inside the cell.
+ TORSO: chest and back of the fitted black jacket with the crimson inner collar and thin gold trim, NO cloak (separate part), NO arms, NO shoulder plate. Flat cut at the neck and at the waist.
+ HIPS: crimson waist sash tied with a white braided rope and a short hanging tassel, layered black lacquer tassets with gold edges hanging to mid-thigh, top of dark trousers. Flat cut on top.
+ CAPE: ONLY the tattered crimson short cloak with black lining, seen from the side, hanging straight DOWN from a narrow fastened top (the shoulder mount point at the top center), widening toward a ragged torn hem. About 440 px long. No body inside it.
+ UPPER ARM: black sleeve with a rounded glossy black lacquer shoulder plate with a gold rim and a small crimson cord at the top, flat cut at the elbow.
+ FOREARM + HAND: forearm wrapped in crimson cloth with a black lacquer bracer with gold trim, a small mechanical rope-launcher on the wrist, closed fist in a black glove.
+ THIGH: dark charcoal trousers, rounded hip cap on top, flat cut at the knee.
+ SHIN + BOOT: crimson leg wraps over dark trousers, black boot with a small gold toe cap, toe pointing RIGHT, flat sole at the bottom.

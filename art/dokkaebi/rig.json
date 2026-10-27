@@ -1,0 +1,226 @@
+{
+ "cell": [
+  640,
+  768
+ ],
+ "scale": 0.03096,
+ "cloak": true,
+ "parts": {
+  "head": {
+   "pivot": [
+    432,
+    588
+   ],
+   "src": "parts/head.png",
+   "size": [
+    1.42,
+    1.25
+   ]
+  },
+  "torso": {
+   "pivot": [
+    420,
+    572
+   ],
+   "joints": {
+    "neck": [
+     398,
+     312
+    ],
+    "shoulderN": [
+     352,
+     360
+    ],
+    "shoulderF": [
+     344,
+     360
+    ],
+    "cape": [
+     298,
+     300
+    ]
+   },
+   "src": "parts/torso.png",
+   "size": [
+    0.93,
+    1.18
+   ]
+  },
+  "hips": {
+   "pivot": [
+    302,
+    470
+   ],
+   "joints": {
+    "waist": [
+     300,
+     292
+    ],
+    "hipN": [
+     306,
+     470
+    ],
+    "hipF": [
+     292,
+     470
+    ]
+   },
+   "src": "parts/hips.png",
+   "size": [
+    0.85,
+    1.15
+   ]
+  },
+  "cape": {
+   "pivot": [
+    322,
+    188
+   ],
+   "src": "parts/cape.png",
+   "size": [
+    1.0,
+    1.15
+   ]
+  },
+  "upperArm": {
+   "pivot": [
+    360,
+    248
+   ],
+   "joints": {
+    "elbow": [
+     340,
+     492
+    ]
+   },
+   "src": "parts/upperArm.png",
+   "size": [
+    0.88,
+    1.2
+   ]
+  },
+  "foreArm": {
+   "pivot": [
+    345,
+    256
+   ],
+   "joints": {
+    "hand": [
+     347.1,
+     503.9
+    ]
+   },
+   "src": "parts/foreArm.png",
+   "size": [
+    0.88,
+    1.2
+   ]
+  },
+  "thigh": {
+   "pivot": [
+    304,
+    226
+   ],
+   "joints": {
+    "knee": [
+     300,
+     512
+    ]
+   },
+   "src": "parts/thigh.png",
+   "size": [
+    0.8,
+    1.18
+   ]
+  },
+  "shin": {
+   "pivot": [
+    285,
+    248
+   ],
+   "joints": {
+    "sole": [
+     281.3,
+     558
+    ]
+   },
+   "src": "parts/shin.png",
+   "size": [
+    0.8,
+    1.12
+   ]
+  }
+ },
+ "weapon": {
+  "src": "weapon_cut.png",
+  "cell": [
+   211,
+   1393
+  ],
+  "grip": [
+   84.2,
+   192.9
+  ],
+  "rot": 0,
+  "tip": [
+   52,
+   1377
+  ],
+  "size": 0.48
+ },
+ "death": {
+  "frames": [
+   {
+    "src": "death/death_0.png",
+    "pivot": [
+     407.6,
+     465.0
+    ],
+    "w": 538,
+    "h": 473
+   },
+   {
+    "src": "death/death_1.png",
+    "pivot": [
+     324.6,
+     417.0
+    ],
+    "w": 451,
+    "h": 425
+   },
+   {
+    "src": "death/death_2.png",
+    "pivot": [
+     341.0,
+     387.0
+    ],
+    "w": 682,
+    "h": 395
+   },
+   {
+    "src": "death/death_3.png",
+    "pivot": [
+     360.5,
+     199.0
+    ],
+    "w": 721,
+    "h": 207
+   }
+  ],
+  "size": 0.07706,
+  "times": [
+   0,
+   0.12,
+   0.34,
+   0.6
+  ]
+ },
+ "ref": {
+  "src": "full_side_key.png",
+  "foot": [
+   563.9,
+   1467
+  ],
+  "k": 1
+ }
+}

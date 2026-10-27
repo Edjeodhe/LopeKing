@@ -45,15 +45,15 @@ export function pixelFx(im, ramp, w, dither = false, o = null) {
   x.drawImage(cur, -cw / 2, -ch * py);
   x.setTransform(1, 0, 0, 1, 0, 0);
   const d = x.getImageData(0, 0, W, H), p = d.data, R = ramp.map(hex);
-  // 1) 밝기 → 4단 (-1 = 비움). 옅은 번짐은 버리고 경계만 체크무늬로
+  // 1) 밝기 → 4단 (-1 = 비움). 옅은 번짐은 버림. 경계는 문턱 하나로 딱 끊음 (체크무늬 경계는 확대하면 점으로 보임)
   const tone = new Int8Array(W * H).fill(-1);
   for (let i = 0, n = 0; i < p.length; i += 4, n++) {
     const al = p[i + 3] / 255 * Math.max(p[i], p[i + 1], p[i + 2]) / 255;
     const xx = n % W, yy = (n / W) | 0;
-    if (al < 0.32 || (al < 0.42 && (xx + yy) % 2) || (dither && (xx + yy) % 2)) continue;
+    if (al < 0.37 || (dither && (xx + yy) % 2)) continue;
     tone[n] = al < 0.52 ? 0 : al < 0.74 ? 1 : al < 0.9 ? 2 : 3;
   }
-  // 2) 잔부스러기(8방향으로 이어진 점 3개 이하, 흰 심 없는 조각)는 줄이면서 생긴 잡티 → 지움
+  // 2) 잔부스러기(8방향으로 이어진 점 4개 이하, 흰 심 없는 조각)는 줄이면서 생긴 잡티 → 지움
   const at = (xx, yy) => (xx < 0 || yy < 0 || xx >= W || yy >= H ? -1 : tone[yy * W + xx]);
   if (!dither) {
     const seen = new Uint8Array(W * H), stack = [], part = [];
@@ -69,7 +69,7 @@ export function pixelFx(im, ramp, w, dither = false, o = null) {
           if ((dx || dy) && X >= 0 && Y >= 0 && X < W && Y < H && tone[m] >= 0 && !seen[m]) { seen[m] = 1; stack.push(m); }
         }
       }
-      if (part.length <= 3 && !hot) for (const n of part) tone[n] = -1;
+      if (part.length <= 4 && !hot) for (const n of part) tone[n] = -1;
     }
   }
   // 3) 밝은 덩어리 바깥 1px 어두운 테두리 (배경에서 떨어져 보이게)

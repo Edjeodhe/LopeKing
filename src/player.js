@@ -15,10 +15,11 @@ export const TUNE = {
   run: 128, accG: 1500, accA: 900, fric: 1800,
   grav: 900, maxFall: 420, jump: 292, jumpCut: 0.45, coyote: 0.08, buffer: 0.11,
   wallSlide: 70, wallJumpX: 175, wallJumpY: 270,
-  dash: 520, dashT: 0.2, dashCd: 0.32, dJump: 270, airJumps: 1,
-  hookSpeed: 1300, hookMax: 230, hookMin: 18, reel: 150, pump: 520, ropeJump: 200,
+  dash: 1200, dashEnd: 240, dashT: 0.22, dashCd: 0.32, dJump: 345, flipT: 0.45, airJumps: 1,
+  hookSpeed: 1300, hookMax: 230, hookMin: 18, reel: 190, pump: 760, ropeJump: 200,
+  ropeSnap: 0.82, snapReel: 320, swingGrav: 1.2, swingMax: 560, ropeKeep: 0.92, ropeFling: 1.12,
   zip: 1050, zipCd: 0.12, zipKeep: 0.35, cling: 0.6, ceilHang: 0.35, leash: 300,
-  atkLunge: 190,
+  atkLunge: 190, riseHop: 150,
   hp: 5, iframes: 1.0,
 };
 
@@ -38,6 +39,8 @@ export class Player {
     this.safe = { x, y };
     this.hurtT = 0;
     this.mouse = [x + 50, y - 20];
+    // 가면 폼: 가면마다 평타·기술이 달라지는 컨셉 (지금은 기본 폼 도깨비 하나). 도깨비 = 가만히 있으면 가면에서 증기 (steam.js)
+    this.mask = 'dokkaebi'; this.idleT = 0;
   }
   get cx() { return this.x; }
   get cy() { return this.y - 18; }    // 가슴 (로프·조준 기준)
@@ -84,7 +87,7 @@ export class Player {
       if (!r || r.state === 'back') this.throwKunai(G);
       else if (r.state === 'stuck') this.startZip(G);
     }
-    if (this.ropeRel) { this.ropeRel = false; if (this.rope?.tether) this.rope.tether = false; }
+    if (this.ropeRel) { this.ropeRel = false; this.releaseRope(); }
     if (this.rope) this.stepRope(dt, G, dir);
     const rope = this.rope;
 
@@ -129,12 +132,13 @@ export class Player {
     const holding = this.cling > 0 || this.ceil > 0;
     if (zipping || holding) { /* 돌진·매달림 중엔 이동 입력·중력 없음 */ }
     else if (this.dashT > 0) {
-      // 대시 중: 속도 고정, 중력 없음. 끝나면 탄력을 조금 남김 (위로 대시는 더 짧게 끊음)
+      // 대시 중: 처음에 확 튀어 나가 점점 느려짐 (dash → dashEnd, 감속 곡선) → 잔상 간격도 넓다가 촘촘해짐. 중력 없음
       this.dashT -= dt;
       const [ux, uy] = this.dashDir || [this.facing, 0];
-      this.vx = ux * TUNE.dash; this.vy = uy * TUNE.dash;
+      const k = 1 - Math.max(0, this.dashT) / TUNE.dashT, v = TUNE.dashEnd + (TUNE.dash - TUNE.dashEnd) * (1 - k) * (1 - k);
+      this.vx = ux * v; this.vy = uy * v;
       if (Math.random() < 0.7) speedLine(this.x - ux * 4, this.y - 6 - Math.random() * 20, -ux, -uy, 12);
-      if (this.dashT <= 0) { this.vx = ux * TUNE.dash * 0.45; this.vy = uy < 0 ? uy * TUNE.dash * 0.35 : uy * TUNE.dash * 0.5; }
+      if (this.dashT <= 0) { this.vx = ux * TUNE.dashEnd; this.vy = uy * TUNE.dashEnd * (uy < 0 ? 0.8 : 1); }   // 끝 속도는 탄력으로 남김
     } else {
       // 가로 이동
       const acc = this.onGround ? TUNE.accG : hooked ? 0 : TUNE.accA;
@@ -150,8 +154,8 @@ export class Player {
       if (dir && this.atkT < 0 && !hooked) this.facing = dir;
       // 중력
       const sliding = !this.onGround && this.wall && dir === this.wall && this.vy > 0 && !hooked;
-      this.vy += TUNE.grav * dt;
-      this.vy = Math.min(this.vy, sliding ? TUNE.wallSlide : TUNE.maxFall);
+      this.vy += TUNE.grav * (hooked ? TUNE.swingGrav : 1) * dt;   // 스윙 중엔 조금 무겁게 → 호가 또렷하고 빠름
+      this.vy = Math.min(this.vy, sliding ? TUNE.wallSlide : hooked ? TUNE.swingMax : TUNE.maxFall);   // 스윙은 낙하 속도 제한 없이
       if (sliding && Math.random() < 0.3) spark(this.x + this.wall * 5, this.y - 20, Math.PI / 2, 1, { cols: ['#8a86b0'], v: 20, g: 50, life: 0.2 });
     }
 
@@ -191,12 +195,13 @@ export class Player {
         // 더블 점프: 공중에서 한 번 더 (앞구르기 + 발밑 고리 + 잔상)
         this.airJump--; this.buf = 0;
         this.vy = -TUNE.dJump; if (dir) { this.vx = dir * Math.max(Math.abs(this.vx), TUNE.run); this.facing = dir; }
-        this.flipT = 0.3;
+        this.flipT = TUNE.flipT;
         G.onDoubleJump?.(this);
         G.sfx?.('djump');
       }
     }
-    if (this.jumpRelease) { this.jumpRelease = false; if (this.vy < 0 && !hooked && !zipping && this.dashT <= 0) this.vy *= TUNE.jumpCut; }
+    // 손을 떼면 낮게 끊는 건 첫 점프만 — 더블 점프(앞구르기 중)는 늘 끝까지 높이 뜀
+    if (this.jumpRelease) { this.jumpRelease = false; if (this.vy < 0 && !hooked && !zipping && this.dashT <= 0 && this.flipT <= 0) this.vy *= TUNE.jumpCut; }
 
     // ---- 움직이기 ----
     const wasGround = this.onGround, vy0 = this.vy, x0 = this.cx, y0 = this.cy;
@@ -237,11 +242,12 @@ export class Player {
     // 뼈 기준 조준각: 90 = 정면, 180 = 위, 0 = 아래
     this.aim = 90 - Math.atan2(dy, Math.abs(dx)) * 180 / Math.PI;
     // 앞으로 내딛는 베기 (공중에선 마우스 방향 그대로 — 카타나 제로식). 회전 마무리는 보는 쪽으로 크게 내디딤
+    // 땅: 타마다 내딛는 세기가 다름 (1타 가장 크게) · 올려 베기는 살짝 뜀
     if (this.combo === n - 1 && !exec) this.vx = this.facing * TUNE.atkLunge * (this.onGround ? 1.3 : 1);
-    else if (this.onGround) this.vx = dx * TUNE.atkLunge * 0.7;
+    else if (this.onGround) { this.vx = dx * TUNE.atkLunge * [1.05, 0.85, 0.6][this.combo]; if (this.combo === 2 && !exec) this.vy = -TUNE.riseHop; }
     else if (this.airAtk) { this.vx = dx * TUNE.atkLunge; this.vy = Math.min(this.vy, dy * TUNE.atkLunge * 0.8); if (dy < 0) this.airAtk = false; }
     // 처형은 칼이 지나가는 순간부터 시작 → 타격 멈춤 화면에 칼질·궤적이 찍혀 있게
-    if (exec) this.atkT = A.SLASH.wind + A.SLASH.act * 0.4;
+    if (exec) this.atkT = this.move.wind + this.move.act * 0.4;
     G.onAttack(this, exec);
   }
 
@@ -272,7 +278,7 @@ export class Player {
         if (r.state === 'stuck') {
           shake(1);
           // 누른 채 꽂히면 실이 팽팽 → 스윙 (적에게 꽂혔으면 스윙 없음)
-          if (this.ropeHeld && !r.target) { r.tether = true; r.len = Math.max(TUNE.hookMin, Math.hypot(r.x - ox, r.y - oy)); }
+          if (this.ropeHeld && !r.target) this.attachRope(r, ox, oy);
         }
         return;
       }
@@ -296,27 +302,52 @@ export class Player {
     const dx = this.cx - r.x, dy = this.cy - r.y, d = Math.hypot(dx, dy) || 1;
     // 너무 멀어지면(실이 안 팽팽할 때) 쿠나이가 빠져 돌아옴
     if (!r.tether) { if (d > TUNE.leash) { r.state = 'back'; r.target = null; } return; }
-    // 매달림: W/S 로 감고 풀기, A/D 로 흔들기(접선 방향 힘)
-    if (held('up')) r.len = Math.max(TUNE.hookMin, r.len - TUNE.reel * dt);
-    if (held('down')) r.len = Math.min(TUNE.hookMax, r.len + TUNE.reel * dt);
+    // 매달림 (산나비식): 걸린 직전엔 목표 길이까지 빠르게 감겨 몸이 호를 그리며 끌려 들어감. W/S 로 감고 풀면 목표 길이가 바뀜
+    if (held('up')) r.goal = Math.max(TUNE.hookMin, Math.min(r.goal, r.len) - TUNE.reel * dt);
+    if (held('down')) r.goal = Math.min(TUNE.hookMax, Math.max(r.goal, r.len) + TUNE.reel * dt);
+    if (r.len > r.goal) r.len = Math.max(r.goal, r.len - (held('up') ? TUNE.reel : TUNE.snapReel) * dt);
+    else if (r.len < r.goal) r.len = Math.min(r.goal, r.len + TUNE.reel * dt);
+    // A/D 흔들기: 접선 방향 힘. 아래쪽(진자 바닥)일수록 세고, 지금 흔들리는 쪽과 반대로 누르면 브레이크(약하게)
     if (dir && d >= r.len - 2) {
       let tx = -dy / d, ty = dx / d;
       if (tx * dir < 0) { tx = -tx; ty = -ty; }
-      this.vx += tx * TUNE.pump * dt; this.vy += ty * TUNE.pump * dt;
+      const low = Math.max(0, dy / d), along = this.vx * tx + this.vy * ty;
+      const f = TUNE.pump * (0.45 + 0.55 * low) * (along < -30 ? 0.6 : 1);
+      this.vx += tx * f * dt; this.vy += ty * f * dt;
       this.facing = dir;
     }
-    if (this.onGround && !dir && r.len > d) r.len = Math.max(TUNE.hookMin, d);
+    const sp = Math.hypot(this.vx, this.vy);
+    if (sp > TUNE.swingMax) { this.vx *= TUNE.swingMax / sp; this.vy *= TUNE.swingMax / sp; }
+    if (this.onGround && !dir && r.len > d) r.len = r.goal = Math.max(TUNE.hookMin, d);
     // 실이 벽에 가려지면 팽팽함만 풀림 (쿠나이는 꽂힌 채)
     if (G.world.ray(this.cx, this.cy, -dx, -dy, d - 4, false)) r.tether = false;
   }
-  // 로프 길이를 넘으면 원 위로 되돌리고 바깥으로 가는 속도를 없앰 → 진자
+  // 실이 팽팽해짐: 길이 = 지금 거리, 목표 길이 = 조금 짧게(고리가 위에 있을 때) → 걸리자마자 호를 그리며 끌려 올라감
+  attachRope(r, ox, oy) {
+    const d = Math.max(TUNE.hookMin, Math.hypot(r.x - ox, r.y - oy));
+    r.tether = true; r.len = d;
+    r.goal = r.y < oy ? Math.max(TUNE.hookMin, d * TUNE.ropeSnap) : d;
+  }
+  // 실을 놓음: 스윙 탄력을 살려 조금 더 멀리 던져짐 (산나비식 놓기)
+  releaseRope() {
+    const r = this.rope;
+    if (!r?.tether) return;
+    r.tether = false;
+    if (Math.hypot(this.vx, this.vy) > 140) { this.vx *= TUNE.ropeFling; this.vy = this.vy * TUNE.ropeFling - 60; }
+  }
+  // 로프 길이를 넘으면 원 위로 되돌리고 바깥으로 가는 속도를 없앰 → 진자.
+  // 막 팽팽해지는 순간(바깥으로 빠르게 가던 중)엔 속력을 버리지 않고 접선 방향으로 돌려 줌 → 끊김 없이 스윙으로 이어짐
   constrainRope(G) {
     const r = this.rope, dx = this.cx - r.x, dy = this.cy - r.y, d = Math.hypot(dx, dy);
     if (d <= r.len) return;
     const nx = dx / d, ny = dy / d;
     G.world.move(this, r.x + nx * r.len - this.cx, r.y + ny * r.len - this.cy);
     const vr = this.vx * nx + this.vy * ny;
-    if (vr > 0) { this.vx -= vr * nx; this.vy -= vr * ny; }
+    if (vr <= 0) return;
+    const sp = Math.hypot(this.vx, this.vy);
+    this.vx -= vr * nx; this.vy -= vr * ny;
+    const vt = Math.hypot(this.vx, this.vy);
+    if (vr > 60 && vt > 1) { const k = Math.max(vt, sp * TUNE.ropeKeep) / vt; this.vx *= k; this.vy *= k; }
   }
   // 꽂힌 쿠나이로 순간 돌진 (INARI 식): 아주 빠르게 몸을 던지며 지나가는 길의 적을 벰
   startZip(G) {
@@ -388,7 +419,7 @@ export class Player {
   // ---- 자세 고르기 (그리기 직전, 실제 프레임 dt) ----
   animate(dt) {
     if (this.dead) return;
-    let target;
+    let target, idle = false;
     const r = this.rope;
     if (this.hurtT > 0) target = A.HURT;
     else if (this.atkT >= 0) target = A.comboPose(this.combo, this.atkT, this.aim);
@@ -412,14 +443,16 @@ export class Player {
       const [ux, uy] = this.dashDir || [this.facing, 0];
       target = { ...A.DASH, rot: Math.abs(ux) < 0.2 ? (uy < 0 ? 30 : -40) : -Math.atan2(uy, Math.abs(ux)) * 180 / Math.PI * 0.6 };
     } else if (this.flipT > 0 && !this.onGround) {
-      // 더블 점프 앞구르기: 45도씩 끊어 돎 (도트 애니메이션처럼)
-      const k = 1 - this.flipT / 0.3;
-      target = { ...A.JUMP, nT: 90, nS: -120, fT: 70, fS: -110, torso: 30, rot: -(Math.round(k * 8) % 8) * 45 };   // 끝은 0도 (한 바퀴 다 돈 뒤 거꾸로 감기지 않게)
+      // 더블 점프 앞구르기: 확 감아 돌다 느려지며 펴짐 (감속 곡선, 30도씩 끊어 도트 결 유지). 처음엔 무릎을 바짝 당기고 끝물에 다리를 폄
+      const k = 1 - this.flipT / TUNE.flipT, e = 1 - (1 - k) ** 3, tuck = Math.max(0, 1 - k * 1.4);
+      target = { ...A.JUMP, nT: 50 + 50 * tuck, nS: -70 - 60 * tuck, fT: 20 + 55 * tuck, fS: -60 - 55 * tuck, torso: 10 + 25 * tuck, fU: 40 + 50 * tuck, nU: -20 + 40 * tuck,
+        rot: -(Math.round(e * 12) % 12) * 30 };   // 끝은 0도 (한 바퀴 다 돈 뒤 거꾸로 감기지 않게)
     }
     else if (!this.onGround) target = this.wall && this.vy > 0 ? A.WALL : this.vy < -40 ? A.JUMP : A.FALL;
     else if (this.landT > 0) target = A.LAND;
     else if (Math.abs(this.vx) > 12) { this.runPh += dt * Math.abs(this.vx) / 70; target = A.run(this.runPh); }
-    else target = A.idle(this.t);
+    else { target = A.idle(this.t); idle = true; }
+    this.idleT = idle ? this.idleT + dt : 0;   // 가만히 선 시간 (가면 증기)
     this.throwT = Math.max(0, this.throwT - dt);
     // 벽 타기·매달림은 벽 반대쪽을 봄
     this.drawFacing = target.turn ? -this.facing : this.cling > 0 ? (this.pole ? -this.clingSide : -this.clingDir) : !this.onGround && this.wall && this.vy > 0 && !r ? -this.wall : this.facing;

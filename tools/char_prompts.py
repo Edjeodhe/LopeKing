@@ -46,6 +46,45 @@ CHARS = {
                   'black-and-crimson diamond pattern, small dark pommel. Total length about 760 px. Blade edge faces RIGHT.',
         'death': True,
     },
+    # 도깨비 가면 폼 (주인공 기본 폼). 가면마다 평타·기술이 달라지는 컨셉 — 다른 가면 폼도 같은 뼈대로 art/<폼>/ 에 추가
+    # 디자인 방향: 발로란트 '도깨비(Oni)' 스킨 시리즈의 결 (광택 흑칠 + 진홍 + 금테, 빛나는 붉은 기운) — 직접 베끼지 않고 분위기만
+    'dokkaebi': {
+        'who': 'an original masked swordsman hero in his "DOKKAEBI MASK" form (original design, do NOT copy any existing character or skin). '
+               'His whole face is hidden behind a fierce Korean DOKKAEBI (goblin-demon) MASK: glossy deep-CRIMSON lacquer, two short thick '
+               'curved horns on the forehead, a heavy furrowed brow, narrow eye slits glowing red-orange, a wide snarling mouth with small '
+               'GOLD fangs, thin gold trim lines along the mask edges. Long straight BLACK hair tied high at the back of the head, flowing '
+               'backward in a thick tail. Outfit in the sleek "oni weapon skin" style of modern tactical shooters - GLOSSY BLACK LACQUER '
+               'armor pieces with crimson cloth and thin GOLD trim - mixed with Joseon-era warrior clothing: a fitted black jacket with a '
+               'crimson inner collar, layered black lacquer tassets with gold edges over dark trousers, a crimson waist sash tied with a '
+               'white braided rope and tassel, crimson leg wraps, black boots with small gold toe caps. A separate tattered CRIMSON short '
+               'cloak with a black lining hangs from the shoulders down to about the knees, with a ragged torn hem.',
+        'palette': 'glossy black lacquer (with cool highlights), deep crimson red, small gold trim, ivory-white rope, and ONE glow accent: '
+                   'red-orange glowing mask eyes.',
+        'parts': {
+            'HEAD': 'big head in side view wearing the crimson dokkaebi mask over the whole face (two short horns, furrowed brow, glowing '
+                    'eye slit, snarling mouth with gold fangs, gold trim), long black hair tied high and flowing back to the LEFT in a thick '
+                    'tail, short neck with a flat cut at the bottom. Horns and hair must fit inside the cell.',
+            'TORSO': 'chest and back of the fitted black jacket with the crimson inner collar and thin gold trim, NO cloak (separate part), '
+                     'NO arms, NO shoulder plate. Flat cut at the neck and at the waist.',
+            'HIPS': 'crimson waist sash tied with a white braided rope and a short hanging tassel, layered black lacquer tassets with gold '
+                    'edges hanging to mid-thigh, top of dark trousers. Flat cut on top.',
+            'CAPE': 'ONLY the tattered crimson short cloak with black lining, seen from the side, hanging straight DOWN from a narrow fastened '
+                    'top (the shoulder mount point at the top center), widening toward a ragged torn hem. About 440 px long. No body inside it.',
+            'UPPER ARM': 'black sleeve with a rounded glossy black lacquer shoulder plate with a gold rim and a small crimson cord at the top, '
+                         'flat cut at the elbow.',
+            'FOREARM + HAND': 'forearm wrapped in crimson cloth with a black lacquer bracer with gold trim, a small mechanical rope-launcher '
+                              'on the wrist, closed fist in a black glove.',
+            'THIGH': 'dark charcoal trousers, rounded hip cap on top, flat cut at the knee.',
+            'SHIN + BOOT': 'crimson leg wraps over dark trousers, black boot with a small gold toe cap, toe pointing RIGHT, flat sole at the bottom.',
+        },
+        'weapon': 'a demon KATANA: slim, slightly curved single-edged blade of glossy BLACK lacquer-dark steel with a thin GLOWING CRIMSON '
+                  'cutting edge line; a GOLD guard (tsuba) shaped like a small snarling horned demon face; grip wrapped in black-and-crimson '
+                  'diamond pattern; gold pommel with a short crimson tassel. Total length about 760 px. Blade edge faces RIGHT.',
+        'death': True,
+        # 가면은 얼굴에 붙은 채 — 기본 문구('모자가 벗겨져 떨어짐') 때문에 머리째 떨어져 그려졌음
+        'death_head': 'the dokkaebi MASK stays firmly on the face and the HEAD stays firmly attached to the neck in EVERY frame '
+                      '(no gap between head and body, no decapitation, nothing falls off)',
+    },
     'ghoul': {
         'who': 'an original undead GHOUL BANDIT swordsman, a corrupted monster of a cursed night town (original design, do NOT copy any existing '
                'character). Gaunt and hunched, ash-gray rotting skin, sunken face with a torn lipless grin showing teeth, small glowing sickly '
@@ -162,17 +201,23 @@ def prompts(c):
         f'- WEAPON: {c["weapon"]}\n',
     }
     if c.get('death'):
+        # death_head = 머리·가면이 붙은 채로 쓰러지게 (가면 캐릭터). 없으면 모자가 벗겨져 떨어지는 기본 연출
+        keep = c.get('death_head')
+        lift, fall, ground = (('the head snapping back with the mask still on', 'the head lolling back', 'the head resting on the ground')
+                              if keep else ('head snapping back, the headgear starting to lift off', 'the headgear falling away behind',
+                                            'the headgear on the ground beside the head'))
         p['death'] = ('- 1536x1024, an exact grid of 2 columns x 2 rows (each cell 768x512).\n' + BG +
             '- Each drawing sits in its own cell with clear magenta margin and its feet/body resting on the BOTTOM of the cell area '
             '(about 40 px above the cell bottom). Drawings must NOT cross cell borders.\n' + SAME + style(c) +
             '- Scale: smaller, the standing figure would be about 440 px tall (same proportions as the reference).\n'
             '- A 4-frame DEATH animation, pure SIDE VIEW, the character FACES RIGHT and is struck from the right, so falls BACKWARD (to the left).\n'
-            ' 1. (top-left) HIT: body jolts backward, chest pushed back, head snapping back, arms flung loose, the headgear starting to lift off.\n'
-            ' 2. (top-right) KNEES BUCKLE: dropping to the knees, torso leaning back, arms limp, the headgear falling away behind.\n'
+            f' 1. (top-left) HIT: body jolts backward, chest pushed back, arms flung loose, {lift}.\n'
+            f' 2. (top-right) KNEES BUCKLE: dropping to the knees, torso leaning back, arms limp, {fall}.\n'
             ' 3. (bottom-left) FALLING: body falling backward toward the ground at about 45 degrees, cape spread.\n'
-            ' 4. (bottom-right) LYING: lying flat on the back on the ground, limbs relaxed, the headgear on the ground beside the head, '
-            'cape spread under the body. Long and low, fits the cell width.\n'
-            '- NO blood pools, NO weapon. Keep EXACTLY the SD proportions of the reference (very big hatted head about 1/3 of the height, '
+            f' 4. (bottom-right) LYING: lying flat on the back on the ground, limbs relaxed, {ground}, '
+            'cape spread under the body. Long and low, fits the cell width.\n' +
+            (f'- IMPORTANT: {keep}.\n' if keep else '') +
+            '- NO blood pools, NO weapon. Keep EXACTLY the SD proportions of the reference (very big head with its headgear or mask about 1/3 of the height, '
             'short sturdy body, short legs) - it is the in-game rig, not a realistic figure.\n')
     return p
 
