@@ -1,0 +1,25 @@
+Use your built-in image generation tool to create ONE image and save it as PNG to: parts_side.png (in the current working directory). Do not write code to draw it; it must be a generated illustration. After saving, reply only with the file name.
+
+Image spec:
+- 1536x1024, an exact grid of 4 columns x 2 rows (each cell 384x512).
+- Solid flat MAGENTA background (#FF00FF) everywhere behind the drawings. No text, no letters, no numbers, no labels, no grid lines, no frames, no cast shadows, no ground.
+- Each drawing sits centered in its own cell with a clear magenta margin; drawings must NOT touch or cross cell borders.
+- Cut-out body parts for a 2D paper-doll (cutout) rig. Arms and legs hang perfectly straight DOWN and vertical, with a flat clean cut at each joint (rounded joint caps so rotation hides seams).
+- The attached reference image shows THIS EXACT CHARACTER. Keep the identical design, colors, proportions and scale.
+- CHARACTER: an original undead MUSKETEER ghoul, a corrupted soldier of a cursed night town (original design, do NOT copy any existing character). Wears a wide flat-brimmed black soldier hat (Joseon "jeollip") with a red tassel, a cracked pale ceramic mask with one glowing yellow-green eye hole, a dark padded soldier coat with tarnished brass studs, ammunition pouches, wrapped gaiters. A tattered dark-red military half-cape hangs from one shoulder as a separate part.
+- PROPORTIONS: stylized chibi-action "SD" proportions, about 3.3 heads tall: the head (with headgear) is BIG (about 30% of the full height), short sturdy body, short limbs, a slightly oversized look like a modern pixel action game character (Sanabi / Katana Zero era). NOT cute, no big anime eyes.
+- RENDERING: flat CEL SHADING, every material exactly THREE flat tones (shadow, base, light) with hard edges, plus a thin cold moonlight rim light ON the upper-right edges of each shape (inside the shape, not a glow around it). NO outlines, NO black linework, NO gradients, NO texture noise, NO glow halos, NO tiny details. Big simple readable shapes with a few bold cloth folds: it will be shrunk to a 40-pixel-tall sprite.
+- PALETTE: black hat, pale bone-white mask, dark navy padded coat, tarnished brass, dull leather, and ONE vivid accent: sickly yellow-green eye glow (plus a small faded red tassel).
+- Scale: as if the whole figure is 1150 px tall from boot sole to the top of the head/headgear (head with headgear about 360 px tall and at most 360 px wide, thigh about 190 px long, shin with boot about 230 px long).
+Every part is a pure SIDE VIEW, FACING RIGHT.
+Cells, left to right, top to bottom:
+Row 1: 1. HEAD  2. TORSO  3. HIPS  4. CAPE
+Row 2: 5. UPPER ARM  6. FOREARM + HAND  7. THIGH  8. SHIN + BOOT
+ HEAD: big head with the wide flat-brimmed black soldier hat with a red tassel, cracked pale ceramic mask with one glowing eye hole, short neck with a flat cut at the bottom. The hat must fit inside the cell.
+ TORSO: dark navy padded soldier coat chest with brass studs and a powder-flask strap, NO arms, NO cape. Flat cut at neck and waist.
+ HIPS: leather belt with ammunition pouches, padded coat skirt down to mid-thigh, top of trousers. Flat cut on top.
+ CAPE: ONLY the tattered dark-red military half-cape, hanging straight DOWN from a narrow top (the mount point at the top center), torn hem. About 380 px long. No body inside it.
+ UPPER ARM: padded navy sleeve with a rounded shoulder at the top, flat cut at the elbow.
+ FOREARM + HAND: padded navy sleeve cuff with brass studs, pale gray hand closed into a fist.
+ THIGH: dark trousers, rounded hip cap on top, flat cut at the knee.
+ SHIN + BOOT: wrapped cloth gaiters and soft dark boot, toe pointing RIGHT, flat sole at the bottom.

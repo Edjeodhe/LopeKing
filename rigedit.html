@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>리그 편집기</title>
+<style>
+  :root { --bg: #111018; --panel: #1b1926; --line: #34304a; --text: #d8d2e6; --dim: #8a84a0; --acc: #e04048; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.4 system-ui, sans-serif; }
+  header { display: flex; gap: 10px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  header b { color: #fff; }
+  select, button, input { font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; }
+  button.on { background: var(--acc); border-color: var(--acc); color: #fff; }
+  main { display: grid; grid-template-columns: 340px 1fr 1fr; gap: 10px; padding: 10px; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px; min-width: 0; }
+  h3 { margin: 0 0 6px; font-size: 13px; color: #fff; font-weight: 600; }
+  canvas { image-rendering: pixelated; display: block; max-width: 100%; }
+  #parts { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+  #score { font-size: 15px; color: #fff; }
+  .dim { color: var(--dim); }
+  .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 4px 0; }
+  #motions { display: flex; flex-wrap: wrap; gap: 4px; }
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <b>리그 편집기</b>
+  <select id="char"><option>assassin</option><option>ghoul</option><option>gunner</option></select>
+  <button id="fit">자동 맞춤 (통 이미지 기준)</button>
+  <button id="save">rig.json 저장</button>
+  <span id="status" class="dim"></span>
+  <span class="dim">· 부위를 고르고 점을 끌기 (방향키 1px, Shift 10px) · Tab 다음 점</span>
+</header>
+<main>
+  <section>
+    <h3>부위 · 관절</h3>
+    <div id="parts"></div>
+    <canvas id="partView" width="320" height="400"></canvas>
+    <div class="row">크기 <input id="size" type="number" step="0.02" style="width:70px"> <span class="dim">(부위 배율, SD 비율 맞춤)</span></div>
+    <div class="row">축척 <input id="scale" type="number" step="0.0005" style="width:90px"> <span class="dim">칸 px → 게임 px</span></div>
+    <div class="row" id="pointInfo" class="dim"></div>
+  </section>
+  <section>
+    <h3>통 이미지와 비교 <span id="score"></span></h3>
+    <div class="row">
+      <button data-ov="diff" class="on">차이</button><button data-ov="blend">겹치기</button><button data-ov="rig">리그만</button><button data-ov="ref">통 이미지만</button>
+      기준 배율 <input id="refk" type="number" step="0.01" style="width:70px">
+    </div>
+    <canvas id="cmp" width="512" height="768"></canvas>
+    <div class="dim">빨강 = 통 이미지엔 있는데 리그엔 없음 · 하늘 = 리그만 있음. 차렷 자세(모든 각도 0)로 조립해 겹침</div>
+  </section>
+  <section>
+    <h3>게임 화면 (픽셀 굽기 1배 → 6배 확대)</h3>
+    <div id="motions"></div>
+    <canvas id="game" width="768" height="624"></canvas>
+    <div class="dim">게임과 같은 리그·모션·굽기 코드(src/*.js)를 그대로 씀</div>
+  </section>
+</main>
+<section style="margin: 0 10px 10px">
+  <h3>모션 한 장 보기 <button id="sheetBtn">만들기</button></h3>
+  <canvas id="sheet" width="10" height="10"></canvas>
+</section>
+<script type="module" src="src/rigedit.js"></script>
+</body>
+</html>

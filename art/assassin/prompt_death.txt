@@ -1,0 +1,18 @@
+Use your built-in image generation tool to create ONE image and save it as PNG to: death.png (in the current working directory). Do not write code to draw it; it must be a generated illustration. After saving, reply only with the file name.
+
+Image spec:
+- 1536x1024, an exact grid of 2 columns x 2 rows (each cell 768x512).
+- Solid flat MAGENTA background (#FF00FF) everywhere behind the drawings. No text, no letters, no numbers, no labels, no grid lines, no frames, no cast shadows, no ground.
+- Each drawing sits in its own cell with clear magenta margin and its feet/body resting on the BOTTOM of the cell area (about 40 px above the cell bottom). Drawings must NOT cross cell borders.
+- The attached reference image shows THIS EXACT CHARACTER. Keep the identical design, colors, proportions and scale.
+- CHARACTER: an original ASSASSIN hero inspired by the Assassin's Creed silhouette mixed with East-Asian wanderer gear (original design, do NOT copy any existing character). Wears a wide conical woven bamboo hat (Korean "satgat" / straw kasa) tilted slightly forward so its brim shades the eyes, with one sharp eye glint visible under the brim; the lower face is covered by a dark cloth mask. Ivory-white fitted assassin coat with layered coat tails, dark leather straps and bracers, a deep CRIMSON waist sash, dark charcoal trousers, cloth-wrapped soft boots. A separate dark charcoal-indigo SHORT CLOAK hangs from the shoulders down to about the knees, with a ragged torn hem.
+- PROPORTIONS: stylized chibi-action "SD" proportions, about 3.3 heads tall: the head (with headgear) is BIG (about 30% of the full height), short sturdy body, short limbs, a slightly oversized look like a modern pixel action game character (Sanabi / Katana Zero era). NOT cute, no big anime eyes.
+- RENDERING: flat CEL SHADING, every material exactly THREE flat tones (shadow, base, light) with hard edges, plus a thin cold moonlight rim light ON the upper-right edges of each shape (inside the shape, not a glow around it). NO outlines, NO black linework, NO gradients, NO texture noise, NO glow halos, NO tiny details. Big simple readable shapes with a few bold cloth folds: it will be shrunk to a 40-pixel-tall sprite.
+- PALETTE: ivory white, charcoal, indigo-gray, dark leather brown, straw tan for the hat, and ONE vivid accent: deep crimson red.
+- Scale: smaller, the standing figure would be about 440 px tall (same proportions as the reference).
+- A 4-frame DEATH animation, pure SIDE VIEW, the character FACES RIGHT and is struck from the right, so falls BACKWARD (to the left).
+ 1. (top-left) HIT: body jolts backward, chest pushed back, head snapping back, arms flung loose, the headgear starting to lift off.
+ 2. (top-right) KNEES BUCKLE: dropping to the knees, torso leaning back, arms limp, the headgear falling away behind.
+ 3. (bottom-left) FALLING: body falling backward toward the ground at about 45 degrees, cape spread.
+ 4. (bottom-right) LYING: lying flat on the back on the ground, limbs relaxed, the headgear on the ground beside the head, cape spread under the body. Long and low, fits the cell width.
+- NO blood pools, NO weapon. Keep the SD proportions of the reference (big head, short limbs).

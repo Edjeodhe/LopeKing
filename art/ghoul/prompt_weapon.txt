@@ -1,0 +1,13 @@
+Use your built-in image generation tool to create ONE image and save it as PNG to: weapon.png (in the current working directory). Do not write code to draw it; it must be a generated illustration. After saving, reply only with the file name.
+
+Image spec:
+- 1024x1536 portrait.
+- Solid flat MAGENTA background (#FF00FF) everywhere behind the drawings. No text, no letters, no numbers, no labels, no grid lines, no frames, no cast shadows, no ground.
+- The attached reference image shows THIS EXACT CHARACTER. Keep the identical design, colors, proportions and scale.
+- CHARACTER: an original undead GHOUL BANDIT swordsman, a corrupted monster of a cursed night town (original design, do NOT copy any existing character). Gaunt and hunched, ash-gray rotting skin, sunken face with a torn lipless grin showing teeth, small glowing sickly yellow-green eyes, stringy black hair, a battered dented iron headband. Ragged dirty hemp clothes with exposed ribs, rope belt, bare bony shins with filthy foot wraps. A torn STRAW RAIN CAPE (Korean "dorongi") hangs from the shoulders as a separate part.
+- PROPORTIONS: stylized chibi-action "SD" proportions, about 3.3 heads tall: the head (with headgear) is BIG (about 30% of the full height), short sturdy body, short limbs, a slightly oversized look like a modern pixel action game character (Sanabi / Katana Zero era). NOT cute, no big anime eyes.
+- RENDERING: flat CEL SHADING, every material exactly THREE flat tones (shadow, base, light) with hard edges, plus a thin cold moonlight rim light ON the upper-right edges of each shape (inside the shape, not a glow around it). NO outlines, NO black linework, NO gradients, NO texture noise, NO glow halos, NO tiny details. Big simple readable shapes with a few bold cloth folds: it will be shrunk to a 40-pixel-tall sprite.
+- PALETTE: ash gray-green skin, dirty hemp beige, rotten brown, straw yellow-brown, rusty iron, and ONE vivid accent: sickly yellow-green glowing eyes.
+- Scale: as if the whole figure is 1150 px tall from boot sole to the top of the head/headgear (head with headgear about 360 px tall and at most 360 px wide, thigh about 190 px long, shin with boot about 230 px long).
+- ONE weapon only, VERTICAL, pointing straight DOWN, handle/grip at the TOP, centered with clear magenta margin.
+- WEAPON: a RUSTY notched curved saber with a broken chipped edge and a rag-wrapped grip, small round rusty guard. Total length about 620 px. Blade edge faces RIGHT.

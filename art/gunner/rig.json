@@ -1,0 +1,148 @@
+{
+ "cell": [
+  512,
+  640
+ ],
+ "scale": 0.03199,
+ "cloak": true,
+ "parts": {
+  "head": {
+   "pivot": [
+    293.3,
+    545.9
+   ],
+   "src": "parts/head.png",
+   "size": 1
+  },
+  "torso": {
+   "pivot": [
+    353.1,
+    558.9
+   ],
+   "joints": {
+    "neck": [
+     331.4,
+     212.8
+    ],
+    "shoulderN": [
+     339.3,
+     251.4
+    ],
+    "shoulderF": [
+     333.3,
+     251.4
+    ],
+    "cape": [
+     304.8,
+     212.8
+    ]
+   },
+   "src": "parts/torso.png"
+  },
+  "hips": {
+   "pivot": [
+    305.8,
+    326.5
+   ],
+   "joints": {
+    "waist": [
+     272.1,
+     246.1
+    ],
+    "hipN": [
+     275.8,
+     326.5
+    ],
+    "hipF": [
+     263.8,
+     326.5
+    ]
+   },
+   "src": "parts/hips.png"
+  },
+  "cape": {
+   "pivot": [
+    308.2,
+    -86.9
+   ],
+   "src": "parts/cape.png"
+  },
+  "upperArm": {
+   "pivot": [
+    277.7,
+    140.1
+   ],
+   "joints": {
+    "elbow": [
+     286.1,
+     415.1
+    ]
+   },
+   "src": "parts/upperArm.png"
+  },
+  "foreArm": {
+   "pivot": [
+    207.5,
+    195.2
+   ],
+   "joints": {
+    "hand": [
+     311,
+     445.6
+    ]
+   },
+   "src": "parts/foreArm.png"
+  },
+  "thigh": {
+   "pivot": [
+    261.4,
+    186.9
+   ],
+   "joints": {
+    "knee": [
+     257.5,
+     446.7
+    ]
+   },
+   "src": "parts/thigh.png"
+  },
+  "shin": {
+   "pivot": [
+    224.5,
+    205.9
+   ],
+   "joints": {
+    "sole": [
+     221.6,
+     479
+    ]
+   },
+   "src": "parts/shin.png"
+  }
+ },
+ "weapon": {
+  "src": "weapon_cut.png",
+  "cell": [
+   216,
+   1346
+  ],
+  "grip": [
+   95.2,
+   186.8
+  ],
+  "rot": 0,
+  "tip": [
+   109,
+   1330
+  ],
+  "size": 0.5
+ },
+ "ref": {
+  "src": "full_side_key.png",
+  "foot": [
+   538.7,
+   1432
+  ],
+  "k": 1
+ }
+}
