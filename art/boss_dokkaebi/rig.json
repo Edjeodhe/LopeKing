@@ -1,0 +1,380 @@
+{
+ "cell": [
+  512,
+  640
+ ],
+ "scale": 0.02987,
+ "cloak": true,
+ "parts": {
+  "head": {
+   "pivot": [
+    366.9,
+    571.1
+   ],
+   "src": "parts/head.png",
+   "size": 1.05
+  },
+  "torso": {
+   "pivot": [
+    325.1,
+    547.3
+   ],
+   "joints": {
+    "neck": [
+     355,
+     327
+    ],
+    "shoulderN": [
+     190,
+     270
+    ],
+    "shoulderF": [
+     182,
+     266
+    ],
+    "cape": [
+     165,
+     190
+    ]
+   },
+   "src": "parts/torso.png",
+   "size": 1.18
+  },
+  "hips": {
+   "pivot": [
+    301.8,
+    281.1
+   ],
+   "joints": {
+    "waist": [
+     297,
+     181
+    ],
+    "hipN": [
+     228,
+     366
+    ],
+    "hipF": [
+     218,
+     366
+    ]
+   },
+   "src": "parts/hips.png",
+   "size": 1.3
+  },
+  "cape": {
+   "pivot": [
+    281.4,
+    106.5
+   ],
+   "src": "parts/cape.png",
+   "size": [
+    1.9,
+    1.1
+   ]
+  },
+  "upperArm": {
+   "pivot": [
+    268.8,
+    138.9
+   ],
+   "joints": {
+    "elbow": [
+     283.4,
+     470.1
+    ]
+   },
+   "src": "parts/upperArm.png",
+   "size": 0.94
+  },
+  "foreArm": {
+   "pivot": [
+    252.0,
+    150.0
+   ],
+   "joints": {
+    "hand": [
+     282.7,
+     466.0
+    ]
+   },
+   "src": "parts/foreArm.png",
+   "size": 0.94
+  },
+  "thigh": {
+   "pivot": [
+    251.6,
+    170.4
+   ],
+   "joints": {
+    "knee": [
+     252.8,
+     460.1
+    ]
+   },
+   "src": "parts/thigh.png",
+   "size": 0.55
+  },
+  "shin": {
+   "pivot": [
+    202.0,
+    184.8
+   ],
+   "joints": {
+    "sole": [
+     190.8,
+     528.0
+    ]
+   },
+   "src": "parts/shin.png",
+   "size": 1.0
+  }
+ },
+ "weapon": {
+  "src": "weapon_cut.png",
+  "cell": [
+   318,
+   1447
+  ],
+  "grip": [
+   205.3,
+   200.0
+  ],
+  "rot": 0,
+  "tip": [
+   159.5,
+   1431.0
+  ],
+  "size": 0.6
+ },
+ "anims": {
+  "idle": {
+   "frames": [
+    {
+     "src": "anims/idle_0.png",
+     "pivot": [
+      132.5,
+      473.0
+     ],
+     "w": 362,
+     "h": 481,
+     "mouth": [
+      227.0,
+      113.0
+     ]
+    },
+    {
+     "src": "anims/idle_1.png",
+     "pivot": [
+      135.5,
+      477.0
+     ],
+     "w": 365,
+     "h": 485,
+     "mouth": [
+      221.0,
+      107.0
+     ]
+    },
+    {
+     "src": "anims/idle_2.png",
+     "pivot": [
+      137.5,
+      480.0
+     ],
+     "w": 367,
+     "h": 488,
+     "mouth": [
+      222.0,
+      101.0
+     ]
+    },
+    {
+     "src": "anims/idle_3.png",
+     "pivot": [
+      140.5,
+      487.0
+     ],
+     "w": 370,
+     "h": 495,
+     "mouth": [
+      228.0,
+      110.0
+     ]
+    },
+    {
+     "src": "anims/idle_4.png",
+     "pivot": [
+      132.5,
+      473.0
+     ],
+     "w": 362,
+     "h": 480,
+     "mouth": [
+      204.0,
+      113.0
+     ]
+    },
+    {
+     "src": "anims/idle_5.png",
+     "pivot": [
+      134.5,
+      473.0
+     ],
+     "w": 364,
+     "h": 480,
+     "mouth": [
+      228.0,
+      106.5
+     ]
+    },
+    {
+     "src": "anims/idle_6.png",
+     "pivot": [
+      133.5,
+      471.0
+     ],
+     "w": 363,
+     "h": 478,
+     "mouth": [
+      266.0,
+      101.5
+     ]
+    },
+    {
+     "src": "anims/idle_7.png",
+     "pivot": [
+      134.5,
+      473.0
+     ],
+     "w": 364,
+     "h": 480,
+     "mouth": [
+      226.0,
+      104.0
+     ]
+    }
+   ],
+   "size": 0.09277,
+   "fps": 6
+  },
+  "walk": {
+   "frames": [
+    {
+     "src": "anims/walk_0.png",
+     "pivot": [
+      155.5,
+      470.0
+     ],
+     "w": 379,
+     "h": 478,
+     "mouth": [
+      242.0,
+      112.0
+     ]
+    },
+    {
+     "src": "anims/walk_1.png",
+     "pivot": [
+      160.5,
+      456.0
+     ],
+     "w": 384,
+     "h": 461,
+     "mouth": [
+      236.0,
+      98.5
+     ]
+    },
+    {
+     "src": "anims/walk_2.png",
+     "pivot": [
+      160.5,
+      476.0
+     ],
+     "w": 369,
+     "h": 480,
+     "mouth": [
+      218.0,
+      111.0
+     ]
+    },
+    {
+     "src": "anims/walk_3.png",
+     "pivot": [
+      159.5,
+      477.0
+     ],
+     "w": 381,
+     "h": 485,
+     "mouth": [
+      229.0,
+      109.0
+     ]
+    },
+    {
+     "src": "anims/walk_4.png",
+     "pivot": [
+      155.5,
+      474.0
+     ],
+     "w": 379,
+     "h": 476,
+     "mouth": [
+      244.0,
+      107.0
+     ]
+    },
+    {
+     "src": "anims/walk_5.png",
+     "pivot": [
+      160.5,
+      454.0
+     ],
+     "w": 382,
+     "h": 461,
+     "mouth": [
+      228.0,
+      113.0
+     ]
+    },
+    {
+     "src": "anims/walk_6.png",
+     "pivot": [
+      160.5,
+      476.0
+     ],
+     "w": 382,
+     "h": 480,
+     "mouth": [
+      227.0,
+      117.0
+     ]
+    },
+    {
+     "src": "anims/walk_7.png",
+     "pivot": [
+      160.5,
+      477.0
+     ],
+     "w": 380,
+     "h": 484,
+     "mouth": [
+      232.0,
+      111.0
+     ]
+    }
+   ],
+   "size": 0.09277,
+   "fps": 8
+  }
+ },
+ "ref": {
+  "src": "full_side_key.png",
+  "foot": [
+   557.8,
+   1504.0
+  ],
+  "k": 1.0
+ }
+}

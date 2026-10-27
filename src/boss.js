@@ -1,4 +1,5 @@
-// 보스: 거대 망나니 구울 (art/executioner, 주인공과 같은 뼈대를 1.9배로).
+// 보스: 거대 도깨비 (art/boss_dokkaebi, 주인공과 같은 뼈대를 1.9배로. 예전 망나니 구울 그림은 art/executioner).
+// 대기·걷기 = 장면 그림(프레임 애니메이션, rig.json anims), 패턴·휘청·포효 = 리그, 사망 = 고어(참수 + 사지 분산)
 // 패턴 (모두 예고 → 공격 → 빈틈):
 //   내려찍기 — 칼을 머리 위로 들고(붉은 ! 깜빡임) 내리침 → 바닥을 따라 양쪽으로 충격파(뛰어 넘기)
 //   휩쓸기   — 칼을 뒤로 젖혔다 몸 앞을 가로로 크게 벰 (뛰어 넘거나 대시 무적으로)
@@ -151,6 +152,7 @@ export class Boss {
     if (this.dead) return;
     const sp = this.phase === 2 ? BOSS.speed2 : 1, st = this.st;
     let target;
+    this.frameAnim = null;   // 대기·걷기일 때만 장면 그림 (main.js) — 리그 자세는 그대로 계산해 둠 (패턴으로 이어질 때 자세가 튀지 않게)
     const T = k => T_[k].map(v => v / sp);
     switch (this.state) {
       case 'sleep': target = A.P({ torso: 30, head: 30, nU: 10, nF: 10, sw: 20, fU: 5, fF: 10, nT: 20, nS: -20, fT: -10, fS: -5, y: 2 }); break;
@@ -171,8 +173,8 @@ export class Boss {
       case 'leap': target = !this.did ? A.LAND : !this.landed ? A.P({ torso: -10, nU: 190, nF: 20, sw: 0, fU: 160, fF: 20, nT: 60, nS: -90, fT: -10, fS: -50 }) : A.slash(0.2, 30, 1); break;
       case 'chain': target = A.P({ torso: 6, nU: 90 - this.aimAng * 180 / Math.PI * this.facing, nF: 0, sw: 30, fU: 40, fF: 40, nT: 30, nS: -30, fT: -20, fS: -10 }); break;
       default:
-        if (Math.abs(this.vx) > 10) { this.runPh += dt * Math.abs(this.vx) / 90; target = A.run(this.runPh); }
-        else target = A.idle(this.t);
+        if (Math.abs(this.vx) > 10) { this.runPh += dt * Math.abs(this.vx) / 90; target = A.run(this.runPh); this.frameAnim = { name: 'walk', ph: this.runPh }; }
+        else { target = A.idle(this.t); this.frameAnim = { name: 'idle', t: this.t }; }
     }
     // 예고 깜빡임: 공격 직전엔 붉은 번쩍임 (bakeActor flash 는 흰색이라 marks 로 따로)
     this.pose = A.follow(this.pose, target, dt, this.state === 'slam' || this.state === 'sweep' ? 1.6 : 1);

@@ -163,6 +163,71 @@ CHARS = {
         'death': False,
         'scale_note': 'HULKING heavy proportions, about 3 heads tall, very wide shoulders and huge arms (much bulkier than a normal SD hero).',
     },
+    # 보스 도깨비 판 (사용자: 보스는 도깨비 느낌, 크기·비율은 망나니 그대로 그림만). 주인공처럼 도트.
+    # 비율은 망나니 그림(ref_proportion.png = executioner/full_side.png)을, 도트 결은 주인공(ref_style.png = dokkaebi/full_side.png)을 참고로
+    # 주인공 = 가면 쓴 사람이라 보스는 진짜 도깨비(뿔·엄니가 얼굴에 붙음), 색은 주인공(흑칠·진홍·금)과 겹치지 않게 쪽빛 피부
+    'boss_dokkaebi': {
+        'who': 'an original BOSS monster: a towering, terrifying GIANT KOREAN DOKKAEBI (goblin-demon) WARLORD, the final terror of a cursed '
+               'execution ground (original design, do NOT copy any existing character). A real demon, NOT a man in a mask: dark INDIGO-BLUE '
+               'skin covered in old battle scars (thin dark scar lines, not pink marks), a deep furious scowl under a heavy brow, two LONG thick curved IVORY HORNS sweeping up and '
+               'back from the forehead (much bigger than a normal dokkaebi), EYES = solid blank glowing yellow-green slits with NO pupils and '
+               'NO irises (pure glowing light, no dark dot inside), a snarling mouth with big lower TUSKS, a wild shaggy BONE-WHITE mane and '
+               'beard flowing back like flames. HULKING and massive: huge rounded shoulders, enormous muscular arms, a heavy hunched back. '
+               'Boss regalia: a heavy SPIKED IRON COLLAR, a necklace of small yellowed SKULLS, thick rusty iron chains crossed over the bare '
+               'chest (no shoulder armor). A loincloth of faded TIGER-STRIPED hide (orange and black) over '
+               'dark baggy trousers, a thick braided straw rope belt, rusty iron cuffs on the wrists and ankles, huge bare clawed feet. A large '
+               'torn dark indigo war banner (with no readable text) hangs from the back of the shoulders as a separate cape part.',
+        'palette': 'dark indigo-blue skin (with cool highlights), bone-white hair and horns, faded orange-and-black tiger stripes, straw tan, '
+                   'rusty iron, dark indigo cloth, and ONE vivid accent: sickly yellow-green glowing eyes.',
+        'parts': {
+            'HEAD': 'huge dokkaebi head in side view: two LONG thick curved ivory horns sweeping up and back, furious scowling brow, a solid '
+                    'blank glowing yellow-green eye slit with NO pupil, snarling mouth with big lower tusks, wild bone-white mane and beard flowing back to the LEFT, thick short neck with a '
+                    'flat cut at the bottom. Horns and hair must fit inside the cell.',
+            'TORSO': 'massive hunched scarred bare indigo-blue chest and back with a heavy spiked iron collar, a necklace of small skulls and '
+                     'crossed rusty iron chains, NO arms, NO cape. Flat cut at neck and waist.',
+            'HIPS': 'thick braided straw rope belt with a hanging knot, faded tiger-striped hide loincloth hanging to mid-thigh, top of dark '
+                    'trousers. Flat cut on top.',
+            'CAPE': 'ONLY the torn dark indigo war banner, hanging straight DOWN from a narrow top (the mount point at the top center), ragged '
+                    'hem, NO letters. About 420 px long. No body inside it.',
+            'UPPER ARM': 'enormous muscular indigo-blue upper arm with a rounded shoulder at the top, thin dark scar lines and a '
+                         'chain wrapped around it, flat cut at the elbow.',
+            'FOREARM + HAND': 'thick indigo-blue forearm with a rusty iron cuff and a huge clawed fist.',
+            'THIGH': 'thick dark baggy trousers, rounded hip cap on top, flat cut at the knee.',
+            'SHIN + BOOT': 'thick indigo-blue shin with a rusty iron ankle cuff and a huge bare clawed foot, toes pointing RIGHT, flat sole at the bottom.',
+        },
+        'weapon': 'a MASSIVE DOKKAEBI CLUB ("dokkaebi bangmangi"): a long heavy dark-wood club that thickens toward the end, studded all over with '
+                  'big blunt iron knobs, bound with rusty iron bands, a rope-wrapped grip with a dark indigo tassel. Total length about 900 px, '
+                  'about 170 px wide at the thick end. Seen from the side.',
+        'death': False,
+        # 대기·걷기 = 프레임 애니메이션 (주인공처럼). 공격 패턴은 리그. 사망은 고어(몸이 잘림) 그대로
+        'hold': 'He holds his MASSIVE DOKKAEBI CLUB (the attached weapon image) in the NEAR (right) hand.',
+        'anims': {
+            'idle': 'An 8-frame IDLE loop, left to right then top to bottom: the hulking boss stands menacingly, hunched forward, knees bent, '
+                    'the club held LOW in the near hand with its heavy end resting near the ground in front of him, the free fist clenched. '
+                    'Heavy slow breathing: frames 1-4 the huge shoulders and chest heave up one pixel at a time (the mane and the banner '
+                    'drift back), frames 5-8 they sink back down (mane and banner settle). The changes between neighbouring frames are SMALL '
+                    'so it loops smoothly.',
+            'walk': 'An 8-frame heavy WALK cycle, left to right then top to bottom: a slow, menacing STOMPING walk, the huge body hunched '
+                    'forward, shoulders rolling with each step, the club held low in the near hand and swinging slightly, the free arm '
+                    'swinging, the mane and banner swaying back to the LEFT.\n'
+                    ' 1. CONTACT (near foot forward)  2. DOWN (weight lands, body lowest)  3. PASS (back leg swinging through)  4. UP\n'
+                    ' 5. CONTACT (far foot forward)  6. DOWN  7. PASS  8. UP\n'
+                    '- The frames must loop seamlessly from frame 8 back to frame 1.',
+        },
+        'anim_h': 400,   # 칸(384x512) 안 서 있는 키 (image px) — 몸집이 커서 주인공(440)보다 조금 작게 그려 칸을 안 넘게
+        'pixel': True,
+        'pixel_h': 85,   # 게임에서 1.9배로 크게 나옴 → 도트 한 칸이 주인공과 비슷한 굵기가 되게 (주인공 48)
+        'props': ('- PROPORTIONS: EXACTLY the same body proportions, bulk, posture and size on the canvas as the HULKING GRAY GIANT in the '
+                  'attached proportion reference (the first attached image): same head size relative to the body, same huge shoulders and '
+                  'arms, same leg length. Only the design and the drawing style change.\n'),
+        'refs': ('- ATTACHED REFERENCES: image 1 = the OLD boss design, use it ONLY for proportions, pose and size (not its design or its '
+                 'painted style). Image 2 = the game\'s hero sprite, use it ONLY for the pixel-art style (pixel block size, outline, number '
+                 'of tones), NOT for the design. Image 3 = the previous draft of THIS boss: keep its colors, white mane, tiger loincloth '
+                 'and banner, but apply every change in this spec (eyes with NO pupils, bigger horns, boss regalia, more menacing).\n'),
+        'parts_ref': ('- The second attached image shows the OLD design\'s part sheet: draw every part in the SAME cell, at the SAME size and '
+                      'with the SAME joint positions as the matching old part, only with the new design.\n'),
+        'scale_txt': '- Scale: the same size on the canvas as the proportion reference (the figure about 90% of the image height).\n',
+    },
 }
 
 HEAD = ('Use your built-in image generation tool to create ONE image and save it as PNG to: {name}.png '
@@ -196,22 +261,27 @@ PIXEL_RENDER = (
     'around the silhouette. Simple readable shapes; details like gold trim are single blocks or omitted.\n')
 
 
-def style(c):
+def style(c, full=False):
     note = f'- BODY: {c["scale_note"]}\n' if c.get('scale_note') else ''
     base = REAL_STYLE if c.get('real') else COMMON_STYLE
+    if c.get('props'):   # 비율을 참고 그림대로 (보스 도깨비 판 = 망나니 비율)
+        base = (c['props'] if full else '- PROPORTIONS: EXACTLY the proportions of the attached character reference.\n') + base[base.index('- RENDERING'):]
     if c.get('pixel'):
-        base = base[:base.index('- RENDERING')] + PIXEL_RENDER
+        base = base[:base.index('- RENDERING')] + PIXEL_RENDER.replace('about 48 pixels', f'about {c.get("pixel_h", 48)} pixels')
     return f'- CHARACTER: {c["who"]}\n' + base + note + f'- PALETTE: {c["palette"]}\n'
 
 
-def scale(c):
+def scale(c, full=False):
+    # scale_txt = 통 이미지는 참고 그림 크기대로, 부위·무기는 축척 줄 없이 (부위는 parts_ref 가 크기를 정함)
+    if c.get('scale_txt'):
+        return c['scale_txt'] if full else ''
     return REAL_SCALE if c.get('real') else SCALE
 
 
 def prompts(c):
     p = {
         # 통 이미지: 리그 부위를 맞출 때 겹쳐 비교하는 기준 자세 (팔다리 곧게 내림)
-        'full_side': '- 1024x1536 portrait.\n' + BG + style(c) + scale(c) +
+        'full_side': '- 1024x1536 portrait.\n' + BG + c.get('refs', '') + style(c, True) + scale(c, True) +
         '- ONE full-body figure, pure SIDE VIEW, FACING RIGHT (face and toes point to the right), centered, with clear magenta margin all around.\n'
         '- NEUTRAL RIG REFERENCE POSE: standing straight and still, both arms hanging perfectly straight DOWN along the body (the far arm hidden '
         'behind the near arm), hands closed into fists, both legs straight and vertical, feet slightly apart front-to-back, the cape hanging '
@@ -220,7 +290,7 @@ def prompts(c):
         'parts_side': '- 1536x1024, an exact grid of 4 columns x 2 rows (each cell 384x512).\n' + BG +
         '- Each drawing sits centered in its own cell with a clear magenta margin; drawings must NOT touch or cross cell borders.\n'
         '- Cut-out body parts for a 2D paper-doll (cutout) rig. Arms and legs hang perfectly straight DOWN and vertical, with a flat clean cut '
-        'at each joint (rounded joint caps so rotation hides seams).\n' + SAME + style(c) + scale(c) +
+        'at each joint (rounded joint caps so rotation hides seams).\n' + SAME + c.get('parts_ref', '') + style(c) + scale(c) +
         'Every part is a pure SIDE VIEW, FACING RIGHT.\nCells, left to right, top to bottom:\n'
         'Row 1: 1. HEAD  2. TORSO  3. HIPS  4. CAPE\nRow 2: 5. UPPER ARM  6. FOREARM + HAND  7. THIGH  8. SHIN + BOOT\n' +
         ''.join(f' {k}: {c["parts"][k]}\n' for k in CELLS),
@@ -228,6 +298,17 @@ def prompts(c):
         '- ONE weapon only, VERTICAL, pointing straight DOWN, handle/grip at the TOP, centered with clear magenta margin.\n'
         f'- WEAPON: {c["weapon"]}\n',
     }
+    # 프레임 애니메이션 시트 (카타나 제로풍 대기·걷기 등): 4×2 칸 8장 → slice_char.py slice_anims
+    for name, desc in c.get('anims', {}).items():
+        sh, ah = c.get('pixel_h', 48), c.get('anim_h', 440)
+        p[f'pose_{name}'] = ('- 1536x1024, an exact grid of 4 columns x 2 rows (each cell 384x512).\n' + BG +
+            '- The attached reference images show THIS EXACT CHARACTER and his weapon. Keep the identical design, colors, proportions and scale.\n' +
+            style(c) + (f'- {c["hold"]}\n' if c.get('hold') else '') +
+            f'- Every figure is a pure SIDE VIEW, FACING RIGHT, at the SAME pixel scale in every cell (standing height about {sh} sprite '
+            f'pixels, about {ah} image px), feet on the same ground line near the bottom of its cell. Same pixel block size in every cell.\n'
+            '- Each drawing sits centered in its own cell with a clear magenta margin; drawings must NOT touch or cross cell borders.\n'
+            '- These are ANIMATION FRAMES for a fast 2D pixel action game in the spirit of Katana Zero (original character, do NOT copy any existing character).\n'
+            f'- {desc}\n')
     if c.get('death'):
         # death_head = 머리·가면이 붙은 채로 쓰러지게 (가면 캐릭터). 없으면 모자가 벗겨져 떨어지는 기본 연출
         keep = c.get('death_head')

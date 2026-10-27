@@ -1,0 +1,25 @@
+Use your built-in image generation tool to create ONE image and save it as PNG to: parts_side.png (in the current working directory). Do not write code to draw it; it must be a generated illustration. After saving, reply only with the file name.
+
+Image spec:
+- 1536x1024, an exact grid of 4 columns x 2 rows (each cell 384x512).
+- Solid flat MAGENTA background (#FF00FF) everywhere behind the drawings. No text, no letters, no numbers, no labels, no grid lines, no frames, no cast shadows, no ground.
+- Each drawing sits centered in its own cell with a clear magenta margin; drawings must NOT touch or cross cell borders.
+- Cut-out body parts for a 2D paper-doll (cutout) rig. Arms and legs hang perfectly straight DOWN and vertical, with a flat clean cut at each joint (rounded joint caps so rotation hides seams).
+- The attached reference image shows THIS EXACT CHARACTER. Keep the identical design, colors, proportions and scale.
+- The second attached image shows the OLD design's part sheet: draw every part in the SAME cell, at the SAME size and with the SAME joint positions as the matching old part, only with the new design.
+- CHARACTER: an original BOSS monster: a towering, terrifying GIANT KOREAN DOKKAEBI (goblin-demon) WARLORD, the final terror of a cursed execution ground (original design, do NOT copy any existing character). A real demon, NOT a man in a mask: dark INDIGO-BLUE skin covered in old battle scars (thin dark scar lines, not pink marks), a deep furious scowl under a heavy brow, two LONG thick curved IVORY HORNS sweeping up and back from the forehead (much bigger than a normal dokkaebi), EYES = solid blank glowing yellow-green slits with NO pupils and NO irises (pure glowing light, no dark dot inside), a snarling mouth with big lower TUSKS, a wild shaggy BONE-WHITE mane and beard flowing back like flames. HULKING and massive: huge rounded shoulders, enormous muscular arms, a heavy hunched back. Boss regalia: a heavy SPIKED IRON COLLAR, a necklace of small yellowed SKULLS, thick rusty iron chains crossed over the bare chest (no shoulder armor). A loincloth of faded TIGER-STRIPED hide (orange and black) over dark baggy trousers, a thick braided straw rope belt, rusty iron cuffs on the wrists and ankles, huge bare clawed feet. A large torn dark indigo war banner (with no readable text) hangs from the back of the shoulders as a separate cape part.
+- PROPORTIONS: EXACTLY the proportions of the attached character reference.
+- RENDERING: authentic PIXEL ART sprite, like the hero sprites of Katana Zero or Sanabi. Drawn at LOW RESOLUTION: the standing character is only about 85 pixels tall in sprite pixels, and every sprite pixel is shown as a crisp SOLID SQUARE block (nearest-neighbor upscale, all blocks the same size, aligned to one grid). NO anti-aliasing, NO gradients, NO soft edges, NO blur, NO thin lines thinner than one block. A limited palette of about 16 colors, 2-3 flat tones per material, a 1-block dark outline around the silhouette. Simple readable shapes; details like gold trim are single blocks or omitted.
+- PALETTE: dark indigo-blue skin (with cool highlights), bone-white hair and horns, faded orange-and-black tiger stripes, straw tan, rusty iron, dark indigo cloth, and ONE vivid accent: sickly yellow-green glowing eyes.
+Every part is a pure SIDE VIEW, FACING RIGHT.
+Cells, left to right, top to bottom:
+Row 1: 1. HEAD  2. TORSO  3. HIPS  4. CAPE
+Row 2: 5. UPPER ARM  6. FOREARM + HAND  7. THIGH  8. SHIN + BOOT
+ HEAD: huge dokkaebi head in side view: two LONG thick curved ivory horns sweeping up and back, furious scowling brow, a solid blank glowing yellow-green eye slit with NO pupil, snarling mouth with big lower tusks, wild bone-white mane and beard flowing back to the LEFT, thick short neck with a flat cut at the bottom. Horns and hair must fit inside the cell.
+ TORSO: massive hunched scarred bare indigo-blue chest and back with a heavy spiked iron collar, a necklace of small skulls and crossed rusty iron chains, NO arms, NO cape. Flat cut at neck and waist.
+ HIPS: thick braided straw rope belt with a hanging knot, faded tiger-striped hide loincloth hanging to mid-thigh, top of dark trousers. Flat cut on top.
+ CAPE: ONLY the torn dark indigo war banner, hanging straight DOWN from a narrow top (the mount point at the top center), ragged hem, NO letters. About 420 px long. No body inside it.
+ UPPER ARM: enormous muscular indigo-blue upper arm with a rounded shoulder at the top, thin dark scar lines and a chain wrapped around it, flat cut at the elbow.
+ FOREARM + HAND: thick indigo-blue forearm with a rusty iron cuff and a huge clawed fist.
+ THIGH: thick dark baggy trousers, rounded hip cap on top, flat cut at the knee.
+ SHIN + BOOT: thick indigo-blue shin with a rusty iron ankle cuff and a huge bare clawed foot, toes pointing RIGHT, flat sole at the bottom.

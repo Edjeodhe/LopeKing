@@ -206,7 +206,7 @@ def slice_death(root, rig, old, keep, full_h):
         'frames': frames, 'size': round(rig['scale'] * death_scale, 5), 'times': [0, 0.12, 0.34, 0.6]}
 
 
-ANIM_SHEETS = {'idle': ('pose_idle.png', 8, 6), 'run': ('pose_run.png', 8, 12)}   # 이름: (시트, 장수, 초당 장수) — 4×2 칸
+ANIM_SHEETS = {'idle': ('pose_idle.png', 8, 6), 'run': ('pose_run.png', 8, 12), 'walk': ('pose_walk.png', 8, 8)}   # 이름: (시트, 장수, 초당 장수) — 4×2 칸. walk = 보스
 
 
 def slice_anims(root, rig, full_h):

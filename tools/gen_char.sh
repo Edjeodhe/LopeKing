@@ -20,10 +20,19 @@ one() {   # one <id> <이름> <참고그림...>
   echo "$(date +%H:%M) $d/$n $([ -f $d/$n.png ] && echo ok || echo FAIL)" >> $log
 }
 for id in "$@"; do
-  one $id full_side
+  # 참고 그림이 있으면 같이 넘김: ref_proportion(비율) · ref_style(도트 결) · ref_draft(앞 시안) → 통 이미지, ref_parts(예전 부위 시트) → 부위 시트
+  refs=""
+  for r in ref_proportion.png ref_style.png ref_draft.png; do [ -f art/$id/$r ] && refs="$refs $r"; done
+  one $id full_side $refs
   [ -f art/$id/full_side.png ] || { echo "$(date +%H:%M) $id 통 이미지 실패 - 건너뜀" >> $log; continue; }
-  one $id parts_side full_side.png
+  if [ -f art/$id/ref_parts.png ]; then one $id parts_side full_side.png ref_parts.png; else one $id parts_side full_side.png; fi
   one $id weapon full_side.png
+  # 프레임 애니메이션 시트 (대기·달리기·걷기): 통 이미지 + 무기를 참고로
+  for pf in art/$id/prompt_pose_*.txt; do
+    [ -f "$pf" ] || continue
+    pn=$(basename $pf .txt); pn=${pn#prompt_}
+    one $id $pn full_side.png weapon.png
+  done
   # 사망 컷은 SD 배율로 조립한 참고 그림(리그 편집기·sd_ref.png)이 있으면 그걸로 — 통 이미지보다 비율이 정확
   if [ -f art/$id/sd_ref.png ]; then one $id death sd_ref.png; else one $id death full_side.png; fi
 done

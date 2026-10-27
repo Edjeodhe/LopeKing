@@ -57,15 +57,15 @@ function scaledFrame(f, k) {
 }
 export function bakeDeath(type, t, facing, low) { bakeCut(type, type.death, type.death.frames[deathFrame(type, t)], facing, low); }
 // 프레임 애니메이션 한 장 굽기 (대기·달리기). 돌려주는 값 = 그 장의 입 자리(low px, 가면 숨 steam.js 용)
-export function bakeFrame(type, name, i, facing, low) {
+export function bakeFrame(type, name, i, facing, low, flash = false) {
   const set = type.anims[name], f = set.frames[i % set.frames.length];
-  bakeCut(type, set, f, facing, low);
+  bakeCut(type, set, f, facing, low, flash);
   if (!f.mouth) return null;
   const k = set.size * type.scale;
   return [low.ax + (f.mouth[0] - f.pivot[0]) * k * (facing < 0 ? -1 : 1), low.ay + (f.mouth[1] - f.pivot[1]) * k];
 }
 // 통그림 한 장(사망 컷·프레임 애니메이션)을 발 기준점에 맞춰 리그와 같은 굽기(팔레트·외곽선)로
-function bakeCut(type, set, f, facing, low) {
+function bakeCut(type, set, f, facing, low, flash = false) {
   const k = set.size * SS * type.scale;
   const c = scaledFrame(f, k);
   const { hi, hctx, ax, ay } = hiFor(low);
@@ -75,7 +75,7 @@ function bakeCut(type, set, f, facing, low) {
   hctx.scale(facing < 0 ? -1 : 1, 1);
   hctx.drawImage(c, -f.pivot[0] * k, -f.pivot[1] * k);
   hctx.restore();
-  bake(hi, low, type.pal, bakeOpts(type, false, facing));
+  bake(hi, low, type.pal, bakeOpts(type, flash, facing));
 }
 
 function bakeOpts(type, flash, facing) {

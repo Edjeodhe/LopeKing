@@ -57,8 +57,8 @@ async function boot() {
     loadActorType('art/dokkaebi', { colors: 18, keep: [[200, 32, 40], [222, 172, 64], [255, 120, 40]] }),
     loadActorType('art/ghoul', { colors: 14, weapon: 'saber', placeholder: { cloth: '#4a4a3a', clothD: '#2c2c22', clothL: '#6a6a50', skin: '#8a9a88', skinD: '#5a6a5a', accent: '#b8e040' }, tint: [40, 30, 60, 0.08] }),
     loadActorType('art/gunner', { colors: 14, weapon: 'gun', placeholder: { cloth: '#26304a', clothD: '#161c2e', clothL: '#3a4868', metal: '#8a7a50', metalD: '#5a4a30', metalL: '#c8b070', accent: '#b8e040' }, tint: [40, 30, 60, 0.08] }),
-    // 보스: 같은 뼈대를 1.9배로 (그림 키 44px → 약 84px)
-    loadActorType('art/executioner', { colors: 18, scale: 1.9, weapon: 'saber', placeholder: { cloth: '#5a2028', clothD: '#3a1018', clothL: '#8a3038', skin: '#7a6a80', skinD: '#4a3a50', accent: '#b8e040' }, tint: [40, 30, 60, 0.06] }),
+    // 보스: 거대 도깨비, 같은 뼈대를 1.9배로 (그림 키 44px → 약 84px). keep = 눈빛 (예전 망나니 구울은 art/executioner)
+    loadActorType('art/boss_dokkaebi', { colors: 18, keep: [[190, 230, 40]], scale: 1.9, weapon: 'saber', placeholder: { cloth: '#5a2028', clothD: '#3a1018', clothL: '#8a3038', skin: '#7a6a80', skinD: '#4a3a50', accent: '#b8e040' }, tint: [40, 30, 60, 0.06] }),
   ]);
   TYPES.hero = hero; TYPES.grunt = ghoul; TYPES.gunner = gunner; TYPES.boss = boss;
   if (new URLSearchParams(location.search).has('level')) { G.mode = 'play'; loadLevel(+new URLSearchParams(location.search).get('level') || 0); }
@@ -292,6 +292,8 @@ G.zipCut = (p, x0, y0, x1, y1, target) => {
 G.killBoss = (b, hit) => {
   if (b.dead) return;
   b.dead = true;
+  // 대기·걷기 그림 중에 죽어도 몸은 리그 조각으로 잘려 나가니, 잘릴 자리(소켓)를 지금 자세로 다시 잼
+  b.sock = bakeActor(b.type, b.pose, b.facing, b.low).sock;
   killActor(b, { ...hit, power: 1.6 }, 'decap');
   G.stop = 0.25; G.slow = 1.4; G.slowScale = 0.25;
   flash('#ffffff', 0.08); shake(10);
@@ -449,7 +451,15 @@ function render(real) {
 
   // 적: 30fps 로만 다시 굽기
   for (const e of G.enemies) {
-    if (frameNo % 2 === 0 || !e.baked) { const o = bakeActor(e.type, e.pose, e.facing, e.low, e.flashT > 0); e.sock = o.sock; e.baked = true; }
+    if (frameNo % 2 === 0 || !e.baked) {
+      // 보스 대기·걷기는 장면 그림 (주인공과 같은 방식), 나머지는 리그
+      const fa = e.frameAnim, set = fa && e.type.anims?.[fa.name];
+      if (set) {
+        const n = set.frames.length, i = fa.ph !== undefined ? Math.floor(fa.ph * n) : Math.floor(fa.t * set.fps);
+        bakeFrame(e.type, fa.name, ((i % n) + n) % n, e.facing, e.low, e.flashT > 0);
+      } else { const o = bakeActor(e.type, e.pose, e.facing, e.low, e.flashT > 0); e.sock = o.sock; }
+      e.baked = true;
+    }
     ctx.drawImage(e.low, Math.round(e.x - e.low.ax) + shudderOf(e, real), Math.round(e.y - e.low.ay));
   }
   // 로프: 로프 쏘는 손(먼 팔)에서 쿠나이까지 — 몸 뒤에 그림
