@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LopeKing rig.json (art/<id>/rig.json)",
+  "description": "컷아웃 리그. 좌표 단위 = 칸 px (부위 PNG 는 칸 크기 그대로, 크롭 안 함). scale = 칸 px → 게임 px",
+  "type": "object",
+  "required": ["cell", "scale", "parts"],
+  "properties": {
+    "cell": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2, "description": "부위 칸 크기 [w, h]" },
+    "scale": { "type": "number", "description": "칸 px → 게임 px (서 있는 키 약 44px 가 되게)" },
+    "cloak": { "type": "boolean", "description": "코트 자락이 두 다리를 덮음 (가까운 다리를 자락 뒤에)" },
+    "parts": {
+      "type": "object",
+      "description": "head · torso · hips · cape(선택) · upperArm · foreArm · thigh · shin",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["pivot"],
+        "properties": {
+          "src": { "type": "string" },
+          "pivot": { "$ref": "#/$defs/pt", "description": "부모 관절에 붙는 점" },
+          "joints": {
+            "type": "object",
+            "description": "torso: neck·shoulderN·shoulderF·cape / hips: waist·hipN·hipF / upperArm: elbow / foreArm: hand / thigh: knee / shin: sole",
+            "additionalProperties": { "$ref": "#/$defs/pt" }
+          },
+          "size": { "description": "부위 배율 (숫자 또는 [높이, 가로])", "oneOf": [{ "type": "number" }, { "type": "array", "items": { "type": "number" } }] },
+          "cell": { "$ref": "#/$defs/pt" }
+        }
+      }
+    },
+    "weapon": {
+      "type": "object",
+      "required": ["src", "cell", "grip"],
+      "properties": {
+        "src": { "type": "string" }, "cell": { "$ref": "#/$defs/pt" },
+        "grip": { "$ref": "#/$defs/pt", "description": "쥐는 자리 (손 관절에 붙음)" },
+        "tip": { "$ref": "#/$defs/pt", "description": "칼끝 (칼끝 궤적 이펙트 기준)" },
+        "rot": { "type": "number", "description": "쥐는 각도 보정(도)" },
+        "size": { "type": "number" }
+      }
+    },
+    "death": {
+      "type": "object",
+      "description": "사망 통그림 컷 (리깅으로 어색한 쓰러짐)",
+      "properties": {
+        "frames": { "type": "array", "items": { "type": "object", "properties": { "src": { "type": "string" }, "pivot": { "$ref": "#/$defs/pt" }, "w": { "type": "number" }, "h": { "type": "number" } } } },
+        "size": { "type": "number", "description": "그림 px → 게임 px" },
+        "times": { "type": "array", "items": { "type": "number" }, "description": "컷이 바뀌는 시각(초)" }
+      }
+    },
+    "ref": {
+      "type": "object",
+      "description": "비교용 통 이미지 (리그 편집기)",
+      "properties": { "src": { "type": "string" }, "foot": { "$ref": "#/$defs/pt" }, "k": { "type": "number" } }
+    }
+  },
+  "$defs": { "pt": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 } }
+}

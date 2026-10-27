@@ -12,7 +12,7 @@
     486.20000000000005
    ],
    "src": "parts/head.png",
-   "size": 1
+   "size": 1.0
   },
   "torso": {
    "pivot": [
@@ -37,7 +37,8 @@
      210.9
     ]
    },
-   "src": "parts/torso.png"
+   "src": "parts/torso.png",
+   "size": 0.8
   },
   "hips": {
    "pivot": [
@@ -58,14 +59,16 @@
      317.1
     ]
    },
-   "src": "parts/hips.png"
+   "src": "parts/hips.png",
+   "size": 0.8
   },
   "cape": {
    "pivot": [
     255.8,
     108.1
    ],
-   "src": "parts/cape.png"
+   "src": "parts/cape.png",
+   "size": 0.8
   },
   "upperArm": {
    "pivot": [
@@ -78,7 +81,8 @@
      452.2
     ]
    },
-   "src": "parts/upperArm.png"
+   "src": "parts/upperArm.png",
+   "size": 0.8
   },
   "foreArm": {
    "pivot": [
@@ -91,7 +95,8 @@
      460
     ]
    },
-   "src": "parts/foreArm.png"
+   "src": "parts/foreArm.png",
+   "size": 0.82
   },
   "thigh": {
    "pivot": [
@@ -104,7 +109,8 @@
      461.7
     ]
    },
-   "src": "parts/thigh.png"
+   "src": "parts/thigh.png",
+   "size": 0.75
   },
   "shin": {
    "pivot": [
@@ -117,7 +123,8 @@
      510
     ]
    },
-   "src": "parts/shin.png"
+   "src": "parts/shin.png",
+   "size": 0.75
   }
  },
  "weapon": {

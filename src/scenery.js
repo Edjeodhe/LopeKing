@@ -16,6 +16,21 @@ export const PAL = {
   crimson: ['#5a0e14', '#9a1a22', '#d23a3a', '#ff8a7a'],
 };
 
+// 테마: 레벨 json 의 theme 으로 팔레트·배경을 바꿈 (밤 기와 마을 · 대나무 숲)
+const THEMES = {
+  night: { ...PAL },
+  bamboo: {
+    rock: ['#0f1512', '#18231c', '#243228', '#34473a'], moon: '#9ad0a0',
+    brick: ['#1a1410', '#2a2018', '#3e3022', '#5a4630'],
+    spike: ['#2a3a20', '#6a8a48', '#c8d8a0'],
+    sky: ['#040807', '#07100e', '#0c1a16', '#122620', '#1a342a'],
+    far: '#13261f', mid: '#0c1a15', near: '#08110d',
+    bamboo: ['#0e2014', '#1e4024', '#3a6a38', '#7aa860'],
+  },
+};
+export let theme = 'night';
+export function setTheme(name) { theme = THEMES[name] ? name : 'night'; Object.assign(PAL, THEMES.night, THEMES[theme]); }
+
 // ---------- 타일 굽기 ----------
 export function bakeTiles(world) {
   const c = document.createElement('canvas');
@@ -58,6 +73,17 @@ export function bakeTiles(world) {
       if (open(-1, 0)) { x.fillStyle = PAL.ink; x.fillRect(X, Y, 1, TILE); x.fillStyle = P[2]; x.fillRect(X + 1, Y + 1, 1, TILE - 1); }
       if (open(1, 0)) { x.fillStyle = PAL.ink; x.fillRect(X + TILE - 1, Y, 1, TILE); x.fillStyle = P[0]; x.fillRect(X + TILE - 2, Y + 1, 1, TILE - 1); }
       if (open(0, 1)) { x.fillStyle = PAL.ink; x.fillRect(X, Y + TILE - 1, TILE, 1); x.fillStyle = P[0]; x.fillRect(X, Y + TILE - 2, TILE, 1); }
+    } else if (t === T.BAMBOO) {
+      // 대나무 줄기: 12px 폭, 마디마다 굵은 띠, 왼쪽 그림자·오른쪽 빛
+      const P = PAL.bamboo || ['#0e2014', '#1e4024', '#3a6a38', '#7aa860'];
+      x.fillStyle = PAL.ink; x.fillRect(X + 1, Y, 14, TILE);
+      x.fillStyle = P[1]; x.fillRect(X + 2, Y, 12, TILE);
+      x.fillStyle = P[2]; x.fillRect(X + 6, Y, 6, TILE);
+      x.fillStyle = P[3]; x.fillRect(X + 10, Y, 1, TILE);
+      x.fillStyle = P[0]; x.fillRect(X + 2, Y, 2, TILE);
+      if (j % 2 === 0) { x.fillStyle = PAL.ink; x.fillRect(X + 1, Y + 8, 14, 1); x.fillStyle = P[3]; x.fillRect(X + 2, Y + 9, 12, 1); x.fillStyle = P[0]; x.fillRect(X + 2, Y + 7, 12, 1); }
+      // 잎: 마디에서 가끔 옆으로 뻗음
+      if (j % 2 === 0 && hash(i, j, 5) < 0.35) { const d = hash(i, j, 6) < 0.5 ? -1 : 1; x.fillStyle = P[2]; for (let k = 0; k < 6; k++) x.fillRect(X + 8 + d * (7 + k), Y + 8 - Math.floor(k / 2), 1, 1); }
     } else if (t === T.PLANK) {
       const P = PAL.plank;
       x.fillStyle = PAL.ink; x.fillRect(X, Y, TILE, 6);
@@ -114,6 +140,29 @@ export function makeBackground(W, H) {
     const c = B.c;
     layers.push({ img: c, f: 0, y: 0, fixed: true });
   }
+  // 대숲: 먼 줄기(가늘고 촘촘) · 가까운 줄기(굵고 듬성, 마디·잎)
+  const stalks = (count, wMin, wMax, col, leaf, seed) => {
+    const w = W * 2, c = document.createElement('canvas'); c.width = w; c.height = H; const x = c.getContext('2d');
+    for (let k = 0; k < count; k++) {
+      const sx = Math.floor(hash(k, seed) * w), sw = wMin + Math.floor(hash(k, seed + 1) * (wMax - wMin + 1)), lean = (hash(k, seed + 2) - 0.5) * 0.08;
+      for (let y = 0; y < H; y++) {
+        const xx = Math.round(sx + (H - y) * lean);
+        x.fillStyle = col; x.fillRect(((xx % w) + w) % w, y, sw, 1);
+        if (y % 22 === Math.floor(hash(k, seed + 3) * 22)) { x.fillStyle = leaf; x.fillRect(((xx % w) + w) % w - 1, y, sw + 2, 1); x.fillStyle = col; }
+      }
+      // 잎 덩어리
+      x.fillStyle = leaf;
+      for (let q = 0; q < 5; q++) {
+        const ly = Math.floor(hash(k, seed + 10 + q) * H * 0.7), d = hash(k, q) < 0.5 ? -1 : 1, xx = Math.round(sx + (H - ly) * lean);
+        for (let m = 0; m < 7; m++) x.fillRect(((xx + d * (sw + m)) % w + w) % w, ly + Math.floor(m / 2), 2, 1);
+      }
+    }
+    return c;
+  };
+  if (theme === 'bamboo') {
+    layers.push({ img: stalks(70, 1, 2, PAL.far, '#1a3a2c', 20), f: 0.15, y: 0 });
+    layers.push({ img: stalks(26, 3, 5, PAL.mid, '#16301f', 40), f: 0.35, y: 0 });
+  } else {
   // 먼 산
   {
     const w = W * 2, c = document.createElement('canvas'); c.width = w; c.height = H; const x = c.getContext('2d');
@@ -140,6 +189,7 @@ export function makeBackground(W, H) {
       xx += bw + 10 + Math.floor(hash(k, 10) * 20); k++;
     }
     layers.push({ img: c, f: 0.3, y: -10 });
+  }
   }
   // 가까운 안개 띠 (체크무늬)
   {
@@ -199,4 +249,28 @@ export function drawExit(ctx, e, time) {
   const wave = Math.floor(time * 6) % 2;
   ctx.fillStyle = PAL.crimson[1]; ctx.fillRect(x + 1, y - 29, 12, 8 + wave);
   ctx.fillStyle = PAL.crimson[2]; ctx.fillRect(x + 1, y - 29, 12, 3);
+}
+
+// 체크포인트: 돌 등롱. 지나가면(lit) 불이 켜짐
+export function drawCheck(ctx, c, time) {
+  const x = Math.round(c.x), y = Math.round(c.y);
+  ctx.fillStyle = PAL.ink; ctx.fillRect(x - 5, y - 22, 11, 22);
+  ctx.fillStyle = '#4a4a5a'; ctx.fillRect(x - 4, y - 6, 9, 6); ctx.fillRect(x - 2, y - 14, 5, 8); ctx.fillRect(x - 5, y - 21, 11, 3);
+  ctx.fillStyle = '#6a6a7e'; ctx.fillRect(x - 4, y - 6, 9, 1); ctx.fillRect(x - 5, y - 21, 11, 1);
+  // 불 창
+  const lit = c.lit, f = Math.floor(time * 10) % 3;
+  ctx.fillStyle = lit ? ['#ffd080', '#ffb040', '#ffe0a0'][f] : '#1a1820';
+  ctx.fillRect(x - 1, y - 13, 3, 5);
+  if (lit) { ctx.fillStyle = '#ffffff'; ctx.fillRect(x, y - 12, 1, 2); }
+}
+
+// 보스 방 문: 닫히면 굵은 쇠창살
+export function drawGates(ctx, world, time) {
+  for (const [gx, gy, gw, gh] of world.gates) {
+    if (world.at(gx, gy) !== T.GATE) continue;
+    const X = gx * TILE, Y = gy * TILE, Hh = gh * TILE, Ww = gw * TILE;
+    ctx.fillStyle = PAL.ink; ctx.fillRect(X, Y, Ww, Hh);
+    for (let i = 2; i < Ww; i += 5) { ctx.fillStyle = '#5e6272'; ctx.fillRect(X + i, Y, 2, Hh); ctx.fillStyle = '#9aa0b0'; ctx.fillRect(X + i, Y, 1, Hh); }
+    for (let j = 6; j < Hh; j += 24) { ctx.fillStyle = '#3e414e'; ctx.fillRect(X, Y + j, Ww, 3); }
+  }
 }

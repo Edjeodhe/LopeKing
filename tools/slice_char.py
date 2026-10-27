@@ -173,7 +173,12 @@ def main():
 
     # 사망 통그림 4컷 (있을 때만): 컷마다 바닥 닿는 자리(가장 아래 줄 가운데)가 기준점
     if os.path.exists(os.path.join(root, 'death.png')):
-        slice_death(root, rig, old, keep, full_h)
+        # 사망 컷 축척 기준 키: SD 배율로 조립한 참고 그림(sd_ref.png)이 있으면 그 키, 없으면 통 이미지 키
+        ref_h = full_h
+        if os.path.exists(os.path.join(root, 'sd_ref.png')):
+            sb = bbox(key_magenta(os.path.join(root, 'sd_ref.png')))
+            ref_h = sb[3] - sb[1]
+        slice_death(root, rig, old, keep, ref_h)
     finish(root, cid, rig, old, keep, full, fx0, fy0, fx1, fy1, parts, cell, rig_path)
 
 

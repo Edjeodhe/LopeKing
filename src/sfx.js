@@ -11,6 +11,8 @@ function ensure() {
   } catch (e) { ac = null; }
   return ac;
 }
+// 배경음(music.js)도 같은 오디오 장치를 씀
+export function audio() { return ensure() ? { ac, noiseBuf } : null; }
 addEventListener('pointerdown', ensure, { once: true });
 addEventListener('keydown', ensure, { once: true });
 
@@ -33,10 +35,12 @@ const SFX = {
   hit: t => { noise(t, 0.18, 1400, 200, 0.7, 0.6, 'lowpass'); tone(t, 0.08, 180, 60, 0.25); },
   gore: t => { noise(t, 0.35, 900, 120, 0.8, 0.5, 'lowpass'); noise(t + 0.03, 0.2, 2600, 400, 0.3, 2); tone(t, 0.2, 110, 40, 0.3, 'sine'); },
   exec: t => { noise(t, 0.08, 7000, 3000, 0.6, 1); tone(t, 0.5, 70, 30, 0.5, 'sine'); noise(t + 0.02, 0.5, 800, 80, 0.7, 0.5, 'lowpass'); },
-  dash: t => { noise(t, 0.14, 1800, 600, 0.3, 0.7); },
+  dash: t => { noise(t, 0.2, 2600, 500, 0.45, 0.7); tone(t, 0.12, 500, 180, 0.06, 'triangle'); },
+  djump: t => { noise(t, 0.1, 1200, 3000, 0.25, 1.5); tone(t, 0.1, 600, 1100, 0.07, 'triangle'); },
   jump: t => { noise(t, 0.06, 900, 1600, 0.15, 1); },
   land: t => { noise(t, 0.08, 500, 120, 0.3, 0.8, 'lowpass'); },
   rope: t => { noise(t, 0.1, 3000, 6000, 0.2, 3); tone(t, 0.06, 900, 1600, 0.06); },
+  zip: t => { noise(t, 0.16, 800, 7000, 0.45, 1.2); tone(t, 0.12, 300, 1400, 0.08, 'triangle'); },
   hook: t => { tone(t, 0.05, 1600, 1200, 0.15); noise(t, 0.05, 4000, 2000, 0.3, 4); },
   hookEnemy: t => { noise(t, 0.12, 1200, 300, 0.5, 1, 'lowpass'); tone(t, 0.08, 300, 120, 0.2); },
   clink: t => { tone(t, 0.04, 2400, 1800, 0.1); },
@@ -46,6 +50,12 @@ const SFX = {
   aim: t => { tone(t, 0.05, 1200, 1200, 0.05, 'sine'); },
   alert: t => { tone(t, 0.06, 700, 900, 0.08); },
   enemySwing: t => { noise(t, 0.1, 2000, 600, 0.35, 0.8); },
+  roar: t => { tone(t, 0.9, 90, 50, 0.4, 'sawtooth'); noise(t, 0.9, 500, 150, 0.5, 0.7, 'lowpass'); tone(t + 0.05, 0.7, 130, 70, 0.2, 'square'); },
+  bossSlam: t => { noise(t, 0.5, 400, 40, 1.0, 0.5, 'lowpass'); tone(t, 0.4, 60, 25, 0.6, 'sine'); },
+  bossSwing: t => { noise(t, 0.25, 1200, 200, 0.6, 0.6); },
+  bossJump: t => { noise(t, 0.2, 300, 900, 0.4, 0.7, 'lowpass'); },
+  crit: t => { tone(t, 0.1, 1800, 900, 0.25, 'square'); noise(t, 0.2, 1500, 200, 0.7, 0.6, 'lowpass'); },
+  check: t => { tone(t, 0.25, 660, 660, 0.12, 'triangle'); tone(t + 0.12, 0.35, 990, 990, 0.1, 'triangle'); },
   death: t => { tone(t, 0.8, 220, 40, 0.4, 'sawtooth'); noise(t, 0.6, 600, 60, 0.5, 0.5, 'lowpass'); },
 };
 export function sfx(name) {

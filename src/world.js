@@ -10,10 +10,12 @@ export const T = {
   PLANK: 3,    // '=' 나무 발판: 위에서만 밟힘 (로프 X)
   SPIKE: 4,    // '^' 가시: 닿으면 피해
   METAL: 5,    // 'M' 쇠벽: 로프 안 박힘 (막힘만)
+  BAMBOO: 6,   // 'Z' 대나무 줄기: 몸은 통과, 쿠나이만 꽂힘 → 돌진하면 줄기를 붙잡고 매달림 (어느 쪽으로든 다시 던짐)
+  GATE: 7,     // 문: 보스 방에 들어서면 닫힘 (로프 X)
 };
-const CH = { '#': T.ROCK, B: T.BRICK, '=': T.PLANK, '^': T.SPIKE, M: T.METAL, '.': T.EMPTY };
-export const SOLID = t => t === T.ROCK || t === T.BRICK || t === T.METAL;
-export const HOOKABLE = t => t === T.ROCK || t === T.BRICK;
+const CH = { '#': T.ROCK, B: T.BRICK, '=': T.PLANK, '^': T.SPIKE, M: T.METAL, Z: T.BAMBOO, '.': T.EMPTY };
+export const SOLID = t => t === T.ROCK || t === T.BRICK || t === T.METAL || t === T.GATE;
+export const HOOKABLE = t => t === T.ROCK || t === T.BRICK || t === T.BAMBOO;
 
 export class World {
   // def = { w, h, fill?: '#', rects: [[x, y, w, h, ch]], points: [[x, y, kind, opts?]] }
@@ -34,6 +36,15 @@ export class World {
       else this.spawns.push({ kind, x: px, y: py, ...(o || {}) });
     }
     this.pw = this.w * TILE; this.ph = this.h * TILE;
+    this.gates = def.gates || [];
+  }
+  // 문 닫기·열기 (보스 방)
+  setGates(closed) {
+    for (const [x, y, w, h] of this.gates) for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) {
+      const k = j * this.w + i;
+      if (closed && !this.t[k]) this.t[k] = T.GATE;
+      else if (!closed && this.t[k] === T.GATE) this.t[k] = T.EMPTY;
+    }
   }
   at(i, j) { return i < 0 || i >= this.w ? T.ROCK : j < 0 || j >= this.h ? T.EMPTY : this.t[j * this.w + i]; }
   atPx(x, y) { return this.at(Math.floor(x / TILE), Math.floor(y / TILE)); }
@@ -106,8 +117,8 @@ export class World {
   }
 
   // 로프 레이캐스트: (x, y)에서 (dx, dy) 방향으로 len 까지. 처음 닿는 벽(hook 여부 포함)을 돌려줌
-  // 타일 격자를 DDA 로 훑음 (빠르고 정확함)
-  ray(x, y, dx, dy, len) {
+  // 타일 격자를 DDA 로 훑음 (빠르고 정확함). poles = 대나무 줄기에도 걸림 (쿠나이만. 시야·실 가림 판정은 false) — 시작 칸의 줄기는 건너뜀(붙잡고 있는 줄기)
+  ray(x, y, dx, dy, len, poles = true) {
     const L = Math.hypot(dx, dy); dx /= L; dy /= L;
     let i = Math.floor(x / TILE), j = Math.floor(y / TILE);
     const si = dx > 0 ? 1 : -1, sj = dy > 0 ? 1 : -1;
@@ -115,9 +126,16 @@ export class World {
     let tx = ((dx > 0 ? (i + 1) * TILE - x : x - i * TILE)) / Math.abs(dx || 1e-9);
     let ty = ((dy > 0 ? (j + 1) * TILE - y : y - j * TILE)) / Math.abs(dy || 1e-9);
     let d = 0, nx = 0, ny = 0;
+    // 붙잡고 있는 줄기(시작 칸이 대나무면 그 세로줄 전체)는 건너뜀 — 위·아래로 던져도 제 줄기에 꽂히지 않게
+    const i0 = this.at(i, j) === T.BAMBOO ? i : -999;
     while (d <= len) {
       const t = this.at(i, j);
       if (SOLID(t)) return { x: x + dx * d, y: y + dy * d, d, tile: t, hook: HOOKABLE(t), nx, ny };
+      if (poles && t === T.BAMBOO && i !== i0) {
+        // 줄기 가운데에 꽂힘
+        const px = i * TILE + TILE / 2, dd = Math.abs(dx) > 1e-6 ? Math.max(d, (px - x) / dx) : d;
+        return { x: px, y: y + dy * dd, d: dd, tile: t, hook: true, pole: true, nx: 0, ny: 0 };
+      }
       if (tx < ty) { d = tx; tx += tdx; i += si; nx = -si; ny = 0; }
       else { d = ty; ty += tdy; j += sj; nx = 0; ny = -sj; }
     }
@@ -125,7 +143,7 @@ export class World {
   }
   // 두 점 사이가 뚫려 있나 (적 시야)
   clear(x0, y0, x1, y1) {
-    const r = this.ray(x0, y0, x1 - x0, y1 - y0, Math.hypot(x1 - x0, y1 - y0));
+    const r = this.ray(x0, y0, x1 - x0, y1 - y0, Math.hypot(x1 - x0, y1 - y0), false);
     return !r;
   }
 }

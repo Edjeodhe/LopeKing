@@ -105,10 +105,14 @@ for (const b of document.querySelectorAll('[data-ov]')) b.onclick = () => { st.o
 let timer = 0;
 function changed() { st.dirty = true; $('status').textContent = '저장 안 됨'; clearTimeout(timer); timer = setTimeout(rebuild, 120); }
 
+// 통 이미지와 비교할 땐 부위 배율(size)을 빼고 조립 — 통 이미지는 배율 전 그림이라서.
+// (SD 비율은 그림을 맞춘 뒤 rig.json size 로 머리를 키우고 다리를 줄여 만든다: 프로토 사막 은둔자와 같은 방식)
+const unsized = r => ({ ...r, scale: 1 / SS, parts: Object.fromEntries(Object.entries(r.parts).map(([k, v]) => [k, { ...v, size: 1 }])) });
+
 // ---------- 다시 조립 ----------
 async function rebuild() {
   // 비교용: 칸 px = 그림 px 1:1 (K = 1/SS)
-  st.hiRig = await loadRig(dir(), { ...st.rig, scale: 1 / SS }, st.imgs);
+  st.hiRig = await loadRig(dir(), unsized(st.rig), st.imgs);
   st.type = await loadActorType(dir(), { rigDef: st.rig, colors: 18 });
   drawPart(); drawCompare();
 }
@@ -162,7 +166,7 @@ async function autoFit() {
   const refMask = new Uint8Array(W * H); for (let i = 0; i < W * H; i++) refMask[i] = ra[i * 4 + 3] > 128;
   const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d', { willReadFrequently: true });
   const score = async () => {
-    const P = await loadRig(dir(), { ...st.rig, scale: 1 / SS }, st.imgs);
+    const P = await loadRig(dir(), unsized(st.rig), st.imgs);
     x.clearRect(0, 0, W, H); x.save(); x.scale(0.5, 0.5);
     const f = st.rig.ref.foot;
     drawRig(x, P, { ...ZERO, cape: [0, 0, 0], hide: ['sword'] }, f[0], f[1], 1, st.rig.ref.k ?? 1);
@@ -173,6 +177,18 @@ async function autoFit() {
     return i0 / Math.max(1, u);
   };
   let best = await score();
+  // 피벗은 그 부위 그림 안(테두리 6px 여유)에만 — 밖으로 나가면 몸통·엉덩이 사이가 벌어짐 (부위 배율을 넣으면 드러남)
+  const bbox = {};
+  for (const n of Object.keys(st.rig.parts)) {
+    const im = st.imgs[n], c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+    const g = c.getContext('2d'); g.drawImage(im, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height).data;
+    let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+    for (let y = 0; y < c.height; y += 2) for (let x = 0; x < c.width; x += 2) if (d[(y * c.width + x) * 4 + 3] > 128) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    const k = (st.rig.parts[n].cell || st.rig.cell)[0] / im.width;   // 그림 px → 칸 px
+    bbox[n] = [x0 * k - 6, y0 * k - 6, x1 * k + 6, y1 * k + 6];
+  }
+  const inside = (n, q) => { const b = bbox[n]; return !b || (q[0] >= b[0] && q[0] <= b[2] && q[1] >= b[1] && q[1] <= b[3]); };
   const order = ['hips', 'torso', 'head', 'cape', 'thigh', 'shin', 'upperArm', 'foreArm'].filter(n => st.rig.parts[n]);
   for (const step of [24, 12, 6, 3]) {
     for (const n of order) {
@@ -183,6 +199,7 @@ async function autoFit() {
         for (const [dx, dy] of [[step, 0], [-step, 0], [0, step], [0, -step]]) {
           const old = p.pivot;
           p.pivot = [old[0] + dx, old[1] + dy];
+          if (!inside(n, p.pivot)) { p.pivot = old; continue; }
           const s = await score();
           if (s > best + 1e-4) { best = s; improved = true; }
           else p.pivot = old;

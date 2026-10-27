@@ -3,7 +3,7 @@
 //   gunner (조총 구울): 거리를 두고 → 겨눔(붉은 조준선 예고) → 발사. 총알은 주인공이 베면 되받아침
 import * as A from './anim.js';
 import { newBakeCanvas } from './actor.js';
-import { blood, spark, shake, flash } from './fx.js';
+import { blood, spark } from './fx.js';
 
 export const KINDS = {
   grunt: { hp: 2, w: 10, h: 24, walk: 40, chase: 92, sight: 190, reach: 26, wind: 0.36, act: 0.1, rec: 0.45, dmg: 1 },
@@ -82,6 +82,7 @@ export class Enemy {
         const a = this.aimAng, mx = this.x + Math.cos(a) * 14, my = this.cy - 2 + Math.sin(a) * 14;
         G.bullets.push({ x: mx, y: my, vx: Math.cos(a) * K.bullet, vy: Math.sin(a) * K.bullet, owner: 'enemy', t: 0 });
         spark(mx, my, a, 6, { cols: ['#fff6c0', '#ffb040'], v: 120, life: 0.12 });
+        G.flares.push({ x: mx, y: my, r: 60, col: [255, 210, 140], t: 0.08, glow: 0.5 });
         this.vx = -Math.cos(a) * 60;
         G.sfx?.('shot');
         this.state = 'chase'; this.cd = K.cd;

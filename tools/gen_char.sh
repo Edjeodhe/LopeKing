@@ -24,6 +24,7 @@ for id in "$@"; do
   [ -f art/$id/full_side.png ] || { echo "$(date +%H:%M) $id 통 이미지 실패 - 건너뜀" >> $log; continue; }
   one $id parts_side full_side.png
   one $id weapon full_side.png
-  one $id death full_side.png
+  # 사망 컷은 SD 배율로 조립한 참고 그림(리그 편집기·sd_ref.png)이 있으면 그걸로 — 통 이미지보다 비율이 정확
+  if [ -f art/$id/sd_ref.png ]; then one $id death sd_ref.png; else one $id death full_side.png; fi
 done
 echo "$(date +%H:%M) 끝 $*" >> $log

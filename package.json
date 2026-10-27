@@ -1,0 +1,6 @@
+{
+  "name": "lopeking",
+  "private": true,
+  "type": "module",
+  "description": "웹 프로토. 빌드 없음 (python tools/server.py). type: module 은 node 로 src/*.js 를 불러 유니티용 데이터를 뽑기 위함"
+}

@@ -1,7 +1,7 @@
 // 이펙트: 칼끝 궤적(smear) · 몸을 감싸는 고리(앞 반/뒤 반 나눠 그림) · 불티·먼지·피 입자 · 피 자국(타일에 묻음) · 속도선 · 화면 흔들림
 // 모두 1px 도트로 직접 찍는다 (반투명 없음, 사라질 땐 체크무늬) → 캐릭터 굽기와 같은 결
 
-export const fx = { smear: [], rings: [], parts: [], lines: [], flashes: [], texts: [] };
+export const fx = { smear: [], rings: [], parts: [], lines: [], flashes: [], texts: [], cuts: [] };
 export const cam = { x: 0, y: 0, shake: 0, kick: [0, 0] };
 let decal = null, decalCtx = null, world = null;
 
@@ -87,8 +87,9 @@ export function spark(x, y, ang, n, o = {}) {
 }
 // 피: 베인 방향으로 뿜어져 나가 바닥·벽에 묻음
 export function blood(x, y, ang, n, power = 1) {
-  spark(x, y, ang, n, { v: 170 * power, spread: 0.9, g: 520, life: 0.9, cols: BLOOD.slice(1), blood: true, size: 2 });
-  spark(x, y, ang, Math.ceil(n / 3), { v: 60 * power, spread: 2.5, g: 400, life: 0.6, cols: [BLOOD[1], BLOOD[2]], blood: true, size: 1 });
+  n = Math.ceil(n * 0.7);   // 너무 많으면 공중에 붉은 점이 떠 보임
+  spark(x, y, ang, n, { v: 170 * power, spread: 0.9, g: 560, life: 0.8, cols: BLOOD.slice(1), blood: true, size: 2 });
+  spark(x, y, ang, Math.ceil(n / 3), { v: 60 * power, spread: 2.5, g: 450, life: 0.5, cols: [BLOOD[1], BLOOD[2]], blood: true, size: 1 });
 }
 export function dust(x, y, dir, n) {
   for (let i = 0; i < n; i++) {
@@ -120,6 +121,23 @@ export function pool(x, y, w) {
 export function speedLine(x, y, dx, dy, len = 10) {
   fx.lines.push({ x, y, dx, dy, len: len * (0.6 + Math.random() * 0.8), t: 0, life: 0.1 + Math.random() * 0.06 });
 }
+// 일직선 베기 자국 (쿠나이 돌진이 적을 관통): 흰 심 → 붉은 테, 가운데부터 가늘어지며 사라짐
+export function cutLine(x0, y0, x1, y1) { fx.cuts.push({ x0, y0, x1, y1, t: 0, life: 0.16 }); }
+function drawCuts(ctx) {
+  for (const c of fx.cuts) {
+    const k = c.t / c.life, L = Math.hypot(c.x1 - c.x0, c.y1 - c.y0), ux = (c.x1 - c.x0) / L, uy = (c.y1 - c.y0) / L;
+    for (let s = 0; s <= L; s += 0.7) {
+      const u = s / L, w = (1 - Math.abs(u - 0.5) * 2) * 3 * (1 - k);   // 가운데가 두꺼운 칼자국
+      for (let o = -Math.ceil(w); o <= Math.ceil(w); o++) {
+        const X = Math.round(c.x0 + ux * s - uy * o), Y = Math.round(c.y0 + uy * s + ux * o);
+        if (k > 0.5 && (X + Y) & 1) continue;
+        ctx.fillStyle = Math.abs(o) < w * 0.4 ? '#ffffff' : Math.abs(o) < w * 0.8 ? '#ff6a6a' : '#9a1a22';
+        ctx.fillRect(X, Y, 1, 1);
+      }
+    }
+  }
+}
+
 // 화면 번쩍 (처형·피격): { col, life }
 export function flash(col, life = 0.06) { fx.flashes.push({ col, t: 0, life }); }
 
@@ -145,6 +163,8 @@ export function updateFx(dt) {
   fx.parts = fx.parts.filter(p => p.t < p.life);
   for (const l of fx.lines) l.t += dt;
   fx.lines = fx.lines.filter(l => l.t < l.life);
+  for (const c of fx.cuts) c.t += dt;
+  fx.cuts = fx.cuts.filter(c => c.t < c.life);
   for (const t of fx.texts) t.t += dt;
   fx.texts = fx.texts.filter(t => t.t < t.life);
   // 오래된 궤적 버림
@@ -169,6 +189,7 @@ export function drawFxBack(ctx, time) {
 // 캐릭터 앞에 그릴 것 (고리 가까운 반·칼끝 궤적·입자)
 export function drawFxFront(ctx, time) {
   drawSmear(ctx, time);
+  drawCuts(ctx);
   for (const R of fx.rings) drawRingHalf(ctx, R, true);
   for (const p of fx.parts) {
     const k = p.t / p.life;

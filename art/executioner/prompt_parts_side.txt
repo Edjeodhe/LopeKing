@@ -1,0 +1,26 @@
+Use your built-in image generation tool to create ONE image and save it as PNG to: parts_side.png (in the current working directory). Do not write code to draw it; it must be a generated illustration. After saving, reply only with the file name.
+
+Image spec:
+- 1536x1024, an exact grid of 4 columns x 2 rows (each cell 384x512).
+- Solid flat MAGENTA background (#FF00FF) everywhere behind the drawings. No text, no letters, no numbers, no labels, no grid lines, no frames, no cast shadows, no ground.
+- Each drawing sits centered in its own cell with a clear magenta margin; drawings must NOT touch or cross cell borders.
+- Cut-out body parts for a 2D paper-doll (cutout) rig. Arms and legs hang perfectly straight DOWN and vertical, with a flat clean cut at each joint (rounded joint caps so rotation hides seams).
+- The attached reference image shows THIS EXACT CHARACTER. Keep the identical design, colors, proportions and scale.
+- CHARACTER: an original BOSS monster: a GIANT undead EXECUTIONER GHOUL, the cursed headsman of a Joseon-era execution ground (inspired by the Korean "mangnani" executioner, original design, do NOT copy any existing character). HULKING and massive: huge rounded shoulders, thick bloated gray-purple rotting arms with stitched seams, a heavy hunched back. Wild matted black hair tied in a ragged topknot, face hidden behind a cracked crimson-lacquered executioner mask with a carved snarl and one glowing yellow-green eye. Bare scarred chest crossed by thick iron chains, a blood-stained crimson executioner sash and a heavy leather apron over dark trousers, wrapped shins and huge bare clawed feet. A torn crimson execution banner (with no readable text) hangs from the back of the shoulders as a separate cape part.
+- PROPORTIONS: stylized chibi-action "SD" proportions, about 3.3 heads tall: the head (with headgear) is BIG (about 30% of the full height), short sturdy body, short limbs, a slightly oversized look like a modern pixel action game character (Sanabi / Katana Zero era). NOT cute, no big anime eyes.
+- RENDERING: flat CEL SHADING, every material exactly THREE flat tones (shadow, base, light) with hard edges, plus a thin cold moonlight rim light ON the upper-right edges of each shape (inside the shape, not a glow around it). NO outlines, NO black linework, NO gradients, NO texture noise, NO glow halos, NO tiny details. Big simple readable shapes with a few bold cloth folds: it will be shrunk to a 40-pixel-tall sprite.
+- BODY: HULKING heavy proportions, about 3 heads tall, very wide shoulders and huge arms (much bulkier than a normal SD hero).
+- PALETTE: bruised gray-purple rotting skin, crimson lacquer and crimson cloth, dark leather brown, rusty iron chains, dirty black hair, and ONE vivid accent: sickly yellow-green eye glow.
+- Scale: as if the whole figure is 1150 px tall from boot sole to the top of the head/headgear (head with headgear about 360 px tall and at most 360 px wide, thigh about 190 px long, shin with boot about 230 px long).
+Every part is a pure SIDE VIEW, FACING RIGHT.
+Cells, left to right, top to bottom:
+Row 1: 1. HEAD  2. TORSO  3. HIPS  4. CAPE
+Row 2: 5. UPPER ARM  6. FOREARM + HAND  7. THIGH  8. SHIN + BOOT
+ HEAD: huge head with matted topknot hair and the cracked crimson-lacquered snarling executioner mask, one glowing eye hole, thick short neck with a flat cut at the bottom.
+ TORSO: massive hunched scarred bare chest and back crossed with iron chains, crimson sash over one shoulder, NO arms, NO cape. Flat cut at neck and waist.
+ HIPS: heavy blood-stained leather apron and crimson sash knot, top of dark trousers. Flat cut on top.
+ CAPE: ONLY the torn crimson execution banner, hanging straight DOWN from a narrow top (the mount point at the top center), ragged hem, NO letters. About 420 px long. No body inside it.
+ UPPER ARM: enormous bloated gray-purple upper arm with stitched seams and a chain wrapped around it, rounded shoulder at the top, flat cut at the elbow.
+ FOREARM + HAND: thick gray-purple forearm with an iron shackle cuff and a huge clawed fist.
+ THIGH: thick dark trousers, rounded hip cap on top, flat cut at the knee.
+ SHIN + BOOT: cloth-wrapped thick shin and a huge bare clawed gray foot, toes pointing RIGHT, flat sole at the bottom.

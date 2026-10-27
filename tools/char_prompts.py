@@ -8,8 +8,8 @@ import sys
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'art')
 
 COMMON_STYLE = (
-    '- PROPORTIONS: stylized chibi-action "SD" proportions, about 3.3 heads tall: the head (with headgear) is BIG (about 30% of the '
-    'full height), short sturdy body, short limbs, a slightly oversized look like a modern pixel action game character (Sanabi / Katana Zero era). '
+    '- PROPORTIONS: stylized chibi-action "SD" proportions, about 3 heads tall: the head (with headgear) is BIG (about 33% of the '
+    'full height), short sturdy body, SHORT legs (legs about 35% of the height), short limbs, a slightly oversized look like a modern pixel action game character (Sanabi / Katana Zero era). '
     'NOT cute, no big anime eyes.\n'
     '- RENDERING: flat CEL SHADING, every material exactly THREE flat tones (shadow, base, light) with hard edges, plus a thin cold moonlight '
     'rim light ON the upper-right edges of each shape (inside the shape, not a glow around it). NO outlines, NO black linework, NO gradients, '
@@ -92,6 +92,36 @@ CHARS = {
                   'iron BARREL pointing straight DOWN, a glowing match cord on the lock, brass bands. Total length about 700 px.',
         'death': False,
     },
+    'executioner': {
+        'who': 'an original BOSS monster: a GIANT undead EXECUTIONER GHOUL, the cursed headsman of a Joseon-era execution ground (inspired by the '
+               'Korean "mangnani" executioner, original design, do NOT copy any existing character). HULKING and massive: huge rounded shoulders, '
+               'thick bloated gray-purple rotting arms with stitched seams, a heavy hunched back. Wild matted black hair tied in a ragged topknot, '
+               'face hidden behind a cracked crimson-lacquered executioner mask with a carved snarl and one glowing yellow-green eye. Bare scarred '
+               'chest crossed by thick iron chains, a blood-stained crimson executioner sash and a heavy leather apron over dark trousers, wrapped '
+               'shins and huge bare clawed feet. A torn crimson execution banner (with no readable text) hangs from the back of the shoulders as a '
+               'separate cape part.',
+        'palette': 'bruised gray-purple rotting skin, crimson lacquer and crimson cloth, dark leather brown, rusty iron chains, dirty black hair, '
+                   'and ONE vivid accent: sickly yellow-green eye glow.',
+        'parts': {
+            'HEAD': 'huge head with matted topknot hair and the cracked crimson-lacquered snarling executioner mask, one glowing eye hole, thick '
+                    'short neck with a flat cut at the bottom.',
+            'TORSO': 'massive hunched scarred bare chest and back crossed with iron chains, crimson sash over one shoulder, NO arms, NO cape. Flat '
+                     'cut at neck and waist.',
+            'HIPS': 'heavy blood-stained leather apron and crimson sash knot, top of dark trousers. Flat cut on top.',
+            'CAPE': 'ONLY the torn crimson execution banner, hanging straight DOWN from a narrow top (the mount point at the top center), ragged '
+                    'hem, NO letters. About 420 px long. No body inside it.',
+            'UPPER ARM': 'enormous bloated gray-purple upper arm with stitched seams and a chain wrapped around it, rounded shoulder at the top, '
+                         'flat cut at the elbow.',
+            'FOREARM + HAND': 'thick gray-purple forearm with an iron shackle cuff and a huge clawed fist.',
+            'THIGH': 'thick dark trousers, rounded hip cap on top, flat cut at the knee.',
+            'SHIN + BOOT': 'cloth-wrapped thick shin and a huge bare clawed gray foot, toes pointing RIGHT, flat sole at the bottom.',
+        },
+        'weapon': 'a MASSIVE broad Joseon EXECUTIONER\'S SWORD (headsman blade): very wide, heavy, slightly curved single-edged blade with a '
+                  'squared end, notched and rust-stained, dark dried blood near the edge, long rag-wrapped grip with a crimson tassel. Total length '
+                  'about 900 px, blade about 170 px wide. Edge faces RIGHT.',
+        'death': False,
+        'scale_note': 'HULKING heavy proportions, about 3 heads tall, very wide shoulders and huge arms (much bulkier than a normal SD hero).',
+    },
 }
 
 HEAD = ('Use your built-in image generation tool to create ONE image and save it as PNG to: {name}.png '
@@ -107,7 +137,8 @@ CELLS = ['HEAD', 'TORSO', 'HIPS', 'CAPE', 'UPPER ARM', 'FOREARM + HAND', 'THIGH'
 
 
 def style(c):
-    return f'- CHARACTER: {c["who"]}\n' + COMMON_STYLE + f'- PALETTE: {c["palette"]}\n'
+    note = f'- BODY: {c["scale_note"]}\n' if c.get('scale_note') else ''
+    return f'- CHARACTER: {c["who"]}\n' + COMMON_STYLE + note + f'- PALETTE: {c["palette"]}\n'
 
 
 def prompts(c):
@@ -141,7 +172,8 @@ def prompts(c):
             ' 3. (bottom-left) FALLING: body falling backward toward the ground at about 45 degrees, cape spread.\n'
             ' 4. (bottom-right) LYING: lying flat on the back on the ground, limbs relaxed, the headgear on the ground beside the head, '
             'cape spread under the body. Long and low, fits the cell width.\n'
-            '- NO blood pools, NO weapon. Keep the SD proportions of the reference (big head, short limbs).\n')
+            '- NO blood pools, NO weapon. Keep EXACTLY the SD proportions of the reference (very big hatted head about 1/3 of the height, '
+            'short sturdy body, short legs) - it is the in-game rig, not a realistic figure.\n')
     return p
 
 

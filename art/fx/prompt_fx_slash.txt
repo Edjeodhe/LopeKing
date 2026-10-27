@@ -1,0 +1,13 @@
+Use your built-in image generation tool to create ONE image and save it as PNG to: fx_slash.png (in the current working directory). Do not write code to draw it; it must be a generated illustration. After saving, reply only with the file name.
+
+Image spec:
+- 1536x1024, solid flat pure BLACK background (#000000) everywhere. No text, no letters, no numbers, no labels, no grid lines, no frames.
+- An exact grid of 4 columns x 4 rows (each cell 384x256). Each drawing is centered in its own cell with black margin and must NOT touch or cross cell borders.
+- These are 2D SLASH EFFECT sprites for a fast pixel-art side-scrolling action game (in the spirit of Katana Zero and the Korean game INARI). They will be recolored by brightness, so draw them in GRAYSCALE ONLY: pure white core, light gray body, mid gray edges. Brighter = stronger.
+- STYLE: razor-sharp, crisp, hard-edged vector-like shapes. NO blur, NO soft glow, NO halo, NO bloom, NO smoke, NO gradients except 2-3 flat gray steps. Clean silhouettes that read clearly when shrunk to 60 pixels wide.
+- Each ROW is a 4-frame animation, left to right in time order.
+
+Row 1 - HORIZONTAL SLASH (a sword cut swept horizontally, seen from the side): a very LONG, THIN, flat crescent arc, wide horizontally and only slightly curved, thick in the middle and tapering to needle-sharp points at both ends. Frame 1: a thin line just appearing on the left half. Frame 2: the full crescent, brightest. Frame 3: the crescent thinner, its left (trailing) end eaten away. Frame 4: only a few thin broken streaks on the right end.
+Row 2 - SPIN SLASH (a full horizontal spinning cut seen from slightly above): a FLAT ELLIPTICAL RING slash (about 5 times wider than tall), a thick bright band. Frame 1: one third of the ellipse. Frame 2: two thirds. Frame 3: the full ring, brightest. Frame 4: the ring breaking into thin fading arc fragments.
+Row 3 - FINISHER SLASH: a HUGE heavy crescent slash, sharper and wider than row 1, with a few straight parallel speed streaks trailing behind it and tiny sharp shards flying off its outer edge. Frame 1: forming. Frame 2: full and brightest. Frame 3: thinning with shards. Frame 4: fading streaks and shards only.
+Row 4 - HIT IMPACT: a sharp hit spark centered in the cell: a bright 4-pointed star / cross flash with thin straight rays and a few small diamond shards. Frame 1: small bright star. Frame 2: biggest, long thin rays. Frame 3: rays breaking apart. Frame 4: a few tiny shards only.

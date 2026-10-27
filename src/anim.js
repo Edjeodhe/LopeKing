@@ -39,6 +39,8 @@ export const FALL = P({ torso: -4, head: 4, nU: -50, nF: 20, sw: -30, fU: 80, fF
 export const LAND = P({ torso: 26, head: -14, nU: 10, nF: 60, sw: 60, fU: -10, fF: 50, nT: 64, nS: -96, fT: -20, fS: -50, y: 5 });
 // 벽 타기: 벽 쪽 손을 벽에 대고 몸을 웅크림 (facing = 벽 반대쪽)
 export const WALL = P({ torso: -4, head: 4, nU: 20, nF: 50, sw: 50, fU: -130, fF: 20, nT: 50, nS: -70, fT: 10, fS: -50 });
+// 벽에 매달림 (쿠나이 돌진으로 벽에 붙음): 벽 쪽 손발로 버티고 몸은 벽 반대쪽(보는 쪽)으로 웅크림. facing = 벽 반대쪽
+export const CLING = P({ torso: 18, head: -10, nU: 30, nF: 60, sw: 40, fU: -150, fF: 30, nT: 70, nS: -100, fT: -40, fS: -60, y: -2 });
 export const DASH = P({ torso: 50, head: -30, nU: -60, nF: 20, sw: -40, fU: -70, fF: 15, nT: 64, nS: -60, fT: -52, fS: -24, y: 3 });
 export const HURT = P({ torso: -22, head: -24, nU: 40, nF: 30, sw: 30, fU: 50, fF: 10, nT: 20, nS: -20, fT: -24, fS: -10, y: 1 });
 
@@ -77,7 +79,7 @@ export function slash(t, aim, dir = 1) {
 export const slashLen = () => SLASH.wind + SLASH.act + SLASH.rec;
 
 // 처형(로프로 끌려가 베기) 준비 자세: 칼을 몸 뒤로 크게 젖힘
-export const ZIP = P({ torso: 36, head: -20, nU: -120, nF: 20, sw: -40, fU: 90, fF: 0, nT: 50, nS: -60, fT: -40, fS: -30 });
+export const ZIP = P({ torso: 40, head: -24, nU: -110, nF: 20, sw: -50, fU: 95, fF: 0, nT: 30, nS: -70, fT: -50, fS: -40 });
 
 // 자세 사이를 부드럽게 따라가기 (관절마다 속도가 다름). 숫자만
 const FOLLOW = { x: 30, y: 30, rot: 14, torso: 22, head: 18 };
@@ -99,7 +101,7 @@ export function newCape() { return { a: Array(CAPE_SEGS).fill(0), w: Array(CAPE_
 export function stepCape(cape, vx, vy, facing, dt) {
   cape.t += dt;
   const G = 260, K = 2.1;   // 바람 세기: 달리면(125px/s) 45° 남짓, 대시·로프 스윙이면 거의 수평으로 날림
-  const fx = -vx * K, fy = G - vy * K * 0.8;
+  const fx = -vx * K, fy = G - vy * K * 0.3;   // 떨어질 때 너무 크게 들리면 머리 위로 깃발처럼 솟음
   // 세상 각도(화면: 아래 0, 오른쪽 +) → 뼈 기준(보는 쪽 +)
   let target = Math.atan2(fx, fy) * 180 / Math.PI * facing;
   const speed = Math.hypot(vx, vy);

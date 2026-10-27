@@ -6,7 +6,7 @@ export const input = {
 };
 
 const KEYMAP = { KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right', KeyW: 'up', ArrowUp: 'up', KeyS: 'down', ArrowDown: 'down',
-  Space: 'jump', ShiftLeft: 'dash', ShiftRight: 'dash', KeyE: 'rope', KeyR: 'restart', KeyF: 'full', Backquote: 'debug', KeyP: 'pause' };
+  Space: 'jump', ShiftLeft: 'dash', ShiftRight: 'dash', KeyE: 'rope', KeyR: 'restart', KeyF: 'full', Backquote: 'debug', KeyP: 'pause', Escape: 'pause', KeyM: 'mute' };
 
 export function bindInput(canvas, toGame) {
   addEventListener('keydown', e => {

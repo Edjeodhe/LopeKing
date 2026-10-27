@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LopeKing level (levels/*.json)",
+  "description": "맵 = 사각형 채우기 + 점 배치. 단위 = 타일(16px). 나중 사각형이 앞 것을 덮음",
+  "type": "object",
+  "required": ["w", "h", "rects", "points"],
+  "properties": {
+    "name": { "type": "string" },
+    "w": { "type": "integer" }, "h": { "type": "integer" },
+    "theme": { "enum": ["night", "bamboo"], "description": "팔레트·배경" },
+    "ambient": { "type": "array", "items": { "type": "number" }, "description": "조명 환경색 [r, g, b] (곱하기)" },
+    "ceilY": { "type": "number", "description": "보스 낙석이 떨어지기 시작하는 높이(px)" },
+    "rects": {
+      "type": "array",
+      "items": { "type": "array", "prefixItems": [{ "type": "integer" }, { "type": "integer" }, { "type": "integer" }, { "type": "integer" }, { "enum": ["#", "B", "M", "Z", "=", "^", "."] }] },
+      "description": "[x, y, w, h, 타일]  # 돌(로프 O) · B 기와(로프 O) · M 쇠벽(로프 X) · Z 대나무 줄기(로프 O) · = 나무 발판(위에서만) · ^ 가시 · . 비움"
+    },
+    "gates": { "type": "array", "items": { "type": "array", "items": { "type": "integer" } }, "description": "보스 방 문 [x, y, w, h] — 보스가 깨면 닫힘" },
+    "points": {
+      "type": "array",
+      "items": { "type": "array", "prefixItems": [{ "type": "integer" }, { "type": "integer" }, { "enum": ["player", "grunt", "gunner", "boss", "ring", "lamp", "check", "exit"] }, { "type": "object" }] },
+      "description": "[x, y, 종류, 옵션] — y 는 그 타일에 서 있는 발 자리(타일 아래 끝). boss 옵션 { arena: [x0, x1], trigger: x }"
+    }
+  }
+}

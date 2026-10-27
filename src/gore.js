@@ -2,7 +2,7 @@
 //   decap 참수 · bisect 두 동강 · sever 팔 절단 · burst 처형(사지가 다 흩어짐) · crumple 그대로 고꾸라짐
 // 조각 = 죽은 순간의 자세에서 pose.only/hide 로 그 부위만 골라, 고해상도에서 돌려 같은 팔레트로 굽는다 (화면 결이 같음).
 // 잘린 자리(그루터기)에선 피가 몇 번 뿜어지고, 피는 바닥·벽에 묻어 남는다 (fx.js decal).
-import { bakeGib, newBakeCanvas, ACT } from './actor.js';
+import { bakeGib, newBakeCanvas, ACT } from './actor.js';   // 보스처럼 큰 개체는 e.low 크기·기준점을 따름
 import { blood, pool, spark, BLOOD } from './fx.js';
 import { P } from './anim.js';
 
@@ -29,15 +29,17 @@ export function pickDeath(hit) {
 // e = 죽는 개체 { type, pose, facing, x, y(발), sock(마지막 굽기의 소켓, low px), vx }
 export function killActor(e, hit, kind = pickDeath(hit)) {
   const ang = hit.ang ?? 0, dx = Math.cos(ang), dy = Math.sin(ang), pw = hit.power ?? 1;
+  const big = e.kind === 'boss' ? 2 : 1;   // 보스: 키가 두 배라 관절 기본값·조각 반지름도 두 배
   const S = e.sock || {};
-  const foot = [ACT.AX, ACT.AY];
+  const L = e.low || { width: ACT.CW, height: ACT.CH, ax: ACT.AX, ay: ACT.AY };
+  const foot = [L.ax, L.ay];
   const at = (k, fb) => S[k] || fb;
-  const neck = at('head', [foot[0], foot[1] - 28]), chest = at('chest', [foot[0], foot[1] - 22]), waist = at('waist', [foot[0], foot[1] - 14]);
+  const neck = at('head', [foot[0], foot[1] - 28 * big]), chest = at('chest', [foot[0], foot[1] - 22 * big]), waist = at('waist', [foot[0], foot[1] - 14 * big]);
   const pose = { ...e.pose };
-  const base = { type: e.type, facing: e.facing, ox: e.x - ACT.AX, oy: e.y - ACT.AY };
+  const base = { type: e.type, facing: e.facing, ox: e.x - L.ax, oy: e.y - L.ay, size: [L.width, L.height, L.ax, L.ay] };
   // 날아가는 조각: only = 그릴 부위, c = 무게중심(low px), stump = 잘린 자리(low px), v = 속도
   const fly = (only, c, stump, vx, vy, spin, r = 4) => add({ ...base, pose: { ...pose, only }, c0: c, stump, x: base.ox + c[0], y: base.oy + c[1],
-    vx: vx + (e.vx || 0) * 0.5, vy, va: spin, ang: 0, r, spurts: stump ? 3 + Math.floor(Math.random() * 3) : 0 });
+    vx: vx + (e.vx || 0) * 0.5, vy, va: spin, ang: 0, r: r * big, spurts: stump ? 3 + Math.floor(Math.random() * 3) : 0 });
   // 남은 몸: 발 기준으로 맞은 쪽 반대로 넘어짐 (hide = 떨어져 나간 부위)
   const topple = (hide, stump) => add({ ...base, pose: { ...pose, hide }, c0: foot, stump, x: e.x, y: e.y, topple: true,
     dir: Math.sign(dx || -e.facing) || 1, ang: 0, va: 0, spurts: stump ? 4 + Math.floor(Math.random() * 3) : 0, limp: 0 });
@@ -47,7 +49,7 @@ export function killActor(e, hit, kind = pickDeath(hit)) {
     fly(['sword'], h, null, dx * 90 + (Math.random() - 0.5) * 80, -160 - Math.random() * 80, (Math.random() - 0.5) * 30, 5);
     hide.push('sword');
   };
-  const head = [neck[0], neck[1] - 7];
+  const head = [neck[0], neck[1] - 7 * big];
   if (kind === 'decap') {
     fly(['head'], head, neck, dx * 140 * pw, -200 - Math.random() * 120, (Math.random() < 0.5 ? -1 : 1) * (10 + Math.random() * 10), 5);
     const hide = ['head']; swordAway(hide);
@@ -82,7 +84,7 @@ export function killActor(e, hit, kind = pickDeath(hit)) {
 }
 
 function add(g) {
-  g.low = newBakeCanvas(); g.dirty = true; g.t = 0; g.spurtT = 0.05; g.settled = false;
+  g.low = newBakeCanvas(...(g.size || [])); g.dirty = true; g.t = 0; g.spurtT = 0.05; g.settled = false;
   gibs.push(g);
   if (gibs.length > 80) { const i = gibs.findIndex(q => q.settled); gibs.splice(i < 0 ? 0 : i, 1); }
   return g;
@@ -113,7 +115,11 @@ export function updateGore(dt) {
       const lim = Math.PI / 2 * 0.96;
       if (Math.abs(g.ang) >= lim) {
         g.ang = Math.sign(g.ang) * lim;
-        if (g.va > 3) { g.va *= -0.25; } else { g.settled = true; pool(g.x + g.dir * 12, g.y - 1, 10); }
+        if (g.va > 3) { g.va *= -0.25; }
+        else if (!world.solidPx(g.x + g.dir * 14, g.y + 3) && !world.solidPx(g.x + g.dir * 22, g.y + 3)) {
+          // 벼랑 끝으로 넘어갔으면 허공에 걸린 채 멈추지 않고 떨어짐
+          g.topple = false; g.r = 6; g.vx = g.dir * 50; g.vy = 0; g.va = g.dir * 4;
+        } else { g.settled = true; pool(g.x + g.dir * 12, g.y - 1, 10); }
       }
       g.dirty = true;
       continue;
