@@ -111,6 +111,25 @@ function respawn() {
   cam.x = c.x - W / 2; cam.y = c.y - H / 2;
 }
 
+// ---------- 쿠나이 조준 보정 ----------
+// 겨눈 줄에서 적 가슴·갈고리 고리까지의 옆 거리가 너그러운 범위(적 16px · 고리 20px, 멀수록 조금 더) 안이고, 그 사이에 벽이 없으면
+// 그것을 겨눈 것으로 봄. 여럿이면 줄에 가장 가까운 것. 돌려주는 값 = 그 자리로 가는 방향 (없으면 null)
+G.ropeAssist = (ox, oy, dx, dy) => {
+  let best = null, bestPerp = Infinity;
+  const consider = (tx, ty, tol0) => {
+    const ex = tx - ox, ey = ty - oy, t = ex * dx + ey * dy;
+    if (t < 6 || t > TUNE.hookMax + 8) return;
+    const perp = Math.abs(ex * dy - ey * dx);
+    if (perp > tol0 + t * 0.06 || perp >= bestPerp) return;
+    const L = Math.hypot(ex, ey);
+    if (G.world.ray(ox, oy, ex / L, ey / L, L - 4)) return;   // 벽 너머는 안 됨
+    best = [ex / L, ey / L]; bestPerp = perp;
+  };
+  for (const e of G.enemies) if (!e.dead) consider(e.x, e.y - e.h / 2, 16);
+  for (const r of G.world.rings) consider(r.x, r.y, 20);
+  return best;
+};
+
 // ---------- 로프가 닿는 것 찾기 ----------
 // (ox, oy)에서 방향 (dx, dy)로 from ~ d 구간: 적(살아 있는) · 갈고리 고리 · 벽 중 가장 가까운 것
 G.ropeTarget = (ox, oy, dx, dy, d, from = 0) => {
@@ -121,7 +140,7 @@ G.ropeTarget = (ox, oy, dx, dy, d, from = 0) => {
   for (const e of G.enemies) {
     if (e.dead) continue;
     // 선분 - 상자 (조금 넉넉히)
-    const cx = e.x, cy = e.y - e.h / 2, hw = e.w / 2 + 5, hh = e.h / 2 + 5;
+    const cx = e.x, cy = e.y - e.h / 2, hw = e.w / 2 + 10, hh = e.h / 2 + 8;   // 쿠나이는 몸보다 넉넉히 맞음
     const t = segBox(ox, oy, dx, dy, cx - hw, cy - hh, cx + hw, cy + hh);
     if (t !== null && t <= d && t >= from - 12 && (!wall || t < wall.d)) take({ x: ox + dx * t, y: oy + dy * t, d: t, enemy: e });
   }
@@ -129,7 +148,7 @@ G.ropeTarget = (ox, oy, dx, dy, d, from = 0) => {
     const t = (r.x - ox) * dx + (r.y - oy) * dy;
     if (t < 0 || t > d + 6) continue;
     const px = ox + dx * t - r.x, py = oy + dy * t - r.y;
-    if (px * px + py * py < 64 && (!wall || t < wall.d)) take({ x: r.x, y: r.y, d: Math.min(t, d), hook: true, ring: r });
+    if (px * px + py * py < 13 * 13 && (!wall || t < wall.d)) take({ x: r.x, y: r.y, d: Math.min(t, d), hook: true, ring: r });   // 고리는 넉넉히 (반지름 13px)
   }
   return best;
 };
@@ -422,7 +441,8 @@ function render(real) {
   for (const c of G.checks) drawCheck(ctx, c, G.time);
   drawGates(ctx, w, G.time);
   // 로프 겨냥 미리보기: 지금 쏘면 걸리는 고리 깜빡임
-  const prev = !p.dead && !p.rope ? G.ropeTarget(p.cx, p.cy, Math.cos(p.aimRad), Math.sin(p.aimRad), TUNE.hookMax) : null;
+  const aimDir = !p.dead && !p.rope ? G.ropeAssist(p.cx, p.cy, Math.cos(p.aimRad), Math.sin(p.aimRad)) || [Math.cos(p.aimRad), Math.sin(p.aimRad)] : null;
+  const prev = aimDir ? G.ropeTarget(p.cx, p.cy, aimDir[0], aimDir[1], TUNE.hookMax) : null;   // 조준 보정까지 반영한 미리보기 (적이면 조준점이 붉게)
   for (const r of w.rings) drawRing(ctx, r, prev?.ring === r, G.time);
   drawFxBack(ctx, G.time);
   drawGore(ctx, frameNo % 2 === 0);

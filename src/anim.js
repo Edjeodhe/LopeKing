@@ -61,6 +61,17 @@ export function heroRun(p) {
   });
 }
 
+// 주인공 점프 (사람 비율 — 허벅지 ≈ 정강이, 팔이 허리 아래까지): 세로 속도로 세 열쇠 자세를 섞음
+//   솟음: 몸을 위로 펴고 앞무릎을 끌어올리며 뒷다리는 곧게 늘어뜨림, 칼 든 팔은 뒤로·빈 팔은 앞위로 치켜 차오름
+//   꼭대기: 두 무릎을 당겨 몸을 웅크림 · 떨어짐: 다리를 아래로 뻗어 디딜 준비, 두 팔을 벌려 균형
+const AIR_RISE = P({ torso: 8, head: -4, nU: -35, nF: 25, sw: -55, fU: 95, fF: 45, nT: 75, nS: -95, fT: -18, fS: -12, y: -1 });
+const AIR_APEX = P({ torso: 18, head: -10, nU: -20, nF: 50, sw: -60, fU: 60, fF: 70, nT: 70, nS: -110, fT: 45, fS: -105, y: -2 });
+const AIR_FALL = P({ torso: 6, head: -2, nU: -70, nF: 20, sw: -30, fU: 95, fF: 30, nT: 30, nS: -38, fT: 2, fS: -24 });
+export function heroAir(vy) {
+  const s = Math.max(-1, Math.min(1, vy / 300));
+  return s < 0 ? lerpPose(AIR_APEX, AIR_RISE, -s) : lerpPose(AIR_APEX, AIR_FALL, s);
+}
+
 export const JUMP = P({ torso: 6, head: -6, nU: -30, nF: 40, sw: -40, fU: 60, fF: 60, nT: 58, nS: -86, fT: -6, fS: -50, y: -1 });
 export const FALL = P({ torso: -4, head: 4, nU: -50, nF: 20, sw: -30, fU: 80, fF: 20, nT: 24, nS: -30, fT: -16, fS: -24 });
 export const LAND = P({ torso: 26, head: -14, nU: 10, nF: 60, sw: 60, fU: -10, fF: 50, nT: 64, nS: -96, fT: -20, fS: -50, y: 5 });

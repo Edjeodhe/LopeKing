@@ -253,8 +253,9 @@ export class Player {
 
   // ---- 로프 쿠나이 ----
   throwKunai(G) {
-    const a = this.aimRad;
-    this.rope = { state: 'fly', x: this.cx, y: this.cy, dx: Math.cos(a), dy: Math.sin(a), d: 0, len: 0, tether: false };
+    // 조준 보정: 대충 적 근처로 던지면 그 적 가슴으로 날아감 (main.js G.ropeAssist)
+    const [dx, dy] = G.ropeAssist?.(this.cx, this.cy, Math.cos(this.aimRad), Math.sin(this.aimRad)) || [Math.cos(this.aimRad), Math.sin(this.aimRad)];
+    this.rope = { state: 'fly', x: this.cx, y: this.cy, dx, dy, d: 0, len: 0, tether: false };
     this.throwT = 0.12;   // 던지는 팔 자세
     G.sfx?.('rope');
   }
@@ -437,7 +438,7 @@ export class Player {
     else if (this.ceil > 0) target = A.hang(180, 0, true);
     else if (this.throwT > 0 && r) {
       // 던지는 팔: 빈손을 던진 쪽으로 쭉 뻗음
-      const base = this.onGround ? (Math.abs(this.vx) > 12 ? A.heroRun(this.runPh) : A.HERO_IDLE) : A.FALL;
+      const base = this.onGround ? (Math.abs(this.vx) > 12 ? A.heroRun(this.runPh) : A.HERO_IDLE) : A.heroAir(this.vy);
       target = { ...base, fU: 90 - Math.atan2(r.dy ?? 0, (r.dx ?? 1) * this.facing) * 180 / Math.PI, fF: 0 };
     } else if (this.dashT > 0) {
       // 대시: 몸을 대시 방향으로 눕힘 (위로 대시면 세우고, 아래면 숙임)
@@ -449,7 +450,7 @@ export class Player {
       target = { ...A.JUMP, nT: 50 + 50 * tuck, nS: -70 - 60 * tuck, fT: 20 + 55 * tuck, fS: -60 - 55 * tuck, torso: 10 + 25 * tuck, fU: 40 + 50 * tuck, nU: -20 + 40 * tuck,
         rot: -(Math.round(e * 12) % 12) * 30 };   // 끝은 0도 (한 바퀴 다 돈 뒤 거꾸로 감기지 않게)
     }
-    else if (!this.onGround) target = this.wall && this.vy > 0 ? A.WALL : this.vy < -40 ? A.JUMP : A.FALL;
+    else if (!this.onGround) target = this.wall && this.vy > 0 ? A.WALL : A.heroAir(this.vy);   // 솟음 → 웅크림 → 내려 뻗기를 세로 속도로 섞음
     else if (this.landT > 0) target = A.LAND;
     else if (Math.abs(this.vx) > 12) { this.runPh += dt * Math.max(Math.abs(this.vx), 110) / 70; target = A.heroRun(this.runPh); this.frameAnim = { name: 'run', ph: this.runPh }; }   // 막 출발할 때도 걷지 않고 달리는 발놀림
     else { target = A.heroIdle(this.t); idle = true; this.frameAnim = { name: 'idle', t: this.t }; }
