@@ -8,7 +8,7 @@ import { Player, TUNE } from './player.js';
 import { Enemy, drawEnemyMarks } from './enemies.js';
 import { Boss, drawBossMarks, stepHazards, drawHazards } from './boss.js';
 import * as A from './anim.js';
-import { fx, cam, initFx, updateFx, updateFlash, cutLine, dust, drawFxBack, drawFxFront, drawFxGlow, fxLights, fadeSlashFx, popSlashFx, sweepArc, pushGhost, speedLine, drawFlash, decalCanvas, shake, ring, flash, spark, blood, BLOOD, slashFx, loadSlashFx } from './fx.js';
+import { fx, cam, initFx, updateFx, updateFlash, cutLine, dust, drawFxBack, drawFxFront, drawFxGlow, fxLights, fadeSlashFx, popSlashFx, sweepArc, pushGhost, moveTrail, speedLine, drawFlash, decalCanvas, shake, ring, flash, spark, blood, BLOOD, slashFx, loadSlashFx } from './fx.js';
 import { initGore, updateGore, drawGore, killActor } from './gore.js';
 import { stepSteam, drawSteam } from './steam.js';
 import { sfx } from './sfx.js';
@@ -471,7 +471,7 @@ function render(real) {
     if (TYPES.hero.death) bakeDeath(TYPES.hero, deathT, p.facing, playerLow);
     else bakeActor(TYPES.hero, { ...A.HURT, rot: Math.min(85, deathT * 300), rotDrop: true }, p.facing, playerLow);
   } else {
-    const blink = p.inv > 0 && p.hurtT <= 0 && Math.floor(G.time * 20) % 2;
+    const blink = p.hurtInv > 0 && p.hurtT <= 0 && Math.floor(G.time * 20) % 2;   // 맞은 뒤 무적만 깜빡임 (대시 무적 중엔 몸이 보여야 흔적이 몸에 붙어 보임)
     // 대기·달리기는 장면 그림(프레임 애니메이션, rig.json anims), 나머지는 리그
     const fa = p.frameAnim, set = fa && TYPES.hero.anims?.[fa.name];
     if (set) {
@@ -485,7 +485,17 @@ function render(real) {
     afterimages(p, px, py, real);
     if (blink) playerLow.__skip = true; else playerLow.__skip = false;
   }
-  if (!playerLow.__skip) ctx.drawImage(playerLow, px + shudderOf(p, real), py);
+  if (!playerLow.__skip) {
+    const sx = px + shudderOf(p, real);
+    if (p.str > 0.03 && !p.dead) {
+      // 늘임: 몸 가운데를 축으로 움직이는 쪽은 길게, 옆은 좁게 (부피는 대충 유지)
+      const [ux, uy] = p.strDir || [p.facing, 0], a = Math.atan2(uy, ux), ox = sx + ACT.AX, oy = py + ACT.AY - 20;
+      ctx.save(); ctx.imageSmoothingEnabled = false;
+      ctx.translate(ox, oy); ctx.rotate(a); ctx.scale(1 + 0.4 * p.str, 1 - 0.22 * p.str); ctx.rotate(-a);
+      ctx.drawImage(playerLow, -ACT.AX, -ACT.AY + 20);
+      ctx.restore();
+    } else ctx.drawImage(playerLow, sx, py);
+  }
   drawSteam(ctx);   // 가면 증기 (몸 앞, 조명을 받음)
   for (const e of G.enemies) if (e.kind === 'boss') drawBossMarks(ctx, e, G.time); else drawEnemyMarks(ctx, e, G.time);
   drawHazards(ctx, G, G.time);
@@ -602,15 +612,21 @@ function shudderOf(o, real) {
   return (frameNo & 1 ? 1 : -1) * (o.shudder > 0.08 ? 2 : 1);
 }
 
-// ---------- 잔상 (대시·쿠나이 돌진·더블 점프) ----------
-// 잔상은 지나온 거리 기준 간격으로 한 장씩 (빠를 땐 듬성, 감속하면 촘촘) — fx.js pushGhost (반투명 한 색, 나이 들며 색이 바뀌고 가로 조각으로 쓸려 사라짐)
-// 대시·돌진 중엔 몸 뒤로 가는 속도선, 끝나는 순간 화면이 살짝 당겨졌다 놓임(zoomPulse) → 속도감
-const GHOST_GAP = { dash: 22, zip: 26, jump: 24 };   // 몸 너비(약 20px)쯤 → 잔상끼리 거의 안 겹침
+// ---------- 잔상·흔적 (대시·쿠나이 돌진·더블 점프) ----------
+// 대시·쿠나이 돌진 = 흔적: 잔상 대신 몸 등에 붙어 따라오는 띠 하나 (fx.js moveTrail, 사용자 요청 — 대시는 보라·자홍, 돌진은 진홍·흰 심)
+// 더블 점프 = 잔상: 지나온 거리 기준 간격으로 한 장씩 — fx.js pushGhost (반투명 한 색, 나이 들며 색이 바뀌고 가로 조각으로 쓸려 사라짐)
+// 대시·돌진 중엔 몸 뒤로 가는 속도선 + 몸을 움직이는 쪽으로 늘임(stretch), 끝나는 순간 화면이 살짝 당겨졌다 놓임(zoomPulse) → 속도감
+const GHOST_GAP = { jump: 24 };   // 몸 너비(약 20px)쯤 → 잔상끼리 거의 안 겹침
 let lastGhost = null, moveKind = null;
 function afterimages(p, px, py, real) {
   const kind = p.rope?.state === 'zip' ? 'zip' : p.dashT > 0 ? 'dash' : p.flipT > TUNE.flipT * 0.5 && !p.onGround ? 'jump' : null;
   const sp = Math.hypot(p.vx, p.vy) || 1, ux = p.vx / sp, uy = p.vy / sp;
-  if (!kind) lastGhost = null;
+  moveTrail(p.cx, p.cy, kind === 'zip' || kind === 'dash' ? kind : null, real);
+  // 늘임 세기: 돌진 중 1, 대시는 처음이 가장 세고 감속하며 줄어듦, 끝나면 빠르게 원래 모양으로
+  const want = kind === 'zip' ? 1 : kind === 'dash' ? Math.max(0, p.dashT) / TUNE.dashT : 0;
+  p.str = want > (p.str || 0) ? want : (p.str || 0) * Math.exp(-real * 22);
+  if (kind === 'zip' || kind === 'dash') p.strDir = [ux, uy];
+  if (kind !== 'jump') lastGhost = null;
   else if (!lastGhost || lastGhost.kind !== kind || Math.hypot(px - lastGhost.x, py - lastGhost.y) >= GHOST_GAP[kind]) {
     pushGhost(playerLow, px, py, kind, ux, uy); lastGhost = { x: px, y: py, kind };
   }
@@ -634,12 +650,30 @@ function zoomPulse(real, fx0, fy0) {
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(zoomBuf, fx0 * (1 - 1 / z), fy0 * (1 - 1 / z), W / z, H / z, 0, 0, W, H);
 }
+// 대시·돌진 손맛 (Celeste·카타나 제로·산나비류에서 흔히 쓰는 것): 출발 순간 2~3프레임 멈춤(예비 동작) → 몸을 움직이는 쪽으로 늘여 튀어 나감
+// → 화면을 가는 쪽으로 툭 → (돌진) 도착하면 짧은 멈춤 + 흔들림 + 부딪힌 면에서 불티
 // 대시 시작: 발밑 먼지 뭉치 + 뒤로 튀는 불티 + 출발 방향으로 화면 툭
 G.onDash = p => {
   const [ux, uy] = p.dashDir;
+  G.stop = Math.max(G.stop, 0.035);
   dust(p.x, p.y, -Math.sign(ux || p.facing), 8);
   spark(p.x, p.cy, Math.atan2(-uy, -ux), 6, { cols: ['#ffffff', '#ff8090'], v: 140, g: 0, life: 0.14, drag: 6 });
-  shake(1.5, -ux * 2, -uy * 2);
+  shake(1.5, ux * 3, uy * 3);
+};
+// 쿠나이 돌진 시작: 잠깐 멈췄다가 튀어 나감, 뒤로 불티, 가는 쪽으로 화면 툭
+G.onZip = (p, ux, uy) => {
+  G.stop = Math.max(G.stop, 0.045);
+  p.str = 1; p.strDir = [ux, uy];
+  spark(p.cx, p.cy, Math.atan2(-uy, -ux), 8, { cols: ['#ffffff', '#ff4a5a'], v: 180, g: 0, life: 0.16, drag: 7 });
+  if (p.onGround) dust(p.x, p.y, -Math.sign(ux || p.facing), 6);
+  shake(2, ux * 4, uy * 4);
+};
+// 쿠나이 돌진 도착 (처형 말고 벽·바닥·고리·대나무): 짧은 멈춤 + 가는 쪽으로 흔들림 + 부딪힌 자리에서 불티가 거꾸로 튐
+G.onZipEnd = (p, ux, uy, r) => {
+  G.stop = Math.max(G.stop, 0.05);
+  shake(3, ux * 4, uy * 4);
+  spark(r.x, r.y, Math.atan2(-uy, -ux), 10, { cols: ['#ffffff', '#ffd0d0', '#ff4a5a'], v: 200, g: 300, life: 0.22, drag: 4 });
+  for (let i = 0; i < 5; i++) { const a = Math.atan2(-uy, -ux) + (i - 2) * 0.45; speedLine(r.x, r.y, Math.cos(a), Math.sin(a), 6 + Math.random() * 6); }
 };
 // 더블 점프: 발밑에서 공기가 아래·옆으로 터짐 (짧은 속도선 + 먼지), 고리는 없음
 G.onDoubleJump = p => {

@@ -62,6 +62,7 @@ export class Player {
     const W = G.world;
     this.t += dt;
     this.inv = Math.max(0, this.inv - dt);
+    this.hurtInv = Math.max(0, (this.hurtInv || 0) - dt);   // 맞은 뒤 무적만 (깜빡임용) — 대시·돌진 무적은 안 깜빡임
     this.dashCd = Math.max(0, this.dashCd - dt);
     this.zipCd = Math.max(0, this.zipCd - dt);
     this.zipBuf = Math.max(0, (this.zipBuf || 0) - dt);
@@ -360,6 +361,8 @@ export class Player {
     this.inv = Math.max(this.inv, 0.2);
     this.zipId = (this.zipId || 0) + 1;
     G.sfx?.('zip');
+    const d = Math.hypot(r.x - this.cx, r.y - this.cy) || 1;
+    G.onZip?.(this, (r.x - this.cx) / d, (r.y - this.cy) / d);
   }
   zipMoved(G, x0, y0) {
     const r = this.rope;
@@ -386,7 +389,8 @@ export class Player {
     }
     // 도착한 면에 따라: 벽 = 매달림 · 천장 = 잠깐 매달림 · 바닥/고리 = 탄력 조금 남기고 멈춤
     this.vx = ux * TUNE.zip * TUNE.zipKeep; this.vy = uy * TUNE.zip * TUNE.zipKeep;
-    shake(1.5, ux * 2, uy * 2);
+    if (arrived) G.onZipEnd?.(this, ux, uy, r);   // 도착 충격 (멈춤·흔들림·불티, main.js)
+    else shake(1.5, ux * 2, uy * 2);
     if (r.ring) { this.vy = Math.min(this.vy, -160); return; }
     if (r.pole) {
       // 대나무 줄기를 붙잡음: 온 쪽에 몸을 두고 매달림
@@ -406,7 +410,7 @@ export class Player {
 
   hurt(G, dmg, from) {
     if (this.dead || this.inv > 0) return false;
-    this.hp -= dmg; this.inv = TUNE.iframes; this.hurtT = 0.25; this.shudder = 0.22;
+    this.hp -= dmg; this.inv = TUNE.iframes; this.hurtInv = TUNE.iframes; this.hurtT = 0.25; this.shudder = 0.22;
     const k = this.x < from.x ? -1 : 1;
     this.vx = k * 170; this.vy = -170;
     if (this.rope?.state === 'zip' || this.rope?.state === 'fly') this.rope = null;

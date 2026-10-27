@@ -2,7 +2,7 @@
 // 모두 1px 도트로 직접 찍는다 (반투명 없음). 사라질 땐 체크무늬 대신 띠가 가늘어지고·짧아짐(잡티 없이) → 캐릭터 굽기와 같은 결. 콤보 베기는 Codex 그림을 도트로 구워 씀 (pixfx.js)
 import { loadSheet, pixelFx } from './pixfx.js';
 
-export const fx = { rings: [], parts: [], lines: [], flashes: [], texts: [], cuts: [], sprites: [], arcs: [], ghosts: [] };
+export const fx = { rings: [], parts: [], lines: [], flashes: [], texts: [], cuts: [], sprites: [], arcs: [], ghosts: [], trail: null };
 export const cam = { x: 0, y: 0, shake: 0, kick: [0, 0] };
 let decal = null, decalCtx = null, world = null;
 
@@ -10,7 +10,7 @@ export const BLOOD = ['#3a060c', '#601018', '#961c24', '#c8323a'];
 
 export function initFx(w) {
   world = w;
-  for (const k in fx) fx[k].length = 0;
+  for (const k in fx) if (Array.isArray(fx[k])) fx[k].length = 0; else fx[k] = null;   // trail(돌진 흔적)은 배열이 아님
   decal = document.createElement('canvas'); decal.width = w.pw; decal.height = w.ph;
   decalCtx = decal.getContext('2d');
 }
@@ -169,9 +169,7 @@ function drawCuts(ctx) {
 // 지금 구운 주인공 그림을 한 색 반투명 실루엣으로 떠서 그 자리에 남김. 나이가 들수록 색이 한 단씩 바뀌고(대시: 진홍 → 자홍 → 보라)
 // 흐려지면서 2px 가로 조각으로 갈라져 움직인 반대쪽으로 밀려나며 하나씩 빠져 사라짐 (바람에 쓸려 가는 느낌, 체크무늬 없음).
 // 간격은 부르는 쪽(main.js)이 이동 거리 기준으로 정함 → 빠를 땐 듬성, 느려지면 촘촘. 빛나는 층(조명 뒤)에 그리고 주인공 실루엣만큼 가림
-const GHOST = {
-  dash: { cols: ['#ff6a7a', '#e0306a', '#8a2ad0'], a: 0.6, life: 0.32 },
-  zip: { cols: ['#ffffff', '#ff4a5a', '#a0206a'], a: 0.65, life: 0.28 },
+const GHOST = {   // 대시·돌진은 흔적(moveTrail)으로 바뀌어 지금은 더블 점프만
   jump: { cols: ['#fff0c8', '#ffb050', '#c05030'], a: 0.32, life: 0.18 },   // 앞구르기는 느려서 옅고 짧게 (몸에 뭉치지 않게)
 };
 function tint(low, col) {
@@ -199,6 +197,63 @@ function drawGhosts(ctx) {
     }
   }
   ctx.globalAlpha = 1;
+}
+
+// ---------- 대시·쿠나이 돌진 흔적 (사용자: 잔상 말고 몸 뒤에 흔적이 붙어 따라오는 느낌) ----------
+// 돌진하는 동안 몸 가운데가 지나온 길을 하나의 띠로 이음: 몸 쪽은 두껍고(몸 두께쯤) 꼬리로 갈수록 가늘어지며, 늘 몸 등에 붙어 따라감.
+// 겉 진홍 → 속 붉음 → 심 흰색 세 겹, 도트 칸마다 칠함 (반투명 없음). 길이는 최대 TRAIL.max px, 넘는 꼬리는 잘라 냄.
+// 돌진이 끝나면 머리는 계속 몸에 붙인 채 꼬리 쪽부터 빠르게 몸으로 빨려 들어가며 가늘어져 사라짐
+const TRAIL = { max: 150, w: 6, tail: 0.16 };
+// [색, 굵기 비율] 바깥부터. 돌진 = 진홍·흰 심, 대시 = 보라·자홍·옅은 분홍 심 (예전 대시 잔상 색)
+const TRAIL_COLS = {
+  zip: [['#9a1a22', 1], ['#ff4a5a', 0.72], ['#ffffff', 0.34]],
+  dash: [['#5a1a8a', 1], ['#e0306a', 0.72], ['#ffd0dc', 0.34]],
+};
+function trailLen(pts) { let L = 0; for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y); return L; }
+// 몸 쪽(끝)에서 L 만큼만 남기고 꼬리를 자름 (자르는 자리는 사이를 이어 붙임)
+function trimTrail(pts, L) {
+  let s = 0;
+  for (let i = pts.length - 1; i > 0; i--) {
+    const a = pts[i], b = pts[i - 1], d = Math.hypot(a.x - b.x, a.y - b.y);
+    if (s + d >= L) { const u = d > 0 ? (L - s) / d : 0; pts.splice(0, i, { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u }); return; }
+    s += d;
+  }
+}
+// 매 프레임: (x, y) = 몸 가운데, kind = 'dash' | 'zip' | null(안 움직임), dt = 흐른 시간. 종류가 바뀌면(대시 → 돌진) 새 흔적
+export function moveTrail(x, y, kind, dt) {
+  let T = fx.trail;
+  const on = !!kind;
+  if (on && (!T || T.end >= 0 || T.kind !== kind)) T = fx.trail = { pts: [], end: -1, len0: 0, kind };
+  if (!T) return;
+  if (!on && T.end < 0) { T.end = 0; T.len0 = trailLen(T.pts); }
+  const last = T.pts[T.pts.length - 1];
+  if (!last || Math.hypot(x - last.x, y - last.y) >= 1) T.pts.push({ x, y });
+  if (T.end >= 0) {
+    T.end += dt;
+    if (T.end >= TRAIL.tail) { fx.trail = null; return; }
+    trimTrail(T.pts, T.len0 * (1 - T.end / TRAIL.tail) ** 2);
+  } else trimTrail(T.pts, TRAIL.max);
+}
+function drawTrail(ctx) {
+  const T = fx.trail;
+  if (!T || T.pts.length < 2) return;
+  const P = T.pts, L = trailLen(P), k = T.end < 0 ? 0 : T.end / TRAIL.tail, W = TRAIL.w * (1 - k * 0.6);
+  for (const [col, f] of TRAIL_COLS[T.kind]) {
+    ctx.fillStyle = col;
+    let s = 0;   // 몸 쪽부터 잰 거리
+    for (let i = P.length - 1; i > 0; i--) {
+      const a = P[i], b = P[i - 1], d = Math.hypot(b.x - a.x, b.y - a.y);
+      if (d < 1e-3) continue;
+      const ux = (b.x - a.x) / d, uy = (b.y - a.y) / d;
+      for (let t = 0; t < d; t++) {
+        const w = W * f * Math.pow(1 - Math.min(1, (s + t) / Math.max(L, 1)), 0.6);
+        if (w < 0.5) continue;
+        const cx = a.x + ux * t, cy = a.y + uy * t;
+        for (let o = -w; o <= w; o += 0.7) ctx.fillRect(Math.round(cx - uy * o), Math.round(cy + ux * o), 1, 1);
+      }
+      s += d;
+    }
+  }
 }
 
 // 화면 번쩍 (처형·피격): { col, life }
@@ -270,7 +325,8 @@ export function drawFxGlow(ctx, time, cam, W, H, occ) {
   for (const R of fx.rings) drawRingHalf(g, R, false);
   for (const S of fx.sprites) drawSprite(g, S, true);
   for (const A of fx.arcs) drawArc(g, A, false);
-  drawGhosts(g);   // 잔상은 몸 뒤
+  drawTrail(g);    // 쿠나이 돌진 흔적·잔상은 몸 뒤
+  drawGhosts(g);
   if (occ?.img) { g.globalCompositeOperation = 'destination-out'; g.drawImage(occ.img, occ.x, occ.y); }
   ctx.save();
   ctx.drawImage(glowBuf, 0, 0);
@@ -292,6 +348,8 @@ export function fxLights(out, time) {
   for (const R of fx.rings) add(R.x, R.y, R.rx * 1.6, 1 - R.t / R.life);
   for (const A of fx.arcs) add((A.follow?.x ?? 0) + A.x, (A.follow?.y ?? 0) + A.y, A.rx * 1.3, 1 - A.t / A.life);
   for (const c of fx.cuts) add((c.x0 + c.x1) / 2, (c.y0 + c.y1) / 2, 40, 1 - c.t / c.life);
+  const T = fx.trail;   // 돌진 흔적: 몸 쪽 끝과 가운데를 비춤
+  if (T && T.pts.length > 1) { const k = T.end < 0 ? 1 : 1 - T.end / TRAIL.tail, a = T.pts[T.pts.length - 1], m = T.pts[T.pts.length >> 1]; add(a.x, a.y, 44, 0.7 * k); add(m.x, m.y, 36, 0.4 * k); }
 }
 // 새 베기가 시작되면 앞 타의 베기 그림은 바로 사라지는 끝물(체크무늬)로 넘김 — 겹쳐 지저분해지지 않고, 뚝 끊기지도 않게. 타격 섬광(줄 3)은 그대로
 export function fadeSlashFx(rows = [0, 1, 2], arcs = true) {
