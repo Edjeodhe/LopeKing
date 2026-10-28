@@ -10,6 +10,7 @@ export const KINDS = {
   gunner: { hp: 1, w: 10, h: 24, walk: 32, chase: 60, sight: 240, keep: 120, aim: 0.75, cd: 1.5, bullet: 250, dmg: 1 },
 };
 
+const PATROL_R = 40;
 export class Enemy {
   constructor(kind, type, x, y) {
     const K = KINDS[kind];
@@ -18,8 +19,10 @@ export class Enemy {
     this.low = newBakeCanvas(); this.pose = { ...A.IDLE }; this.cape = A.newCape(); this.runPh = Math.random();
     this.hitBy = -1; this.sock = {};
     this.patrolDir = Math.random() < 0.5 ? -1 : 1;
+    this.homeX = x;   // 순찰은 처음 자리 ±PATROL_R 안에서만 (뭉쳐 둔 무리가 흩어지지 않게)
   }
   get cy() { return this.y - 14; }
+  strayed() { return (this.x - this.homeX) * this.patrolDir > PATROL_R; }   // 순찰하다 처음 자리에서 너무 멀어지는 쪽으로 가는 중
 
   step(dt, G) {
     if (this.dead) return;
@@ -65,7 +68,7 @@ export class Enemy {
       return this.facing * K.chase;
     }
     this.state = 'patrol';
-    if (this.blocked(W, this.patrolDir) || Math.random() < dt * 0.15) this.patrolDir *= -1;
+    if (this.blocked(W, this.patrolDir) || this.strayed() || Math.random() < dt * 0.15) this.patrolDir *= -1;
     this.facing = this.patrolDir;
     return this.patrolDir * K.walk;
   }
@@ -100,7 +103,7 @@ export class Enemy {
       return go * K.chase;
     }
     this.state = 'patrol';
-    if (this.blocked(W, this.patrolDir) || Math.random() < dt * 0.1) this.patrolDir *= -1;
+    if (this.blocked(W, this.patrolDir) || this.strayed() || Math.random() < dt * 0.1) this.patrolDir *= -1;
     this.facing = this.patrolDir;
     return this.patrolDir * K.walk;
   }
