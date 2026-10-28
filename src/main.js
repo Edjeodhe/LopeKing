@@ -764,6 +764,13 @@ function zoomPulse(real, fx0, fy0) {
 // 연쇄 끝 → hopFinish 초 뒤 그어진 적이 한꺼번에 베임: 적마다 혼불 초승달 + 피·고어 + 긴 슬로모션
 G.onSeal = s => { spark(s.x, s.y, -Math.PI / 2, 6, { cols: SPIRIT_COLS.slice(0, 3), v: 80, g: 0, life: 0.2, drag: 5 }); };
 G.onSealFade = s => { spark(s.x, s.y, -Math.PI / 2, 3, { cols: SPIRIT_COLS.slice(1, 3), v: 30, g: -20, life: 0.3 }); };
+// 발도 준비: 칼집에 손을 얹는 순간 — 발밑에서 혼불이 살짝 일고 가면 눈 쪽에 작은 번쩍
+G.onFlashWind = p => {
+  spiritFx({ row: 1, x: p.x, y: p.y + 2, py: 0.95, w: 46, life: 0.3, a: 0.6 });
+  spark(p.x, p.y - 2, -Math.PI / 2, 5, { cols: SPIRIT_COLS.slice(1, 3), v: 50, spread: 2, g: -40, life: 0.25 });
+  if (p.sock?.eye) spark(p.sock.eye[0], p.sock.eye[1], 0, 3, { cols: ['#ffffff', '#8affc0'], v: 30, g: 0, life: 0.12 });
+  sfx('clink');
+};
 G.onHopStart = (p, h, x1, y1) => {
   G.stop = Math.max(G.stop, 0.03);
   spiritFx({ row: 1, x: p.x, y: p.y + 2, py: 0.95, w: 50, life: 0.3, a: 0.8 });

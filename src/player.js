@@ -29,9 +29,9 @@ export const TUNE = {
   zip: 1050, zipCd: 0.12, zipKeep: 0.35, cling: 0.6, ceilHang: 0.35, leash: 400,
   atkLunge: 190, riseHop: 150,
   hp: 5, iframes: 1.0,
-  sealMax: 5, sealLife: 5, flashGap: 0.06, flashCd: 0.3,   // 귀보: 표식 쿠나이 수·남는 시간 · 한 번 긋고 다음까지 · 끝난 뒤 다시 쓰기까지
-  sheathMin: 3, sheathT: 0.9, sheathCut: 0.68,   // 귀보로 3명 이상 그었으면 칼을 검집에 넣는 연출(납도) · 걸리는 시간 · 딸깍(7번째 장) = 그어진 적이 베이는 순간
-  hop: 2600, hopPast: 26, hopFinish: 0.32,   // 귀보 관통 속도 · 적 너머로 지나가는 거리 · 마지막에 지나간 뒤 한꺼번에 베이기까지 (검무 연속 베기가 끝날 만큼)
+  sealMax: 5, sealLife: 5, flashGap: 0.12, flashCd: 0.3, flashWind: 0.22,   // 귀보: 표식 쿠나이 수·남는 시간 · 한 번 긋고 다음까지 · 끝난 뒤 다시 쓰기까지 · 첫 관통 전 발도 준비 자세
+  sheathMin: 3, sheathT: 0.9, sheathQuick: 0.5, sheathClick: 0.755,   // 귀보가 끝나면 늘 칼을 검집에 넣음(납도): 3명 이상 그었으면 천천히 0.9초, 아니면 빠르게 0.5초 · 딸깍(7번째 장, 길이의 75.5%) = 그어진 적이 베이는 순간
+  hop: 1900, hopPast: 26, hopFinish: 0.32,   // 귀보 관통 속도 · 적 너머로 지나가는 거리 · 마지막에 지나간 뒤 한꺼번에 베이기까지 (검무 연속 베기가 끝날 만큼)
 };
 // 조작 방식: kb = 키보드만 · false = 마우스 조준 (main.js 가 Tab 으로 바꾸고 기억함)
 export const CTRL = { kb: true };
@@ -118,13 +118,17 @@ export class Player {
     // 귀보: 한 번 긋고 잠깐 뒤 다음 표식 적으로 (지금 자리에서 가장 가까운 것). 남은 표식이 없으면 끝
     if (this.flash && !this.flash.hop) {
       this.flash.t -= dt;
-      if (this.flash.t <= 0) { const s = this.nextSeal(); if (s) this.hopTo(G, s); else this.endFlash(); }
+      if (this.flash.t <= 0) {
+        const f = this.flash.first, s = f && !f.enemy.dead && this.seals.includes(f) ? f : this.nextSeal();
+        this.flash.first = null;
+        if (s) this.hopTo(G, s); else this.endFlash();
+      }
     }
     // 베기 자세 시간 · 납도 (Space·대시로 끊을 수 있음 — 끊어도 그어진 적은 베임)
     if (this.slashPose) this.slashPose.t += dt;
     if (this.sheath) {
       this.sheath.t += dt; this.inv = Math.max(this.inv, 0.05);
-      if (this.sheath.t >= TUNE.sheathT || this.buf > 0 || this.dashReq) this.sheath = null;
+      if (this.sheath.t >= this.sheath.dur || this.buf > 0 || this.dashReq) this.sheath = null;
     }
     // 그어진 적이 한꺼번에 베임 (마지막에 지나가고 hopFinish 초 뒤, 납도면 딸깍 하는 순간)
     if (this.cutWait) { this.cutWait.t -= dt; if (this.cutWait.t <= 0) { G.onChainFinish?.(this, this.cutWait.list); this.cutWait = null; } }
@@ -175,6 +179,7 @@ export class Player {
       // 귀보 관통: 곧게 아주 빠르게 (남은 거리만큼만), 중력 없음
       const h = this.flash.hop, v = Math.min(TUNE.hop, h.left / dt);
       this.vx = h.ux * v; this.vy = h.uy * v;
+    } else if (this.flash?.first) { this.vx = this.vy = 0;   // 발도 준비: 그 자리에 멈춤 (공중이어도)
     } else if (zipping || holding) { /* 돌진·매달림 중엔 이동 입력·중력 없음 */ }
     else if (this.dashT > 0) {
       // 대시 중: 처음에 확 튀어 나가 점점 느려짐 (dash → dashEnd, 감속 곡선) → 잔상 간격도 넓다가 촘촘해짐. 중력 없음
@@ -377,9 +382,12 @@ export class Player {
     // 겨눈 쪽: 키보드 조준(방향키, 안 누르면 보는 쪽)
     const s = this.nextSeal(true);
     if (!s) return;
-    this.flash = { t: 0, hop: null, cut: [] };
-    this.rope = null; this.zipBuf = 0;
-    this.hopTo(G, s);
+    // 바로 튀어 나가지 않고 flashWind 초 동안 발도 준비 자세(칼집에 손 → 웅크림)로 멈춤 — 사용자: 너무 빨라 자세가 안 보임
+    this.flash = { t: TUNE.flashWind, hop: null, cut: [], first: s };
+    this.rope = null; this.zipBuf = 0; this.dashT = 0; this.atkT = -1; this.cling = this.ceil = 0;
+    this.facing = Math.sign(s.enemy.x - this.x) || this.facing; this.inv = Math.max(this.inv, TUNE.flashWind + 0.1);
+    this.slashPose = { k: 'ready', t: 0 }; this.sheath = null;
+    G.onFlashWind?.(this);
   }
   // 벽력일섬식 관통: 표식 적을 꿰뚫고 그 너머(hopPast)까지 한 줄로 그으며 날아감 (아주 빠름, 무적). 적 발 높이 기준이라 같은 땅이면 곧게 옆으로
   hopTo(G, s) {
@@ -402,6 +410,7 @@ export class Player {
     if (!h.e.dead) this.flash.cut.push({ e: h.e, ang: Math.atan2(h.uy, h.ux) });
     G.onHopCut?.(this, h);
     this.slashPose = { k: 'follow', t: 0 };
+    G.slow = Math.max(G.slow, 0.1); G.slowScale = Math.min(G.slowScale, 0.35);   // 벤 직후 잠깐 느리게 → 지나간 자세가 보임
     this.vx = h.ux * 160; this.vy = Math.min(h.uy * 160, -40);
     this.airDash = true; this.airAtk = true; this.airJump = TUNE.airJumps;
     this.flash.t = TUNE.flashGap;
@@ -409,9 +418,11 @@ export class Player {
   // 연쇄 끝 (다 그었거나 Space·Shift·맞아서 끊김): 그은 적은 hopFinish 초 뒤 한꺼번에 베임
   endFlash() {
     const cut = this.flash?.cut || [];
-    // 3명 이상 그었으면 납도: 칼을 천천히 검집에 넣고, 딸깍 하는 순간 한꺼번에 베임 · 아니면 잠깐 뒤 바로 베임
-    if (cut.length >= TUNE.sheathMin && !this.flash.hop) { this.sheath = { t: 0 }; this.slashPose = null; this.cutWait = { t: TUNE.sheathCut, list: cut }; }
-    else if (cut.length) this.cutWait = { t: TUNE.hopFinish, list: cut };
+    // 다 그었으면 납도: 칼을 검집에 넣고 딸깍 하는 순간 한꺼번에 베임 (3명 이상이면 천천히). 긋는 도중 끊겼으면 잠깐 뒤 바로 베임
+    if (cut.length && !this.flash.hop) {
+      const dur = cut.length >= TUNE.sheathMin ? TUNE.sheathT : TUNE.sheathQuick;
+      this.sheath = { t: 0, dur }; this.slashPose = null; this.cutWait = { t: dur * TUNE.sheathClick, list: cut };
+    } else if (cut.length) this.cutWait = { t: TUNE.hopFinish, list: cut };
     this.flash = null; this.flashCd = TUNE.flashCd;
   }
   // 지금 F 를 누르면 갈 곳 (미리보기도 같은 것 — main.js): 표식 적이 있으면 { pool, first }, 없으면 { anchor | null, dir }
@@ -626,11 +637,13 @@ export class Player {
   // 귀보 베기·납도 장면 그림 (art/dokkaebi anims.flash · anims.sheath, Codex — 벽력일섬 발도 자세 참고) — 몇 번째 장인지
   // flash 8장: 0 준비 · 1 웅크림 · 2 튀어 나감 · 3 발도 베기 · 4 지나감 · 5 미끄러져 멈춤 · 6 멈춤 자세 · 7 일어섬
   slashFrame() {
-    if (this.sheath) return { name: 'sheath', i: Math.min(7, Math.floor(this.sheath.t / TUNE.sheathT * 8)) };
+    if (this.sheath) return { name: 'sheath', i: Math.min(7, Math.floor(this.sheath.t / this.sheath.dur * 8)) };
     const s = this.slashPose;
     if (!s) return null;
-    if (s.k === 'dash') return { name: 'flash', i: s.t < 0.02 ? 2 : 3 };
-    const i = s.t < 0.05 ? 4 : s.t < 0.12 ? 5 : s.t < 0.3 ? 6 : s.t < 0.38 ? 7 : -1;
+    if (s.k === 'ready') return { name: 'flash', i: s.t < TUNE.flashWind * 0.45 ? 0 : 1 };
+    // 관통은 아주 짧으니(무리 안에선 0.03초쯤) 튀어 나감(2)은 한 순간만, 발도 베기(3)는 관통 내내 + 벤 직후까지 이어서 보임
+    if (s.k === 'dash') return { name: 'flash', i: s.t < 0.012 ? 2 : 3 };
+    const i = s.t < 0.05 ? 3 : s.t < 0.12 ? 4 : s.t < 0.22 ? 5 : s.t < 0.42 ? 6 : s.t < 0.52 ? 7 : -1;
     if (i < 0 || (this.onGround && Math.abs(this.vx) > 40 && s.t > 0.12) || this.atkT >= 0 || this.dashT > 0 || this.rope) { this.slashPose = null; return null; }
     return { name: 'flash', i };
   }
