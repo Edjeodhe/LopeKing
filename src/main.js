@@ -810,11 +810,11 @@ function drawHud(p, prev) {
   const help = G.level === 0 && G.time - (G.levelT || 0) < 12 && !G.boss;
   if (CTRL.kb) {
     if (help && !p.dead) { text('방향키 이동 · Space 점프 · Shift 대시 · Ctrl 베기', W / 2, H - 40, '#c9c1d4', 'center'); text('F 쿠나이: 적 = 벽력일섬 · 없으면 위 대각선에 걸고 스윙', W / 2, H - 22, '#c9c1d4', 'center'); }
-    else if (p.rope?.tether && G.level === 0 && !G.boss) { text('위·아래 감기 · 좌우 흔들기 · Space 놓기', W / 2, H - 40, '#c9c1d4', 'center'); text('F 다시 = 쿠나이로 돌진', W / 2, H - 22, '#c9c1d4', 'center'); }
+    else if (p.rope?.tether && G.level === 0 && !G.boss) { text('위·아래 감기 · 좌우 흔들기 · Space·Shift 끊기', W / 2, H - 40, '#c9c1d4', 'center'); text('F 다시 = 쿠나이로 돌진', W / 2, H - 22, '#c9c1d4', 'center'); }
     else if (p.rope?.state === 'stuck' && !p.rope.target && G.level === 0) text('F 다시 = 쿠나이로 돌진', W / 2, H - 22, '#c9c1d4', 'center');
   }
   else if (help && !p.dead) { text('A/D 이동 · Space 점프 · Shift 대시 · 좌클릭 베기', W / 2, H - 40, '#c9c1d4', 'center'); text('우클릭 쿠나이 (톡: 꽂기 · 꾹: 스윙)', W / 2, H - 22, '#c9c1d4', 'center'); }
-  else if (p.rope?.tether && G.level === 0 && !G.boss) { text('W/S 감기 · A/D 흔들기 · Space 놓기', W / 2, H - 40, '#c9c1d4', 'center'); text('우클릭 다시(Shift) = 쿠나이로 돌진', W / 2, H - 22, '#c9c1d4', 'center'); }
+  else if (p.rope?.tether && G.level === 0 && !G.boss) { text('W/S 감기 · A/D 흔들기 · Space·Shift 끊기', W / 2, H - 40, '#c9c1d4', 'center'); text('우클릭 다시(Shift) = 쿠나이로 돌진', W / 2, H - 22, '#c9c1d4', 'center'); }
   else if (p.rope?.state === 'stuck' && G.level === 0) text('우클릭 다시(Shift) = 쿠나이로 돌진', W / 2, H - 22, '#c9c1d4', 'center');
   if (p.dead && deathT > 0.8) text('쓰러졌다', W / 2, H / 2 - 8, BLOOD[3], 'center');
   if (G.msg && (G.msg.t < 2.8 || G.clear)) text(G.msg.text, W / 2, G.msg.sub ? 24 : H / 2 - 30, G.msg.sub ? '#e8e0f0' : '#f7cf6d', 'center');

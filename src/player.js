@@ -2,13 +2,14 @@
 // 로프 쿠나이 (레퍼런스: INARI — 던진 자리로 즉시 몸을 던지는 이동+전투):
 //   우클릭 톡 = 붉은 실 달린 쿠나이를 마우스 쪽으로 던짐 → 벽·천장·바닥·고리·적에 꽂힘
 //   꽂힌 뒤 다시 우클릭 = 그 자리로 순간 돌진 — 지나가는 길의 적을 베고 관통, 적에 꽂혔으면 처형
-//   우클릭 꾹 누른 채 꽂히면 = 실이 팽팽해져 진자 스윙 (W/S 감기, A/D 흔들기, Space 놓고 뛰기) — 떼면 실만 느슨해지고 쿠나이는 남음
+//   우클릭 꾹 누른 채 꽂히면 = 실이 팽팽해져 진자 스윙 (W/S 감기, A/D 흔들기) — 떼면 실만 느슨해지고 쿠나이는 남음
+//   스윙 중 Space(뛰어내림)·Shift(대시) = 실을 끊음: 쿠나이가 빠져 손으로 돌아옴 (두 조작 방식 다)
 //   벽에 도착하면 잠깐 매달림(벽 점프·다음 투척으로 연쇄), 천장이면 잠깐 매달렸다 떨어짐
 // 대시(Shift) = 방향키 8방향, 공중 1회 · 더블 점프 = 공중 1회 (벽·천장에 매달리거나 쿠나이 돌진이 끝나면 다시 채워짐)
 // 키보드만 조작 (CTRL.kb, Tab 으로 바꿈) — 조준 대신 고르기 (main.js G.chainNext · G.anchorPick):
 //   방향키 이동 · Ctrl 베기 = 방향키 쪽 (안 누르면 보는 쪽) · F 쿠나이 (마우스 버튼은 안 받음):
 //   둘레에 표식 찍힌 적이 있으면 = 벽력일섬: 겨눈 쪽 적부터 → 가까운 적 순으로 쿠나이 꽂고 돌진·처형을 이어 감 (Space·대시로 끊음)
-//   적이 없으면 = 방향키 쪽 걸 곳(안 누르면 보는 쪽 위 대각선)에 쿠나이가 반드시 꽂힘 → 몸보다 위면 바로 스윙. F 다시 = 돌진 · Space = 놓기
+//   적이 없으면 = 방향키 쪽 걸 곳(안 누르면 보는 쪽 위 대각선)에 쿠나이가 반드시 꽂힘 → 몸보다 위면 바로 스윙. F 다시 = 돌진 · Space·Shift = 실 끊기
 // 물리는 고정 스텝(120Hz)으로 돈다 (main.js). 수치는 게임 px · 초 단위.
 import { input, held } from './input.js';
 import * as A from './anim.js';
@@ -126,7 +127,7 @@ export class Player {
         if (!dx && !dy) dx = this.cling > 0 && !this.pole ? -this.clingDir : this.facing;
         const L = Math.hypot(dx, dy);
         this.dashDir = [dx / L, dy / L];
-        if (this.rope?.tether) this.rope.tether = false;
+        if (this.rope?.tether) this.cutRope();   // 스윙 중 대시 = 실을 끊고 튀어 나감
         if (this.chain) { this.chain = null; this.chainCd = TUNE.chainCd; }
         this.cling = 0; this.ceil = 0; this.pole = null; this.atkT = -1;
         this.dashT = TUNE.dashT; this.dashCd = TUNE.dashCd; this.inv = Math.max(this.inv, TUNE.dashT + 0.05);
@@ -191,8 +192,8 @@ export class Player {
     if (this.buf > 0 && !zipping && this.chain) { this.chain = null; this.chainCd = TUNE.chainCd; if (this.rope?.state === 'fly') this.rope.state = 'back'; }   // 점프로 벽력일섬을 끊음
     if (this.buf > 0 && !zipping) {
       if (hooked) {
-        // 로프에서 뛰어내림: 지금 탄력 + 위로 (쿠나이는 꽂힌 채 남음)
-        this.rope.tether = false; this.vx *= 1.08;
+        // 로프에서 뛰어내림: 실을 끊고 지금 탄력 + 위로
+        this.cutRope(); this.vx *= 1.08;
         this.vy = Math.min(this.vy, 0) - TUNE.ropeJump; this.buf = 0;
         G.sfx?.('jump');
       } else if (this.cling > 0) {
@@ -415,6 +416,13 @@ export class Player {
     }
     // 비좁은 곳(바로 아래가 턱)이라도 최소 스윙 길이(던진 거리가 더 짧으면 그만큼)는 남김 — 고리 밑에 몸이 달라붙지 않게
     return Math.max(TUNE.hookMin, L, Math.min(d, TUNE.swingShort));
+  }
+  // 실을 끊음 (스윙 중 Space·Shift): 쿠나이가 빠져 손으로 빨려 돌아옴 → 다시 던질 수 있음
+  cutRope() {
+    const r = this.rope;
+    if (!r) return;
+    r.state = 'back'; r.tether = false; r.target = null;
+    spark(r.x, r.y, Math.atan2(this.cy - r.y, this.cx - r.x), 3, { cols: ['#ff4a4a', '#ffffff'], v: 60 });
   }
   // 실을 놓음: 스윙 탄력을 살려 조금 더 멀리 던져짐 (산나비식 놓기)
   releaseRope() {
