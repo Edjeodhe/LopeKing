@@ -1,0 +1,25 @@
+Use your built-in image generation tool to create ONE image and save it as PNG to: pose_flash.png (in the current working directory). Do not write code to draw it; it must be a generated illustration. After saving, reply only with the file name.
+
+Image spec:
+- 1536x1024, an exact grid of 4 columns x 2 rows (each cell 384x512).
+- Solid flat MAGENTA background (#FF00FF) everywhere behind the drawings. No text, no letters, no numbers, no labels, no grid lines, no frames, no cast shadows, no ground.
+- The attached reference image shows THIS EXACT CHARACTER. Keep the identical design, colors, proportions and scale.
+- CHARACTER: an original masked swordsman hero in his "DOKKAEBI MASK" form (original design, do NOT copy any existing character or skin). His whole face is hidden behind a fierce Korean DOKKAEBI (goblin-demon) MASK: glossy deep-CRIMSON lacquer, two short thick curved horns on the forehead, a heavy furrowed brow, narrow slanted eye slits glowing bright GREEN, a wide snarling mouth with small GOLD fangs, thin gold trim lines along the mask edges. Long straight BLACK hair tied high at the back of the head, flowing backward in a thick tail. Outfit in the sleek "oni weapon skin" style of modern tactical shooters - GLOSSY BLACK LACQUER armor pieces with crimson cloth and thin GOLD trim - mixed with Joseon-era warrior clothing: a fitted black jacket with a crimson inner collar, layered black lacquer tassets with gold edges over dark trousers, a crimson waist sash tied with a white braided rope and tassel, crimson leg wraps, black boots with small gold toe caps. A separate tattered CRIMSON short cloak with a black lining hangs from the shoulders down to about the knees, with a ragged torn hem.
+- PROPORTIONS: REALISTIC adult human proportions like the heroes of the pixel action games Sanabi or Katana Zero (NOT chibi, NOT SD): about 6.5 heads tall, a normal-size head, slim athletic body, long legs (legs about half of the full height), normal-length arms.
+- RENDERING: authentic PIXEL ART sprite, like the hero sprites of Katana Zero or Sanabi. Drawn at LOW RESOLUTION: the standing character is only about 48 pixels tall in sprite pixels, and every sprite pixel is shown as a crisp SOLID SQUARE block (nearest-neighbor upscale, all blocks the same size, aligned to one grid). NO anti-aliasing, NO gradients, NO soft edges, NO blur, NO thin lines thinner than one block. A limited palette of about 16 colors, 2-3 flat tones per material, a 1-block dark outline around the silhouette. Simple readable shapes; details like gold trim are single blocks or omitted.
+- PALETTE: glossy black lacquer (with cool highlights), deep crimson red, small gold trim, ivory-white rope, and ONE glow accent: bright green glowing mask eyes.
+- He also wears a slim BLACK LACQUER SCABBARD with gold fittings at his LEFT hip (the far side), angled back and slightly down, in every frame.
+- He holds his demon KATANA in the NEAR (right) hand: slim curved black blade with a glowing crimson edge line, gold demon-face guard.
+- Every figure is a pure SIDE VIEW, FACING RIGHT, at the SAME pixel scale in every cell (standing height about 48 sprite pixels, about 440 image px), feet on the same ground line near the bottom of its cell. Same pixel block size in every cell.
+- Each drawing sits centered in its own cell with a clear magenta margin; drawings must NOT touch or cross cell borders.
+- These are ANIMATION FRAMES for a fast 2D pixel action game in the spirit of Katana Zero (original character, do NOT copy any existing character).
+- An 8-frame LIGHTNING QUICK-DRAW DASH CUT (an iaido draw-and-dash attack: he crouches with the sword sheathed, then explodes forward in a straight line and cuts through the enemy in one instant), left to right then top to bottom:
+ 1. READY: deep low crouch, knees bent, body leaning far forward, the katana SHEATHED in the scabbard at his left hip, his near (right) hand gripping the hilt, the far hand holding the scabbard, head low and looking ahead.
+ 2. COIL: even lower, the front foot sliding forward, weight on the back leg, about to spring, cape and hair lifting.
+ 3. LAUNCH: springing forward almost horizontally, body stretched in a straight line low above the ground, the blade just starting to leave the scabbard.
+ 4. DRAW-CUT: flying forward fully horizontal like an arrow, the katana drawn and swept FORWARD in front of him at chest height in a flat horizontal cut, the glowing blade edge a long line.
+ 5. PASS-THROUGH: still flying horizontal, the cut finished, the katana now extended straight back behind him low (the follow-through after slicing), cape and ponytail streaming far behind.
+ 6. SLIDE STOP: landing in a long low skid, one knee nearly touching the ground, the katana held out low and back to the side, body turned slightly away.
+ 7. HOLD: crouched still in the finishing pose, blade extended low behind, head down.
+ 8. RISE: starting to straighten up from the crouch, blade still low.
+- In frames 3 to 5 the body may be horizontal; keep the same pixel scale (the body length about 48 sprite pixels). Do not draw motion blur, speed lines, sparks or any effects - only the character.

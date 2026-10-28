@@ -545,7 +545,7 @@ function render(real) {
   for (const c of G.checks) drawCheck(ctx, c, G.time);
   drawGates(ctx, w, G.time);
   // 로프 겨냥 미리보기: 지금 쏘면 걸리는 고리 깜빡임. 키보드면 지금 F 를 누르면 갈 곳(표식 적·걸 곳)
-  const kbPick = CTRL.kb && !p.dead && !p.flash && !p.seals.length && (!p.rope || p.rope.state === 'back') ? p.kbPick(G) : null;
+  const kbPick = CTRL.kb && !p.dead && !p.flash && !p.sheath && !p.cutWait && !p.seals.length && (!p.rope || p.rope.state === 'back') ? p.kbPick(G) : null;
   const aimDir = !CTRL.kb && !p.dead && !p.rope ? G.ropeAssist(p.cx, p.cy, Math.cos(p.aimRad), Math.sin(p.aimRad)) || [Math.cos(p.aimRad), Math.sin(p.aimRad)] : null;
   const prev = aimDir ? G.ropeTarget(p.cx, p.cy, aimDir[0], aimDir[1], TUNE.hookMax) : null;   // 조준 보정까지 반영한 미리보기 (적이면 조준점이 붉게)
   const prevRing = prev?.ring || kbPick?.anchor?.ring;
@@ -580,7 +580,7 @@ function render(real) {
     // 대기·달리기는 장면 그림(프레임 애니메이션, rig.json anims), 나머지는 리그
     const fa = p.frameAnim, set = fa && TYPES.hero.anims?.[fa.name];
     if (set) {
-      const n = set.frames.length, i = fa.name === 'run' ? Math.floor(fa.ph * n) : Math.floor(fa.t * set.fps);
+      const n = set.frames.length, i = fa.i ?? (fa.name === 'run' ? Math.floor(fa.ph * n) : Math.floor(fa.t * set.fps));   // i = 정해진 장 (귀보 베기·납도)
       const m = bakeFrame(TYPES.hero, fa.name, ((i % n) + n) % n, p.drawFacing ?? p.facing, playerLow);
       p.sock = {};
       if (m.mouth) p.sock.mouth = [m.mouth[0] + px, m.mouth[1] + py];

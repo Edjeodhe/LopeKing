@@ -30,6 +30,7 @@ export const TUNE = {
   atkLunge: 190, riseHop: 150,
   hp: 5, iframes: 1.0,
   sealMax: 5, sealLife: 5, flashGap: 0.06, flashCd: 0.3,   // 귀보: 표식 쿠나이 수·남는 시간 · 한 번 긋고 다음까지 · 끝난 뒤 다시 쓰기까지
+  sheathMin: 3, sheathT: 0.9, sheathCut: 0.68,   // 귀보로 3명 이상 그었으면 칼을 검집에 넣는 연출(납도) · 걸리는 시간 · 딸깍(7번째 장) = 그어진 적이 베이는 순간
   hop: 2600, hopPast: 26, hopFinish: 0.32,   // 귀보 관통 속도 · 적 너머로 지나가는 거리 · 마지막에 지나간 뒤 한꺼번에 베이기까지 (검무 연속 베기가 끝날 만큼)
 };
 // 조작 방식: kb = 키보드만 · false = 마우스 조준 (main.js 가 Tab 으로 바꾸고 기억함)
@@ -91,7 +92,7 @@ export class Player {
     if (!this.dead && W.unstick(this)) { this.vx = this.vy = 0; if (this.flash?.hop) this.endHop(G); }   // 혹시 벽 속에 끼었으면 꺼냄
     if (this.dead) { this.deadT += dt; this.vy = Math.min(TUNE.maxFall, this.vy + TUNE.grav * dt); this.vx *= Math.exp(-dt * 6); W.move(this, this.vx * dt, this.vy * dt); return; }
 
-    const dir = (held('right') ? 1 : 0) - (held('left') ? 1 : 0);
+    const dir = this.sheath ? 0 : (held('right') ? 1 : 0) - (held('left') ? 1 : 0);   // 납도 중엔 안 움직임
     this.drop = held('down') && this.onGround;
 
     // 조준: 마우스 - 가슴 · 키보드 = 방향키 8방향 (안 누르면 보는 쪽, 땅에선 아래로 안 겨눔)
@@ -119,7 +120,13 @@ export class Player {
       this.flash.t -= dt;
       if (this.flash.t <= 0) { const s = this.nextSeal(); if (s) this.hopTo(G, s); else this.endFlash(); }
     }
-    // 그어진 적이 한꺼번에 베임 (마지막에 지나가고 hopFinish 초 뒤)
+    // 베기 자세 시간 · 납도 (Space·대시로 끊을 수 있음 — 끊어도 그어진 적은 베임)
+    if (this.slashPose) this.slashPose.t += dt;
+    if (this.sheath) {
+      this.sheath.t += dt; this.inv = Math.max(this.inv, 0.05);
+      if (this.sheath.t >= TUNE.sheathT || this.buf > 0 || this.dashReq) this.sheath = null;
+    }
+    // 그어진 적이 한꺼번에 베임 (마지막에 지나가고 hopFinish 초 뒤, 납도면 딸깍 하는 순간)
     if (this.cutWait) { this.cutWait.t -= dt; if (this.cutWait.t <= 0) { G.onChainFinish?.(this, this.cutWait.list); this.cutWait = null; } }
     if (this.rope) this.stepRope(dt, G, dir);
     const rope = this.rope;
@@ -381,6 +388,7 @@ export class Player {
     const dx = x1 - this.x, dy = y1 - this.y, L = Math.hypot(dx, dy) || 1;
     this.seals = this.seals.filter(o => o !== s);
     this.flash.hop = { e, x0: this.cx, y0: this.cy, ux: dx / L, uy: dy / L, left: L, t: 0 };
+    this.slashPose = { k: 'dash', t: 0 }; this.sheath = null;
     this.cling = this.ceil = 0; this.pole = null; this.dashT = 0; this.atkT = -1; this.flipT = 0; this.rope = null;
     this.facing = side; this.inv = Math.max(this.inv, 0.4);
     this.aimRad = Math.atan2(dy, dx);
@@ -393,13 +401,17 @@ export class Player {
     this.flash.hop = null;
     if (!h.e.dead) this.flash.cut.push({ e: h.e, ang: Math.atan2(h.uy, h.ux) });
     G.onHopCut?.(this, h);
+    this.slashPose = { k: 'follow', t: 0 };
     this.vx = h.ux * 160; this.vy = Math.min(h.uy * 160, -40);
     this.airDash = true; this.airAtk = true; this.airJump = TUNE.airJumps;
     this.flash.t = TUNE.flashGap;
   }
   // 연쇄 끝 (다 그었거나 Space·Shift·맞아서 끊김): 그은 적은 hopFinish 초 뒤 한꺼번에 베임
   endFlash() {
-    if (this.flash?.cut.length) this.cutWait = { t: TUNE.hopFinish, list: this.flash.cut };
+    const cut = this.flash?.cut || [];
+    // 3명 이상 그었으면 납도: 칼을 천천히 검집에 넣고, 딸깍 하는 순간 한꺼번에 베임 · 아니면 잠깐 뒤 바로 베임
+    if (cut.length >= TUNE.sheathMin && !this.flash.hop) { this.sheath = { t: 0 }; this.slashPose = null; this.cutWait = { t: TUNE.sheathCut, list: cut }; }
+    else if (cut.length) this.cutWait = { t: TUNE.hopFinish, list: cut };
     this.flash = null; this.flashCd = TUNE.flashCd;
   }
   // 지금 F 를 누르면 갈 곳 (미리보기도 같은 것 — main.js): 표식 적이 있으면 { pool, first }, 없으면 { anchor | null, dir }
@@ -611,11 +623,23 @@ export class Player {
     return true;
   }
 
+  // 귀보 베기·납도 장면 그림 (art/dokkaebi anims.flash · anims.sheath, Codex — 벽력일섬 발도 자세 참고) — 몇 번째 장인지
+  // flash 8장: 0 준비 · 1 웅크림 · 2 튀어 나감 · 3 발도 베기 · 4 지나감 · 5 미끄러져 멈춤 · 6 멈춤 자세 · 7 일어섬
+  slashFrame() {
+    if (this.sheath) return { name: 'sheath', i: Math.min(7, Math.floor(this.sheath.t / TUNE.sheathT * 8)) };
+    const s = this.slashPose;
+    if (!s) return null;
+    if (s.k === 'dash') return { name: 'flash', i: s.t < 0.02 ? 2 : 3 };
+    const i = s.t < 0.05 ? 4 : s.t < 0.12 ? 5 : s.t < 0.3 ? 6 : s.t < 0.38 ? 7 : -1;
+    if (i < 0 || (this.onGround && Math.abs(this.vx) > 40 && s.t > 0.12) || this.atkT >= 0 || this.dashT > 0 || this.rope) { this.slashPose = null; return null; }
+    return { name: 'flash', i };
+  }
   // ---- 자세 고르기 (그리기 직전, 실제 프레임 dt) ----
   animate(dt) {
     if (this.dead) return;
     let target, idle = false;
     this.frameAnim = null;   // 대기·달리기는 장면 그림으로 (main.js render) — 리그 자세(target)는 그대로 계산해 둠 (자세 이어짐용)
+    const slashFrame = this.slashFrame();
     const r = this.rope;
     if (this.hurtT > 0) target = A.HURT;
     else if (this.atkT >= 0) target = A.comboPose(this.combo, this.atkT, this.aim);
@@ -648,6 +672,7 @@ export class Player {
     else if (this.landT > 0) target = A.LAND;
     else if (Math.abs(this.vx) > 12) { this.runPh += dt * Math.max(Math.abs(this.vx), 110) / 70; target = A.heroRun(this.runPh); this.frameAnim = { name: 'run', ph: this.runPh }; }   // 막 출발할 때도 걷지 않고 달리는 발놀림
     else { target = A.heroIdle(this.t); idle = true; this.frameAnim = { name: 'idle', t: this.t }; }
+    if (slashFrame) { this.frameAnim = slashFrame; idle = false; }
     this.idleT = idle ? this.idleT + dt : 0;   // 가만히 선 시간 (가면 증기)
     this.throwT = Math.max(0, this.throwT - dt);
     // 벽 타기·매달림은 벽 반대쪽을 봄

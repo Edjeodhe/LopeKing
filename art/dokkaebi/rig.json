@@ -484,6 +484,242 @@
    ],
    "size": 0.09482,
    "fps": 12
+  },
+  "flash": {
+   "frames": [
+    {
+     "src": "anims/flash_0.png",
+     "pivot": [
+      155.8,
+      273.0
+     ],
+     "w": 293,
+     "h": 281,
+     "mouth": null,
+     "eye": [
+      258.7,
+      81.1
+     ]
+    },
+    {
+     "src": "anims/flash_1.png",
+     "pivot": [
+      181.8,
+      245.0
+     ],
+     "w": 278,
+     "h": 253,
+     "mouth": null,
+     "eye": [
+      243.9,
+      95.3
+     ]
+    },
+    {
+     "src": "anims/flash_2.png",
+     "pivot": [
+      181.8,
+      269.0
+     ],
+     "w": 306,
+     "h": 234,
+     "mouth": null,
+     "eye": [
+      273.4,
+      102.9
+     ]
+    },
+    {
+     "src": "anims/flash_3.png",
+     "pivot": [
+      181.8,
+      270.0
+     ],
+     "w": 379,
+     "h": 188,
+     "mouth": null,
+     "eye": [
+      232.4,
+      76.9
+     ]
+    },
+    {
+     "src": "anims/flash_4.png",
+     "pivot": [
+      171.8,
+      338.0
+     ],
+     "w": 374,
+     "h": 220,
+     "mouth": null,
+     "eye": [
+      190.2,
+      116.3
+     ]
+    },
+    {
+     "src": "anims/flash_5.png",
+     "pivot": [
+      171.8,
+      300.0
+     ],
+     "w": 374,
+     "h": 245,
+     "mouth": null,
+     "eye": [
+      363.0,
+      112.5
+     ]
+    },
+    {
+     "src": "anims/flash_6.png",
+     "pivot": [
+      158.8,
+      294.0
+     ],
+     "w": 361,
+     "h": 239,
+     "mouth": null,
+     "eye": [
+      300.7,
+      81.0
+     ]
+    },
+    {
+     "src": "anims/flash_7.png",
+     "pivot": [
+      181.8,
+      352.0
+     ],
+     "w": 335,
+     "h": 297,
+     "mouth": null,
+     "eye": [
+      302.9,
+      72.6
+     ]
+    }
+   ],
+   "size": 0.09482,
+   "fps": 16
+  },
+  "sheath": {
+   "frames": [
+    {
+     "src": "anims/sheath_0.png",
+     "pivot": [
+      109.1,
+      485.0
+     ],
+     "w": 305,
+     "h": 493,
+     "mouth": null,
+     "eye": [
+      173.7,
+      79.0
+     ]
+    },
+    {
+     "src": "anims/sheath_1.png",
+     "pivot": [
+      115.1,
+      485.0
+     ],
+     "w": 274,
+     "h": 493,
+     "mouth": null,
+     "eye": [
+      170.1,
+      81.1
+     ]
+    },
+    {
+     "src": "anims/sheath_2.png",
+     "pivot": [
+      122.1,
+      485.0
+     ],
+     "w": 266,
+     "h": 493,
+     "mouth": null,
+     "eye": [
+      88.5,
+      209.0
+     ]
+    },
+    {
+     "src": "anims/sheath_3.png",
+     "pivot": [
+      122.1,
+      485.0
+     ],
+     "w": 251,
+     "h": 493,
+     "mouth": null,
+     "eye": [
+      171.7,
+      82.3
+     ]
+    },
+    {
+     "src": "anims/sheath_4.png",
+     "pivot": [
+      109.1,
+      493.0
+     ],
+     "w": 247,
+     "h": 494,
+     "mouth": null,
+     "eye": [
+      169.1,
+      80.8
+     ]
+    },
+    {
+     "src": "anims/sheath_5.png",
+     "pivot": [
+      119.1,
+      492.0
+     ],
+     "w": 243,
+     "h": 495,
+     "mouth": null,
+     "eye": [
+      175.9,
+      86.7
+     ]
+    },
+    {
+     "src": "anims/sheath_6.png",
+     "pivot": [
+      108.1,
+      487.0
+     ],
+     "w": 225,
+     "h": 490,
+     "mouth": null,
+     "eye": [
+      171.7,
+      96.2
+     ]
+    },
+    {
+     "src": "anims/sheath_7.png",
+     "pivot": [
+      122.1,
+      493.0
+     ],
+     "w": 217,
+     "h": 496,
+     "mouth": null,
+     "eye": [
+      160.3,
+      79.3
+     ]
+    }
+   ],
+   "size": 0.09155,
+   "fps": 10
   }
  },
  "ref": {
