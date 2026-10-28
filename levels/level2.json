@@ -1,8 +1,7 @@
 {
   "name": "1-2 대숲 산길",
   "w": 210, "h": 44,
-  "theme": "bamboo",
-  "ambient": [92, 112, 110],
+  "theme": "ruin",
   "ceilY": 320,
   "rects": [
     [0, 0, 1, 44, "M"],
