@@ -668,7 +668,7 @@ function drawTitle(real) {
   textOut('로 프 킹', W / 2, 70, '#f2e8d0', 'center', 32);
   textOut('달빛 아래, 붉은 실 하나', W / 2, 112, '#c9a0a0');
   if (Math.floor(G.time * 2) % 2) textOut('클릭 또는 Space 로 시작', W / 2, 170, '#ffffff');
-  textOut('좌클릭 베기 · 우클릭 쿠나이 · Shift 대시 · P 일시정지 · M 소리', W / 2, H - 30, '#8a86a0');
+  textOut(CTRL.kb ? 'Ctrl 베기 · F 로프·쿠나이 · Shift 대시 · Tab 조작 바꾸기' : '좌클릭 베기 · 우클릭 로프 · Shift 대시 · Tab 조작 바꾸기', W / 2, H - 30, '#8a86a0');
 }
 function drawPause() {
   ctx.fillStyle = '#05040a';
