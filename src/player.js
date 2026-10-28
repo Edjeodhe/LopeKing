@@ -30,7 +30,7 @@ export const TUNE = {
   atkLunge: 190, riseHop: 150,
   hp: 5, iframes: 1.0,
   sealMax: 5, sealLife: 5, flashGap: 0.06, flashCd: 0.3,   // 귀보: 표식 쿠나이 수·남는 시간 · 한 번 긋고 다음까지 · 끝난 뒤 다시 쓰기까지
-  hop: 2600, hopPast: 26, hopFinish: 0.16,   // 귀보 관통 속도 · 적 너머로 지나가는 거리 · 마지막에 지나간 뒤 한꺼번에 베이기까지
+  hop: 2600, hopPast: 26, hopFinish: 0.32,   // 귀보 관통 속도 · 적 너머로 지나가는 거리 · 마지막에 지나간 뒤 한꺼번에 베이기까지 (검무 연속 베기가 끝날 만큼)
 };
 // 조작 방식: kb = 키보드만 · false = 마우스 조준 (main.js 가 Tab 으로 바꾸고 기억함)
 export const CTRL = { kb: true };

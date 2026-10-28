@@ -79,7 +79,7 @@ function loadLevel(i) {
 }
 function startLevel() {
   const w = new World(levelDef);
-  G.world = w; G.enemies = []; G.bullets = []; G.exits = []; G.flares = []; G.hazards = []; G.checks = []; G.boss = null;
+  G.world = w; G.enemies = []; laters.length = 0; G.bullets = []; G.exits = []; G.flares = []; G.hazards = []; G.checks = []; G.boss = null;
   G.clear = false; G.msg = { text: levelDef.name, t: 0, sub: true }; G.levelT = G.time;
   tilesImg = bakeTiles(w);
   initFx(w); initGore(w);
@@ -239,6 +239,21 @@ G.onAttack = (p, exec) => {
     sfx('exec');
   }
 };
+// 검무 (참고: 피오라 옛 궁 · 칼바람 증강 검무): 지나가며 그은 적에게 눈 깜짝할 새 여러 번 벰 — 엇갈린 칼자국 → 칼날 고리가 돌고,
+// 칼질마다 타격 별 + 불티 + 몸 떨림·흰 번쩍 + 타격음. 그어진 적은 멈춰 있다가 연쇄가 끝나면 마지막 큰 베기로 베임 (G.onChainFinish)
+function bladeWaltz(e, ang) {
+  const x = e.x, y = e.y - e.h / 2, big = e.kind === 'boss' ? 1.6 : 1;
+  spiritFx({ sheet: 'flurry', row: 0, x, y, w: 92 * big, ang: Math.random() * 0.6 - 0.3, life: 0.3 });
+  spiritFx({ sheet: 'flurry', row: 1, x, y, w: 84 * big, ang: Math.random() * 6.28, life: 0.34, delay: 0.07 });
+  for (let k = 0; k < 4; k++) G.later(0.04 + k * 0.06, () => {
+    if (e.dead) return;
+    const a = ang + (k % 2 ? 1 : -1) * (0.5 + Math.random() * 0.9), hx = x + (Math.random() - 0.5) * 10 * big, hy = y + (Math.random() - 0.5) * 14 * big;
+    spiritFx({ sheet: 'flurry', row: 3, x: hx, y: hy, w: 40 * big, life: 0.16 });
+    spark(hx, hy, a, 4, { cols: SPIRIT_COLS.slice(0, 3), v: 200, life: 0.12 });
+    e.flashT = 0.05; e.shudder = 0.1;
+    sfx('hit');
+  });
+}
 // 혼불 초승달 한 장: (x, y) 에 겨눈 각 a 쪽으로 (왼쪽 f<0 이면 뒤집음, 기울기 ±0.9 까지), vflip = 위아래 뒤집음(되돌리는 칼)
 function spiritSlash(x, y, a, f, w, life, vflip = false, al = 1) {
   let tilt = f < 0 ? a - Math.PI : a; while (tilt > Math.PI) tilt -= 2 * Math.PI; while (tilt < -Math.PI) tilt += 2 * Math.PI;
@@ -411,8 +426,12 @@ function stepBullets(dt) {
 }
 
 // ---------- 한 스텝 ----------
+// G.later(초, fn): 게임 시간으로 잠시 뒤에 실행 (검무 칼질처럼 시간차 연출용)
+const laters = [];
+G.later = (t, fn) => laters.push({ t, fn });
 function step(dt) {
   G.time += dt;
+  for (let i = laters.length - 1; i >= 0; i--) if ((laters[i].t -= dt) <= 0) { const f = laters[i].fn; laters.splice(i, 1); f(); }
   const p = G.player;
   p.step(dt, G);
   for (const e of G.enemies) e.step(dt, G);
@@ -758,6 +777,7 @@ G.onHopCut = (p, h) => {
   const e = h.e, ang = Math.atan2(h.uy, h.ux), ey = e.y - e.h / 2;
   cutLine(e.x - Math.cos(ang) * 22, ey - Math.sin(ang) * 22, e.x + Math.cos(ang) * 22, ey + Math.sin(ang) * 22);
   spark(e.x, ey, ang, 8, { cols: SPIRIT_COLS.slice(0, 3), v: 220, life: 0.14 });
+  bladeWaltz(e, ang);
   G.stop = Math.max(G.stop, 0.035);
   shake(2.5, Math.cos(ang) * 3, Math.sin(ang) * 3);
   sfx('slash');
@@ -767,9 +787,11 @@ G.onChainFinish = (p, list) => {
     if (e.dead) continue;
     const hitInfo = { kind: 'exec', ang, power: 1.3 };
     if (e.kind === 'boss') e.damage(G, 4, hitInfo); else G.killEnemy(e, hitInfo);
-    const ey = e.y - e.h / 2, f = Math.cos(ang) < 0 ? -1 : 1;
-    spiritSlash(e.x, ey, ang + 0.55, f, 100, 0.4, false, 1);
-    spiritSlash(e.x, ey, ang - 0.55, f, 100, 0.4, true, 1);
+    const ey = e.y - e.h / 2, big = e.kind === 'boss' ? 1.6 : 1;
+    // 마지막 큰 베기 (fx_flurry 줄 2: 가로 한 줄 → 굵은 칼자국 → 두 줄로 갈라짐) — 베인 방향으로 기울임
+    let tilt = Math.cos(ang) < 0 ? ang - Math.PI : ang; tilt = Math.max(-0.6, Math.min(0.6, tilt)) - 0.25;
+    spiritFx({ sheet: 'flurry', row: 2, x: e.x, y: ey, w: 130 * big, ang: tilt, flip: Math.cos(ang) < 0, life: 0.42 });
+    spiritSlash(e.x, ey, ang + 0.55, Math.cos(ang) < 0 ? -1 : 1, 90 * big, 0.36, false, 0.6);
     hitBloom(e.x, ey, ang, 1.6);
   }
   flash('#e8fff0', 0.04);

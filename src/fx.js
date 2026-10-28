@@ -92,7 +92,8 @@ function drawArc(ctx, A, front) {
 let sheet = null;
 export async function loadSlashFx() {
   sheet = await loadSheet('art/fx/fx_slash.png', 4, 4);
-  try { soft = await loadSheet('art/fx/fx_gwibo.png', 4, 4); } catch { soft = null; }   // 없으면 불티·줄기만
+  // 혼불 그림 (없으면 불티·줄기만): gwibo = 귀보·처형 · flurry = 검무 연속 베기
+  for (const n of ['gwibo', 'flurry']) { try { soft[n] = await loadSheet(`art/fx/fx_${n}.png`, 4, 4); } catch { delete soft[n]; } }
 }
 export function slashFx(o) { fx.sprites.push({ t: 0, life: 0.2, w: 80, ang: 0, layer: 'front', ramp: [...SMEAR.cols].reverse(), ...o }); }
 function drawSprite(ctx, s, back) {
@@ -109,13 +110,14 @@ function drawSprite(ctx, s, back) {
 // ---------- 귀보·처형 혼불 이펙트 (부드러운 빛, 사용자: 자글자글한 도트 말고 테두리 연하게 부드럽게 · 발로란트 도깨비 트레일러처럼 초록) ----------
 // art/fx/fx_gwibo.png (Codex 흑백 그림, 4×4 칸): 줄 0 표식(삼태극) · 1 사라짐(피어오르는 혼불 기둥) · 2 나타남(바닥 고리 + 불꽃 잎) · 3 처형 초승달.
 // 도트로 굽지 않고 밝기 → 초록 혼불 색(SPIRIT)·알파로 물들여 부드럽게 줄여 '더하기'(lighter)로 겹쳐 그림 → 검은 테두리 없이 빛만. 조명 뒤(빛나는 층)
-// { row, x, y(follow 기준), w(칸 가로 = 게임 px), ang, flip, life, py(기준점 세로 비율), a(세기) } · 순간이동 길 = { streak: [x0, y0, x1, y1] }
-let soft = null;
+// art/fx/fx_flurry.png (sheet: 'flurry', 귀보 검무): 줄 0 엇갈린 칼자국 · 1 칼날 고리 · 2 마지막 큰 베기 · 3 타격 별
+// { sheet, row, x, y(follow 기준), w(칸 가로 = 게임 px), ang, flip, vflip, life, py(기준점 세로 비율), a(세기), delay(초 뒤에 시작) } · 순간이동 길 = { streak: [x0, y0, x1, y1] }
+const soft = {};
 export const SPIRIT = { dark: [20, 120, 70], mid: [60, 230, 130], hi: [190, 255, 210] };   // 짙은 초록 → 혼불 초록 → 흰 민트
 export const SPIRIT_COLS = ['#ffffff', '#c8ffdc', '#4ef0a0', '#2aa870'];   // 점 이펙트(불티·띠)용: 심 → 겉 (겉도 검지 않게 밝은 초록)
 const tinted = new Map();
-function softCell(row, f, w) {
-  const src = soft[row][f], key = `${row},${f},${Math.max(8, Math.round(w / 4) * 4)}`;
+function softCell(sheet, row, f, w) {
+  const src = soft[sheet][row][f], key = `${sheet},${row},${f},${Math.max(8, Math.round(w / 4) * 4)}`;
   if (tinted.has(key)) return tinted.get(key);
   // 반씩 줄여(부드럽게) 목표 크기의 2배까지 → 밝기를 색·알파로
   let cur = src, cw = src.width, ch = src.height;
@@ -133,11 +135,12 @@ function softCell(row, f, w) {
   tinted.set(key, c);
   return c;
 }
-export function spiritFx(o) { fx.soft.push({ t: 0, life: 0.3, w: 60, ang: 0, py: 0.5, a: 1, ...o }); }
+export function spiritFx(o) { fx.soft.push({ t: -(o.delay || 0), life: 0.3, w: 60, ang: 0, py: 0.5, a: 1, sheet: 'gwibo', ...o }); }
 // 칸 한 장을 (x, y) 에 그림 (기준점 = 가로 가운데 · 세로 py). 몸에 붙은 표식처럼 계속 그리는 것도 이걸로
 export function drawSpiritCell(ctx, row, f, x, y, w, o = {}) {
-  if (!soft) return false;
-  const c = softCell(row, f, w), k = w / c.width, py = o.py ?? 0.5;
+  const sheet = o.sheet || 'gwibo';
+  if (!soft[sheet]) return false;
+  const c = softCell(sheet, row, f, w), k = w / c.width, py = o.py ?? 0.5;
   ctx.save();
   ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = o.a ?? 1; ctx.imageSmoothingEnabled = true;
   ctx.translate(x, y); if (o.ang) ctx.rotate(o.ang); ctx.scale(o.flip ? -k : k, o.vflip ? -k : k);
@@ -147,6 +150,7 @@ export function drawSpiritCell(ctx, row, f, x, y, w, o = {}) {
 }
 function drawSoft(ctx) {
   for (const S of fx.soft) {
+    if (S.t < 0) continue;   // 아직 시작 전 (delay)
     const k = S.t / S.life;
     if (S.streak) {
       // 순간이동 길: 출발 → 도착을 잇는 부드러운 빛 줄기 (가운데 밝은 심, 둘레 번짐). 출발 쪽부터 사라짐
@@ -162,7 +166,7 @@ function drawSoft(ctx) {
       continue;
     }
     const f = Math.min(3, Math.floor(k * 4)), fade = f === 3 ? 1 - (k - 0.75) / 0.25 : 1;
-    drawSpiritCell(ctx, S.row, f, (S.follow?.x ?? 0) + S.x, (S.follow?.y ?? 0) + S.y, S.w, { ang: S.ang, flip: S.flip, vflip: S.vflip, py: S.py, a: S.a * Math.max(0, fade) });
+    drawSpiritCell(ctx, S.row, f, (S.follow?.x ?? 0) + S.x, (S.follow?.y ?? 0) + S.y, S.w, { sheet: S.sheet, ang: S.ang, flip: S.flip, vflip: S.vflip, py: S.py, a: S.a * Math.max(0, fade) });
   }
 }
 
@@ -414,6 +418,7 @@ export function fxLights(out, time) {
   }
   for (const R of fx.rings) add(R.x, R.y, R.rx * 1.6, 1 - R.t / R.life);
   for (const S of fx.soft) {   // 혼불은 초록 빛
+    if (S.t < 0) continue;
     const k = 1 - S.t / S.life, x = S.streak ? S.streak[2] : (S.follow?.x ?? 0) + S.x, y = S.streak ? S.streak[3] : (S.follow?.y ?? 0) + S.y;
     if (k > 0.05) out.push({ x, y, r: S.streak ? 40 : S.w * 0.6, col: [120, 255, 170], k: k * 0.5, glow: 0.12 * k });
   }
