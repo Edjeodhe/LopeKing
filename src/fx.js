@@ -140,7 +140,7 @@ export function drawSpiritCell(ctx, row, f, x, y, w, o = {}) {
   const c = softCell(row, f, w), k = w / c.width, py = o.py ?? 0.5;
   ctx.save();
   ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = o.a ?? 1; ctx.imageSmoothingEnabled = true;
-  ctx.translate(x, y); if (o.ang) ctx.rotate(o.ang); ctx.scale(o.flip ? -k : k, k);
+  ctx.translate(x, y); if (o.ang) ctx.rotate(o.ang); ctx.scale(o.flip ? -k : k, o.vflip ? -k : k);
   ctx.drawImage(c, -c.width / 2, -c.height * py);
   ctx.restore();
   return true;
@@ -162,7 +162,7 @@ function drawSoft(ctx) {
       continue;
     }
     const f = Math.min(3, Math.floor(k * 4)), fade = f === 3 ? 1 - (k - 0.75) / 0.25 : 1;
-    drawSpiritCell(ctx, S.row, f, (S.follow?.x ?? 0) + S.x, (S.follow?.y ?? 0) + S.y, S.w, { ang: S.ang, flip: S.flip, py: S.py, a: S.a * Math.max(0, fade) });
+    drawSpiritCell(ctx, S.row, f, (S.follow?.x ?? 0) + S.x, (S.follow?.y ?? 0) + S.y, S.w, { ang: S.ang, flip: S.flip, vflip: S.vflip, py: S.py, a: S.a * Math.max(0, fade) });
   }
 }
 

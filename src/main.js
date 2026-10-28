@@ -239,6 +239,23 @@ G.onAttack = (p, exec) => {
     sfx('exec');
   }
 };
+// 혼불 초승달 한 장: (x, y) 에 겨눈 각 a 쪽으로 (왼쪽 f<0 이면 뒤집음, 기울기 ±0.9 까지), vflip = 위아래 뒤집음(되돌리는 칼)
+function spiritSlash(x, y, a, f, w, life, vflip = false, al = 1) {
+  let tilt = f < 0 ? a - Math.PI : a; while (tilt > Math.PI) tilt -= 2 * Math.PI; while (tilt < -Math.PI) tilt += 2 * Math.PI;
+  spiritFx({ row: 3, x, y, w, ang: Math.max(-1.2, Math.min(1.2, tilt)) * (vflip ? -1 : 1), flip: f < 0, life, a: al, vflip });
+}
+// 사방으로 뻗는 짧은 속도선 (a 쪽이 길게)
+function burstLines(x, y, a, n, len) {
+  for (let i = 0; i < n; i++) { const b = a + (i / n) * Math.PI * 2, k = 0.5 + 0.5 * Math.max(0, Math.cos(b - a)); speedLine(x, y, Math.cos(b), Math.sin(b), len * (0.5 + k) * (0.7 + Math.random() * 0.6)); }
+}
+// 맞은 자리 꽃: 베인 방향에 엇갈린 칼자국 하나 + 충격 고리 + 사방 속도선 + 초록 빛 (k = 세기)
+function hitBloom(x, y, ang, k = 1) {
+  spiritSlash(x, y, ang + Math.PI / 2 * 0.8, Math.cos(ang) < 0 ? -1 : 1, 56 * k, 0.22, Math.random() < 0.5, 0.85);
+  ring({ x, y, rx: 10 * k, ry: 10 * k, life: 0.2, th: 2, grow: 1.6, cols: SPIRIT_COLS });
+  burstLines(x, y, ang, 6, 18 * k);
+  spark(x, y, ang, Math.round(6 * k), { cols: SPIRIT_COLS.slice(0, 3), v: 260 * k, spread: 0.7, g: 200, life: 0.2, size: 2 });
+  G.flares.push({ x, y, r: 40 * k, col: [150, 255, 190], t: 0.14, glow: 0.12 });
+}
 // 콤보 이펙트: 칼이 휘둘리기 시작하는 순간에 띄움. 1·2타·회전 = 칼끝 타원을 따라 그어지는 두꺼운 띠(fx.js sweepArc, 겨눈 만큼 기울임 ±45°),
 // 4타 끝 = 큰 초승달 그림(fx_slash.png 줄 2)
 function comboFx(p, at, t) {
@@ -255,12 +272,18 @@ function comboFx(p, at, t) {
     if (at.combo === 2) sweepArc({ follow: p, y: -19, rx: 31, ry: 31, f, vert: true, th: 9, a0: (205 - p.aim) * D, a1: (-5 - p.aim) * D, dur: m.act, life: m.act + 0.17 });
     // 4타: 몸을 감싸며 한 바퀴 반 도는 띠 (먼 반은 몸 뒤, 가까운 반은 몸 앞)
     if (at.combo === 3) { sweepArc({ follow: p, y: -16, rx: 62, ry: 19, f, th: 7, a0: 178 * D, a1: -370 * D, dur: m.act, life: m.act + 0.12 }); G.flares.push({ x: p.x, y: p.cy, r: 50, col: [190, 255, 210], t: 0.2, glow: 0.1 }); }
+    // 화려하게 (사용자 요청): 띠 밑에 겨눈 쪽 혼불 초승달 번짐 (1·2타 = 겨눈 쪽, 3타 = 위로 세움, 4타 = 몸 둘레 큰 고리)
+    if (at.combo < 2) spiritSlash(p.x + ca * 22, p.cy + sa * 22, a, f, 104, m.act + 0.16, at.combo === 1, 0.7);
+    if (at.combo === 2) spiritSlash(p.x + f * 8, p.cy - 10, -Math.PI / 2 + f * 0.5, f, 90, m.act + 0.16, false, 0.7);
+    if (at.combo === 3) ring({ x: p.x, y: p.y - 14, rx: 48, ry: 13, life: 0.3, th: 2, a0: Math.PI, dir: f, grow: 0.5 });
   }
   // 4타 끝: 겨눈 쪽으로 큰 초승달 + 속도선
   if (at.combo === 3 && at.fx === 1 && t >= m.wind + m.act * 0.7) {
     at.fx = 2;
     const big = Math.max(-60, Math.min(60, p.aim - 90)) * Math.PI / 180 * -f;
     slashFx({ row: 2, follow: p, x: ca * 30, y: -20 + sa * 30, w: 120, ang: big, flip: f < 0, life: 0.28 });
+    spiritSlash(p.x + ca * 34, p.cy + sa * 34, a, f, 150, 0.36, false, 0.9);
+    burstLines(p.x + ca * 30, p.cy + sa * 30, a, 7, 26);
     shake(3, ca * 3, sa * 3); sfx('slash');
   }
 }
@@ -296,6 +319,7 @@ function stepCombat(dt) {
       spark(contact[0], contact[1], ang, fin ? 12 : 8, { cols: ['#ffffff', '#d0ffe0', '#3ee08a'], v: fin ? 280 : 220, life: 0.14 });
       popSlashFx();
       if (!at.exec) slashFx({ row: 3, x: contact[0], y: contact[1], w: fin ? 56 : 40, life: 0.16 });   // 처형은 혼불 초승달만 (도트 섬광 없이)
+      hitBloom(e.x, e.cy, ang, fin ? 1.4 : 1);
       e.damage(G, at.exec ? 1 : m.dmg, hitInfo);
       if (!e.dead) { sfx('hit'); G.stop = Math.max(G.stop, fin ? 0.11 : 0.07); shake(fin ? 6 : 3.5, Math.cos(ang) * (fin ? 6 : 4), Math.sin(ang) * (fin ? 6 : 4)); }
     }
@@ -313,6 +337,10 @@ G.killEnemy = (e, hit) => {
   if (e.dead) return;
   e.dead = true;
   const kind = killActor(e, hit);
+  if (hit.kind === 'slash' || hit.kind === 'exec') {
+    spiritFx({ row: 2, x: e.x, y: e.y + 1, py: 0.7, w: hit.kind === 'exec' ? 92 : 76, life: 0.42 });
+    spiritFx({ row: 1, x: e.x, y: e.y + 2, py: 0.95, w: 54, life: 0.5, a: 0.7 });
+  }
   G.stop = Math.max(G.stop, hit.kind === 'exec' ? 0.1 : 0.07);
   shake(hit.kind === 'exec' ? 5 : 3.5, Math.cos(hit.ang || 0) * 3, Math.sin(hit.ang || 0) * 3);
   sfx('gore');
@@ -485,6 +513,7 @@ function tick(real) {
 
 function render(real) {
   const p = G.player, w = G.world;
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';   // 앞 프레임이 중간에 끊겼어도 화면 상태를 되돌림
   const sx = (Math.random() - 0.5) * cam.shake * 2 + cam.kick[0], sy = (Math.random() - 0.5) * cam.shake * 2 + cam.kick[1];
   const cx = Math.round(cam.x + sx), cy = Math.round(cam.y + sy);
   drawBackground(ctx, bg, cam, W, H, w.ph);
@@ -738,7 +767,10 @@ G.onChainFinish = (p, list) => {
     if (e.dead) continue;
     const hitInfo = { kind: 'exec', ang, power: 1.3 };
     if (e.kind === 'boss') e.damage(G, 4, hitInfo); else G.killEnemy(e, hitInfo);
-    spiritFx({ row: 3, x: e.x, y: e.y - e.h / 2, w: 84, ang: Math.max(-0.9, Math.min(0.9, Math.cos(ang) < 0 ? ang - Math.PI : ang)), flip: Math.cos(ang) < 0, life: 0.34 });
+    const ey = e.y - e.h / 2, f = Math.cos(ang) < 0 ? -1 : 1;
+    spiritSlash(e.x, ey, ang + 0.55, f, 100, 0.4, false, 1);
+    spiritSlash(e.x, ey, ang - 0.55, f, 100, 0.4, true, 1);
+    hitBloom(e.x, ey, ang, 1.6);
   }
   flash('#e8fff0', 0.04);
   G.flares.push({ x: p.x, y: p.cy, r: 90, col: [170, 255, 200], t: 0.3, glow: 0.18 });
