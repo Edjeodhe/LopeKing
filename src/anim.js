@@ -39,7 +39,7 @@ export function run(p) {
 // 대기: 힘 빼고 살짝 구부정하게 서서 칼을 옆에 낮게 늘어뜨림 — 칼끝은 앞·아래 땅 쪽. 4장을 평균 내 기본 자세로 두고 숨만 얹음
 export const HERO_IDLE = P({ torso: 1.5, head: -9.5, nU: -15, nF: 19, sw: 70, fU: -5.5, fF: 1, nT: 8.5, nS: -16, fT: -21, fS: -3.5, y: 0.5 });
 export function heroIdle(t) {
-  const ph = (t / 3.2) % 1;   // steam.js 숨 주기와 같음
+  const ph = (t / 3.2) % 1;   // 숨 주기 3.2초
   const b = ph < 0.55 ? Math.sin(ph / 0.55 * Math.PI / 2) * 2 - 1 : Math.cos((ph - 0.55) / 0.45 * Math.PI / 2) * 2 - 1;
   const q = Math.round(b * 2) / 2;   // 숨도 3단으로 끊음 (들이쉼 = 어깨가 올라가고 가슴이 부풂)
   const I = HERO_IDLE;

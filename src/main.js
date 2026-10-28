@@ -10,7 +10,7 @@ import { Boss, drawBossMarks, stepHazards, drawHazards } from './boss.js';
 import * as A from './anim.js';
 import { fx, cam, spiritFx, drawSpiritCell, SPIRIT_COLS, initFx, updateFx, updateFlash, cutLine, dust, drawFxBack, drawFxFront, drawFxGlow, fxLights, fadeSlashFx, popSlashFx, sweepArc, pushGhost, moveTrail, speedLine, drawFlash, decalCanvas, shake, ring, flash, spark, blood, BLOOD, slashFx, loadSlashFx } from './fx.js';
 import { initGore, updateGore, drawGore, killActor } from './gore.js';
-import { stepSteam, drawSteam } from './steam.js';
+import { stepEyeFire, drawEyeFire } from './eyefire.js';
 import { sfx } from './sfx.js';
 import { applyLight } from './light.js';
 import { startMusic, setMood, toggleMute } from './music.js';
@@ -525,7 +525,8 @@ function tick(real) {
   acc += dt;
   while (acc >= STEP) { step(STEP); acc -= STEP; }
   updateCam(real);
-  if (dt > 0) { p.animate(dt); for (const e of G.enemies) e.animate(dt); stepSteam(dt, p); }
+  if (dt > 0) { p.animate(dt); for (const e of G.enemies) e.animate(dt); }
+  stepEyeFire(real, p);   // 가면 눈 혼불 (실제 시간 — 타격 멈춤 중에도 흐름)
   if (G.msg) G.msg.t += real;
   updateFlash(real);
   render(real);
@@ -605,7 +606,6 @@ function render(real) {
       ctx.restore();
     } else ctx.drawImage(playerLow, sx, py);
   }
-  drawSteam(ctx);   // 가면 증기 (몸 앞, 조명을 받음)
   for (const e of G.enemies) if (e.kind === 'boss') drawBossMarks(ctx, e, G.time); else drawEnemyMarks(ctx, e, G.time);
   drawHazards(ctx, G, G.time);
   drawFxFront(ctx, G.time);
@@ -630,6 +630,7 @@ function render(real) {
   drawBackdropGlow(ctx, bg, { x: cx, y: cy }, W, H, w.ph, G.time, real, tilesImg);   // 배경 불·달 빛 + 불티 (몰락한 조선)
   // 빛나는 이펙트는 조명 뒤에 그대로 (어두운 화면에서 도드라지게). 몸 뒤 반은 주인공 실루엣만큼 가림
   drawFxGlow(ctx, G.time, { x: cx, y: cy }, W, H, p.dead || playerLow.__skip ? null : { img: playerLow, x: px - cx, y: py - cy });
+  drawEyeFire(ctx, cx, cy);   // 눈에서 새는 초록 혼불 연기 + 눈빛 꼬리 (블리치 호로화)
   drawEye(p, cx, cy);
   zoomPulse(real, p.x - cx, p.cy - cy);
 

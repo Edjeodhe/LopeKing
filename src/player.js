@@ -53,7 +53,7 @@ export class Player {
     this.safe = { x, y };
     this.hurtT = 0;
     this.mouse = [x + 50, y - 20];
-    // 가면 폼: 가면마다 평타·기술이 달라지는 컨셉 (지금은 기본 폼 도깨비 하나). 도깨비 = 가만히 있으면 가면에서 증기 (steam.js)
+    // 가면 폼: 가면마다 평타·기술이 달라지는 컨셉 (지금은 기본 폼 도깨비 하나). 도깨비 = 가면 눈에서 초록 혼불이 늘 새어 나옴 (eyefire.js)
     this.mask = 'dokkaebi'; this.idleT = 0;
   }
   get cx() { return this.x; }
