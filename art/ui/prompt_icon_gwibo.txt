@@ -1,0 +1,8 @@
+Use your built-in image generation tool to create ONE image and save it as PNG to: icon_gwibo.png (in the current working directory). Do not write code to draw it; it must be a generated illustration. After saving, reply only with the file name.
+
+Image spec:
+- 1024x1024, a single square SKILL ICON for a dark 2D pixel-art action game (like the skill icons of modern pixel action games). No text, no letters, no numbers, no key labels.
+- RENDERING: authentic PIXEL ART drawn at exactly 32x32 pixels and upscaled exactly 32x with nearest-neighbor: every pixel is a crisp solid 32x32 square block on one grid. NO anti-aliasing, NO gradients, NO blur. A limited palette of about 12 colors. Strong readable silhouette at 32x32.
+- CONTENT: the skill "Gwibo" (ghost step): a single black-steel KUNAI with a crimson-wrapped grip and a gold ring, diagonally from the lower left to the upper right, its blade wreathed in bright GREEN spirit fire, crossing in front of a glowing green three-part swirl SEAL (a triskelion inside a thin ring, like a mark stamped on an enemy), with a few thin green slash lines streaking across like a lightning-fast cut.
+- BACKGROUND inside the icon: a dark lacquer-black to deep crimson square, with a 1-pixel GOLD frame border around the whole icon and a 1-pixel black outline just inside it.
+- Colors: black lacquer, deep crimson, thin gold, bright spirit green (#4ef0a0 family) with a white-mint core.

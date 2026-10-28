@@ -49,10 +49,11 @@ setKeyLayout(CTRL.kb);
 const levelDefs = {};
 const TYPES = {};
 globalThis.__G = G; G.cam = cam;   // 콘솔·자동 확인용
-let tilesImg = null, bg = null, levelDef = null, playerLow = newBakeCanvas(), deathT = 0, titleBg = null;
+let tilesImg = null, bg = null, levelDef = null, playerLow = newBakeCanvas(), deathT = 0, titleBg = null, iconGwibo = null;
 
 async function boot() {
-  await Promise.all([loadFont(), loadSlashFx(), loadBackdrops()]);
+  await Promise.all([loadFont(), loadSlashFx(), loadBackdrops(),
+    new Promise(ok => { const im = new Image(); im.onload = () => { iconGwibo = im; ok(); }; im.onerror = ok; im.src = 'art/ui/icon_gwibo.png'; })]);   // 귀보 스킬 아이콘 (없으면 코드로 그린 쿠나이)
   await Promise.all(LEVELS.map(async n => { levelDefs[n] = await (await fetch(`levels/${n}.json`, { cache: 'no-store' })).json(); }));
   setTheme('ruin'); titleBg = makeBackground(W, H);   // 타이틀 뒤도 몰락한 조선
   // 진짜 그림(art/<id>/rig.json)이 없으면 임시 그림으로 같은 파이프라인을 돌림
@@ -910,6 +911,35 @@ function drawKbMarks(p, pick, cx, cy) {
   }
 }
 
+// 귀보 스킬 칸 (체력 아래, 32×32): 아이콘 + 쿨타임 동안 위에서부터 시계 방향으로 걷히는 어둠 + 남은 초 · 쓸 수 있으면 금테가 은은히 빛남
+// 표식이 꽂혀 있으면(F 다시 = 귀보) 초록 테두리가 깜빡임 · 귀보 중엔 초록으로 꽉 참. 오른쪽 아래 'F' (키보드 조작에서만)
+function drawSkillSlot(p) {
+  const x = 8, y = 22, S = 32, cd = p.flashCd || 0, armed = p.seals.some(s => s.state === 'stuck'), active = !!p.flash;
+  ctx.fillStyle = PAL.ink; ctx.fillRect(x - 1, y - 1, S + 2, S + 2);
+  if (iconGwibo) ctx.drawImage(iconGwibo, x, y, S, S);
+  else {   // 아이콘이 없을 때: 쿠나이 한 자루
+    ctx.fillStyle = '#1a1420'; ctx.fillRect(x, y, S, S);
+    for (let k = 0; k < 18; k++) { ctx.fillStyle = k < 11 ? '#c8ccd8' : '#9a1a22'; ctx.fillRect(x + 7 + k, y + 24 - k, 2, 2); }
+  }
+  if (cd > 0) {
+    const fr = cd / TUNE.flashCd;
+    ctx.save(); ctx.beginPath(); ctx.moveTo(x + S / 2, y + S / 2);
+    ctx.arc(x + S / 2, y + S / 2, S, -Math.PI / 2, -Math.PI / 2 + fr * Math.PI * 2); ctx.closePath();
+    ctx.clip(); ctx.fillStyle = 'rgba(8,6,16,0.72)'; ctx.fillRect(x, y, S, S); ctx.restore();
+    ctx.font = font(16); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const t = cd >= 1 ? String(Math.ceil(cd)) : cd.toFixed(1);
+    ctx.fillStyle = PAL.ink; ctx.fillText(t, x + S / 2 + 1, y + S / 2 + 1); ctx.fillStyle = '#f2e8d0'; ctx.fillText(t, x + S / 2, y + S / 2);
+  }
+  // 테두리: 귀보 중 = 초록 · 표식 꽂힘 = 초록 깜빡임 · 준비됨 = 금빛 은은히 · 쿨타임 = 어두운 금
+  const blink = Math.floor(G.time * 8) % 2, ready = cd <= 0;
+  const col = active ? '#4ef0a0' : armed ? (blink ? '#ffffff' : '#4ef0a0') : ready ? (Math.sin(G.time * 3) > 0 ? '#f0c060' : '#c08a3a') : '#5a4a30';
+  ctx.fillStyle = col;
+  ctx.fillRect(x - 1, y - 1, S + 2, 1); ctx.fillRect(x - 1, y + S, S + 2, 1); ctx.fillRect(x - 1, y - 1, 1, S + 2); ctx.fillRect(x + S, y - 1, 1, S + 2);
+  // 키 'F'
+  ctx.font = font(16); ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+  ctx.fillStyle = PAL.ink; ctx.fillText('F', x + S + 4, y + S - 8); ctx.fillStyle = ready || armed ? '#f2e8d0' : '#8a86a0'; ctx.fillText('F', x + S + 3, y + S - 9);
+}
+
 // ---------- HUD ----------
 function drawHud(p, prev) {
   // 체력: 붉은 마름모
@@ -930,6 +960,7 @@ function drawHud(p, prev) {
   for (const [a, b] of [[-4, 0], [-3, 0], [3, 0], [4, 0], [0, -4], [0, -3], [0, 3], [0, 4]]) ctx.fillRect(mx + a, my + b, 1, 1);
   if (prev?.enemy && Math.floor(G.time * 10) % 2) { ctx.fillRect(mx - 1, my - 1, 3, 3); }
 
+  if (CTRL.kb && !p.dead) drawSkillSlot(p);
   ctx.font = font(16); ctx.textBaseline = 'top';
   const text = (s, x, y, c = '#f2e8d0', align = 'left') => {
     ctx.textAlign = align;

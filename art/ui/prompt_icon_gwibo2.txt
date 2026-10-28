@@ -1,0 +1,8 @@
+Use your built-in image generation tool to create ONE image and save it as PNG to: icon_gwibo2.png (in the current working directory). Do not write code to draw it; it must be a generated illustration. After saving, reply only with the file name.
+
+Image spec:
+- 1024x1024, a single square SKILL ICON for a dark 2D pixel-art action game, designed to be shown TINY at 32x32 pixels, so it must be VERY SIMPLE and BOLD. No text, no letters, no numbers.
+- RENDERING: PIXEL ART on a coarse grid of exactly 32x32 big square pixels (each pixel is a solid 32x32 block). NO anti-aliasing, NO gradients, NO fine detail, NO thin lines - every shape is at least 2 big pixels thick. About 8 flat colors only.
+- CONTENT, only THREE big shapes: (1) ONE large KUNAI pointing up-right diagonally across the whole icon (from the lower-left corner to the upper-right corner), a pale silver-white blade with a dark outline, a short crimson grip and a gold ring at the lower-left end; (2) a solid bright GREEN glow outline around the kunai blade (spirit fire), simple and clean, not noisy; (3) ONE simple green ring (circle) behind the middle of the kunai, like a target seal.
+- BACKGROUND: a plain flat very dark navy-black square (no patterns, no texture), with a 1-pixel bright GOLD frame border around the edge.
+- High contrast: the silver blade and green glow must pop against the dark background.

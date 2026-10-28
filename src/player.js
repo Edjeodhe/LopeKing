@@ -29,7 +29,7 @@ export const TUNE = {
   zip: 1050, zipCd: 0.12, zipKeep: 0.35, cling: 0.6, ceilHang: 0.35, leash: 400,
   atkLunge: 190, riseHop: 150,
   hp: 5, iframes: 1.0,
-  sealMax: 5, sealLife: 5, flashGap: 0.12, flashCd: 0.3, flashWind: 0.22,   // 귀보: 표식 쿠나이 수·남는 시간 · 한 번 긋고 다음까지 · 끝난 뒤 다시 쓰기까지 · 첫 관통 전 발도 준비 자세
+  sealMax: 5, sealLife: 5, flashGap: 0.12, flashCd: 5, flashWind: 0.22,   // 귀보: 표식 쿠나이 수·남는 시간 · 한 번 긋고 다음까지 · 쿨타임(다 쓰거나 표식이 풀리면 돎, 그동안 F = 로프) · 첫 관통 전 발도 준비 자세
   sheathMin: 3, sheathT: 0.9, sheathQuick: 0.5, sheathClick: 0.755,   // 귀보가 끝나면 늘 칼을 검집에 넣음(납도): 3명 이상 그었으면 천천히 0.9초, 아니면 빠르게 0.5초 · 딸깍(7번째 장, 길이의 75.5%) = 그어진 적이 베이는 순간
   hop: 1900, hopPast: 26, hopFinish: 0.32,   // 귀보 관통 속도 · 적 너머로 지나가는 거리 · 마지막에 지나간 뒤 한꺼번에 베이기까지 (검무 연속 베기가 끝날 만큼)
 };
@@ -361,7 +361,9 @@ export class Player {
         if ((s.t += dt) > TUNE.sealLife) { s.gone = true; G.onSealFade?.(s); }
       }
     }
+    const had = this.seals.length;
     this.seals = this.seals.filter(s => !s.gone);
+    if (had && !this.seals.length && !this.flash && !this.cutWait && !this.sheath) this.flashCd = TUNE.flashCd;   // 표식을 안 쓰고 다 풀렸어도 쿨타임
     if (this.flashBuf > 0 && !this.flash && this.seals.some(s => s.state === 'stuck')) { this.flashBuf = 0; this.startFlash(G); }
   }
   // 다음 순간이동할 표식: first = 겨눈 쪽(±70°)에 가까운 것 먼저, 아니면 지금 자리에서 가장 가까운 것 (사거리 leash 안)
@@ -427,7 +429,7 @@ export class Player {
   }
   // 지금 F 를 누르면 갈 곳 (미리보기도 같은 것 — main.js): 표식 적이 있으면 { pool, first }, 없으면 { anchor | null, dir }
   kbPick(G, dir = (held('right') ? 1 : 0) - (held('left') ? 1 : 0)) {
-    const pool = G.markedEnemies(this.cx, this.cy).slice(0, 12);
+    const pool = this.flashCd > 0 ? [] : G.markedEnemies(this.cx, this.cy).slice(0, 12);   // 쿨타임 중엔 적이 있어도 로프
     const first = pool.length ? G.chainNext(this.cx, this.cy, pool, Math.cos(this.aimRad), Math.sin(this.aimRad)) : null;
     if (first) return { pool, first };
     // 위·아래를 안 누르면 위 대각선 (스윙할 곳)
