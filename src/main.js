@@ -1,6 +1,6 @@
 // 로프킹 웹 프로토: 픽셀 횡스크롤 액션 (산나비·카타나 제로풍). 480×270 내부 해상도, 정수배 확대.
 // 흐름: 입력 → 고정 스텝(120Hz) 물리·AI·전투 → 자세 → 리그 굽기 → 그리기
-import { input, bindInput, endFrame, hit } from './input.js';
+import { input, bindInput, endFrame, hit, setKeyLayout } from './input.js';
 import { World } from './world.js';
 import { bakeTiles, makeBackground, drawBackground, drawLamp, drawRing, drawExit, drawCheck, drawGates, setTheme, PAL } from './scenery.js';
 import { loadActorType, newBakeCanvas, bakeActor, bakeDeath, bakeFrame, ACT, deathDone } from './actor.js';
@@ -45,6 +45,7 @@ const LEVELS = ['level1', 'level2'];
 // 조작 방식 (Tab 으로 바꿈, 브라우저에 기억 · ?mouse / ?kb 로 강제)
 try { const c = localStorage.getItem('lopeking.ctrl'); if (c) CTRL.kb = c === 'kb'; } catch {}
 { const q = new URLSearchParams(location.search); if (q.has('mouse')) CTRL.kb = false; if (q.has('kb')) CTRL.kb = true; }
+setKeyLayout(CTRL.kb);
 const levelDefs = {};
 const TYPES = {};
 globalThis.__G = G; G.cam = cam;   // 콘솔·자동 확인용
@@ -447,7 +448,7 @@ function tick(real) {
   if (hit('debug')) G.debug = !G.debug;
   if (hit('mute')) G.muted = toggleMute();
   if (hit('ctrl')) {
-    CTRL.kb = !CTRL.kb;
+    CTRL.kb = !CTRL.kb; setKeyLayout(CTRL.kb);
     try { localStorage.setItem('lopeking.ctrl', CTRL.kb ? 'kb' : 'mouse'); } catch {}
     G.msg = { text: CTRL.kb ? '키보드 조작' : '마우스 조작', t: 0, sub: true };
   }
@@ -496,7 +497,7 @@ function render(real) {
   for (const x of G.exits) drawExit(ctx, x, G.time);
   for (const c of G.checks) drawCheck(ctx, c, G.time);
   drawGates(ctx, w, G.time);
-  // 로프 겨냥 미리보기: 지금 쏘면 걸리는 고리 깜빡임. 키보드면 지금 K 를 누르면 갈 곳(표식 적·걸 곳)
+  // 로프 겨냥 미리보기: 지금 쏘면 걸리는 고리 깜빡임. 키보드면 지금 F 를 누르면 갈 곳(표식 적·걸 곳)
   const kbPick = CTRL.kb && !p.dead && !p.chain && (!p.rope || p.rope.state === 'back') ? p.kbPick(G) : null;
   const aimDir = !CTRL.kb && !p.dead && !p.rope ? G.ropeAssist(p.cx, p.cy, Math.cos(p.aimRad), Math.sin(p.aimRad)) || [Math.cos(p.aimRad), Math.sin(p.aimRad)] : null;
   const prev = aimDir ? G.ropeTarget(p.cx, p.cy, aimDir[0], aimDir[1], TUNE.hookMax) : null;   // 조준 보정까지 반영한 미리보기 (적이면 조준점이 붉게)
@@ -808,9 +809,9 @@ function drawHud(p, prev) {
   };
   const help = G.level === 0 && G.time - (G.levelT || 0) < 12 && !G.boss;
   if (CTRL.kb) {
-    if (help && !p.dead) { text('A/D 이동 · Space 점프 · L(Shift) 대시 · J 베기 (방향키 쪽)', W / 2, H - 40, '#c9c1d4', 'center'); text('K 쿠나이: 적 = 벽력일섬 · 없으면 위 대각선에 걸고 스윙', W / 2, H - 22, '#c9c1d4', 'center'); }
-    else if (p.rope?.tether && G.level === 0 && !G.boss) { text('W/S 감기 · A/D 흔들기 · Space 놓기', W / 2, H - 40, '#c9c1d4', 'center'); text('K 다시 = 쿠나이로 돌진', W / 2, H - 22, '#c9c1d4', 'center'); }
-    else if (p.rope?.state === 'stuck' && !p.rope.target && G.level === 0) text('K 다시 = 쿠나이로 돌진', W / 2, H - 22, '#c9c1d4', 'center');
+    if (help && !p.dead) { text('방향키 이동 · Space 점프 · Shift 대시 · Ctrl 베기', W / 2, H - 40, '#c9c1d4', 'center'); text('F 쿠나이: 적 = 벽력일섬 · 없으면 위 대각선에 걸고 스윙', W / 2, H - 22, '#c9c1d4', 'center'); }
+    else if (p.rope?.tether && G.level === 0 && !G.boss) { text('위·아래 감기 · 좌우 흔들기 · Space 놓기', W / 2, H - 40, '#c9c1d4', 'center'); text('F 다시 = 쿠나이로 돌진', W / 2, H - 22, '#c9c1d4', 'center'); }
+    else if (p.rope?.state === 'stuck' && !p.rope.target && G.level === 0) text('F 다시 = 쿠나이로 돌진', W / 2, H - 22, '#c9c1d4', 'center');
   }
   else if (help && !p.dead) { text('A/D 이동 · Space 점프 · Shift 대시 · 좌클릭 베기', W / 2, H - 40, '#c9c1d4', 'center'); text('우클릭 쿠나이 (톡: 꽂기 · 꾹: 스윙)', W / 2, H - 22, '#c9c1d4', 'center'); }
   else if (p.rope?.tether && G.level === 0 && !G.boss) { text('W/S 감기 · A/D 흔들기 · Space 놓기', W / 2, H - 40, '#c9c1d4', 'center'); text('우클릭 다시(Shift) = 쿠나이로 돌진', W / 2, H - 22, '#c9c1d4', 'center'); }

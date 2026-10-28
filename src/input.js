@@ -5,10 +5,18 @@ export const input = {
   mouse: [false, false, false], mPressed: [false, false, false], mReleased: [false, false, false],
 };
 
-const KEYMAP = { KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right', KeyW: 'up', ArrowUp: 'up', KeyS: 'down', ArrowDown: 'down',
-  Space: 'jump', ShiftLeft: 'dash', ShiftRight: 'dash', KeyE: 'rope', KeyR: 'restart', KeyF: 'full', Backquote: 'debug', KeyP: 'pause', Escape: 'pause', KeyM: 'mute',
-  // 키보드만 조작(Tab 으로 마우스 조작과 바꿈): J 베기 · K 쿠나이 · L 대시
-  KeyJ: 'attack', KeyK: 'rope', KeyL: 'dash', Tab: 'ctrl' };
+// 키 배치: 둘이 같이 쓰는 키 + 조작 방식마다 다른 키 (setKeyLayout, Tab 으로 바꿈)
+const COMMON = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down',
+  Space: 'jump', ShiftLeft: 'dash', ShiftRight: 'dash', KeyR: 'restart', Backquote: 'debug', KeyP: 'pause', Escape: 'pause', KeyM: 'mute', Tab: 'ctrl' };
+// 마우스 조작: WASD 이동 · E 쿠나이 · F 전체 화면 (베기·조준은 마우스)
+const MOUSE_KEYS = { ...COMMON, KeyA: 'left', KeyD: 'right', KeyW: 'up', KeyS: 'down', KeyE: 'rope', KeyF: 'full' };
+// 키보드만 조작 (흔한 배치): 방향키 이동 · Ctrl 베기 · F 쿠나이. WASD 는 뺌 (Ctrl 누른 채 W = 브라우저 탭 닫기라 막을 수 없음)
+const KB_KEYS = { ...COMMON, ControlLeft: 'attack', ControlRight: 'attack', KeyF: 'rope' };
+let KEYMAP = KB_KEYS;
+export function setKeyLayout(kb) {
+  KEYMAP = kb ? KB_KEYS : MOUSE_KEYS;
+  input.down.clear();   // 바꾸는 순간 눌려 있던 키가 남지 않게
+}
 
 export function bindInput(canvas, toGame) {
   addEventListener('keydown', e => {

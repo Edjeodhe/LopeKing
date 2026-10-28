@@ -6,9 +6,9 @@
 //   벽에 도착하면 잠깐 매달림(벽 점프·다음 투척으로 연쇄), 천장이면 잠깐 매달렸다 떨어짐
 // 대시(Shift) = 방향키 8방향, 공중 1회 · 더블 점프 = 공중 1회 (벽·천장에 매달리거나 쿠나이 돌진이 끝나면 다시 채워짐)
 // 키보드만 조작 (CTRL.kb, Tab 으로 바꿈) — 조준 대신 고르기 (main.js G.chainNext · G.anchorPick):
-//   J 베기 = 방향키 쪽 (안 누르면 보는 쪽) · K 쿠나이:
+//   방향키 이동 · Ctrl 베기 = 방향키 쪽 (안 누르면 보는 쪽) · F 쿠나이 (마우스 버튼은 안 받음):
 //   둘레에 표식 찍힌 적이 있으면 = 벽력일섬: 겨눈 쪽 적부터 → 가까운 적 순으로 쿠나이 꽂고 돌진·처형을 이어 감 (Space·대시로 끊음)
-//   적이 없으면 = 방향키 쪽 걸 곳(안 누르면 보는 쪽 위 대각선)에 쿠나이가 반드시 꽂힘 → 몸보다 위면 바로 스윙. K 다시 = 돌진 · Space = 놓기
+//   적이 없으면 = 방향키 쪽 걸 곳(안 누르면 보는 쪽 위 대각선)에 쿠나이가 반드시 꽂힘 → 몸보다 위면 바로 스윙. F 다시 = 돌진 · Space = 놓기
 // 물리는 고정 스텝(120Hz)으로 돈다 (main.js). 수치는 게임 px · 초 단위.
 import { input, held } from './input.js';
 import * as A from './anim.js';
@@ -58,10 +58,12 @@ export class Player {
     if (input.pressed.has('jump')) this.buf = TUNE.buffer;
     if (input.released.has('jump')) this.jumpRelease = true;
     if (input.pressed.has('dash')) this.dashReq = true;
-    if (input.mPressed[0] || input.pressed.has('attack')) this.atkReq = 0.2;
-    if (input.mPressed[2] || input.pressed.has('rope')) this.ropeReq = true;
-    if (input.mReleased[2] || input.released.has('rope')) this.ropeRel = true;
-    this.ropeHeld = input.mouse[2] || held('rope');
+    // 키보드만 조작이면 마우스 버튼은 안 받음 (베기 = Ctrl, 쿠나이 = F)
+    const m = !CTRL.kb;
+    if ((m && input.mPressed[0]) || input.pressed.has('attack')) this.atkReq = 0.2;
+    if ((m && input.mPressed[2]) || input.pressed.has('rope')) this.ropeReq = true;
+    if ((m && input.mReleased[2]) || input.released.has('rope')) this.ropeRel = true;
+    this.ropeHeld = (m && input.mouse[2]) || held('rope');
     this.mouse = mouseWorld;
   }
 
@@ -292,7 +294,7 @@ export class Player {
     this.throwT = 0.12;   // 던지는 팔 자세
     G.sfx?.('rope');
   }
-  // 키보드 K: 꽂혀 있으면 돌진 · 날아가는 중이면 꽂히자마자 돌진(두 번 톡) · 아니면 고른 곳(kbPick)으로 던짐
+  // 키보드 F: 꽂혀 있으면 돌진 · 날아가는 중이면 꽂히자마자 돌진(두 번 톡) · 아니면 고른 곳(kbPick)으로 던짐
   kbRope(G, dir) {
     const r = this.rope;
     if (r?.state === 'stuck') { this.startZip(G); return; }
@@ -303,7 +305,7 @@ export class Player {
     if (pick.first) { this.chain = { pool: new Set(pick.pool), t: 0 }; this.throwKunai(G, { enemy: pick.first }); }
     else this.throwKunai(G, pick.anchor ? { point: pick.anchor } : { dir: pick.dir });
   }
-  // 지금 K 를 누르면 갈 곳 (미리보기도 같은 것 — main.js): 표식 적이 있으면 { pool, first }, 없으면 { anchor | null, dir }
+  // 지금 F 를 누르면 갈 곳 (미리보기도 같은 것 — main.js): 표식 적이 있으면 { pool, first }, 없으면 { anchor | null, dir }
   kbPick(G, dir = (held('right') ? 1 : 0) - (held('left') ? 1 : 0)) {
     const pool = G.markedEnemies(this.cx, this.cy);
     const first = pool.length ? G.chainNext(this.cx, this.cy, pool, Math.cos(this.aimRad), Math.sin(this.aimRad)) : null;
