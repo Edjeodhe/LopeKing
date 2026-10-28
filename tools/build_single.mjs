@@ -23,6 +23,7 @@ const IMPORT = /(\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)(['"])\.\/([\w-]+\.js)\2
 // ---- 그림·데이터 ----
 const assets = new Set(['art/fonts/neodgm.woff2', 'art/fx/fx_slash.png', 'art/fx/fx_gwibo.png', 'art/fx/fx_flurry.png']);
 for (const f of readdirSync('levels')) if (f.endsWith('.json')) assets.add(`levels/${f}`);
+if (existsSync('art/bg')) for (const f of readdirSync('art/bg')) if (f.endsWith('.png')) assets.add(`art/bg/${f}`);   // 배경 그림 층 (몰락한 조선)
 const PARTS = ['head', 'torso', 'hips', 'cape', 'upperArm', 'foreArm', 'thigh', 'shin'];
 for (const [, dir] of mods.get('main.js').matchAll(/loadActorType\('([^']+)'/g)) {
   const rig = `${dir}/rig.json`;

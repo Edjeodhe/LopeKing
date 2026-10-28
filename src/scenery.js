@@ -1,4 +1,5 @@
-// 배경·타일 그림을 코드로 픽셀 단위로 그린다 (그림 파일 없음). 타일은 레벨을 읽을 때 한 장으로 구워 둠.
+// 배경·타일 그림을 코드로 픽셀 단위로 그린다. 타일은 레벨을 읽을 때 한 장으로 구워 둠.
+// 예외: '몰락한 조선'(theme ruin) 배경은 Codex 그림 층(art/bg/ruin_*.png, tools/make_bg.py) — 하늘(고정) · 먼 층 · 중간 층이 가로로 끝없이 이어짐
 // 규칙: 색은 정해진 몇 단계만, 반투명 없음, 경계는 체크무늬(디더) — 캐릭터 굽기와 같은 결
 import { TILE, T, SOLID } from './world.js';
 
@@ -19,6 +20,7 @@ export const PAL = {
 // 테마: 레벨 json 의 theme 으로 팔레트·배경을 바꿈 (밤 기와 마을 · 대나무 숲)
 const THEMES = {
   night: { ...PAL },
+  ruin: {},   // 몰락한 조선: 타일 색은 밤과 같고 배경만 그림 층
   bamboo: {
     rock: ['#0f1512', '#18231c', '#243228', '#34473a'], moon: '#9ad0a0',
     brick: ['#1a1410', '#2a2018', '#3e3022', '#5a4630'],
@@ -116,8 +118,47 @@ function pixels(w, h) {
   const abgr = hex => cache[hex] ?? (cache[hex] = (255 << 24 | parseInt(hex.slice(5, 7), 16) << 16 | parseInt(hex.slice(3, 5), 16) << 8 | parseInt(hex.slice(1, 3), 16)) >>> 0);
   return { c, x, set: (X, Y, hex) => { if (X >= 0 && Y >= 0 && X < w && Y < h) u[Y * w + X] = abgr(hex); }, flush: () => x.putImageData(d, 0, 0) };
 }
+// '몰락한 조선' 배경 그림 층 읽기 (boot 에서 한 번). 없으면 ruin 테마도 밤 배경(코드 그림)으로
+const BACKDROP = {};
+const loadImg = src => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = src; });
+export async function loadBackdrops() {
+  try {
+    for (const k of ['sky', 'far', 'mid']) {
+      BACKDROP[k] = await loadImg(`art/bg/ruin_${k}.png`);
+      BACKDROP[k + 'Glow'] = await loadImg(`art/bg/ruin_${k}_glow.png`);
+    }
+  } catch { for (const k in BACKDROP) delete BACKDROP[k]; }
+}
+// 빛나는 층의 불 점(알파 255) 목록 — 불티가 피어오를 자리
+function firePoints(img) {
+  const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+  const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+  const d = x.getImageData(0, 0, c.width, c.height).data, pts = [];
+  for (let i = 0; i < d.length; i += 4) if (d[i + 3] === 255) pts.push([(i / 4) % c.width, Math.floor(i / 4 / c.width)]);
+  return pts;
+}
+function ruinLayers(W, H) {
+  const B = BACKDROP, L = [];
+  L.push({ img: B.sky, glow: B.skyGlow, f: 0, y: 0, fixed: true, glowK: 0.55 });
+  // 먼 층·중간 층 (그림 256px): 맵 바닥 카메라에서 성벽 밑동이 화면 땅선(약 175px) 근처에 오게. 카메라가 위로 가면 drawBackground 가 살짝 내림 — 시차 0.12 · 0.3
+  L.push({ img: B.far, glow: B.farGlow, f: 0.12, y: -28, glowK: 0.5, flicker: true, fire: firePoints(B.farGlow), embers: [], rate: 6 });
+  L.push({ img: B.mid, glow: B.midGlow, f: 0.3, y: -6, glowK: 0.7, flicker: true, fire: firePoints(B.midGlow), embers: [], rate: 18 });
+  return L;
+}
 export function makeBackground(W, H) {
   const layers = [];
+  if (theme === 'ruin' && BACKDROP.sky) {
+    layers.push(...ruinLayers(W, H));
+    // 가까운 안개 띠는 그대로 (아래 공통)
+    const w = W * 2, Bf = pixels(w, H);
+    for (let y = H - 50; y < H; y++) for (let xx = 0; xx < w; xx++) {
+      const d = (y - (H - 50)) / 50 + 0.15 * Math.sin(xx * 0.03 + y * 0.1);
+      if (d > 0.55 || (d > 0.25 && ((xx + y) & 1))) Bf.set(xx, y, PAL.near);
+    }
+    Bf.flush();
+    layers.push({ img: Bf.c, f: 0.5, y: 20 });
+    return layers;
+  }
   // 하늘 (고정) + 별 + 달
   {
     const B = pixels(W, H), n = PAL.sky.length;
@@ -204,15 +245,59 @@ export function makeBackground(W, H) {
   }
   return layers;
 }
+const layerOffset = (L, cam, H, worldH) => {
+  const w = L.img.width;
+  // 세로: 카메라가 맵 아래로 갈수록 배경이 살짝 올라감
+  return [-Math.round(cam.x * L.f) % w, Math.round(L.y - (cam.y - (worldH - H)) * L.f * 0.5)];
+};
 export function drawBackground(ctx, layers, cam, W, H, worldH) {
   for (const L of layers) {
     if (L.fixed) { ctx.drawImage(L.img, 0, 0); continue; }
-    const w = L.img.width;
-    const ox = -Math.round(cam.x * L.f) % w;
-    // 세로: 카메라가 맵 아래로 갈수록 배경이 살짝 올라감
-    const oy = Math.round(L.y - (cam.y - (worldH - H)) * L.f * 0.5);
+    const w = L.img.width, [ox, oy] = layerOffset(L, cam, H, worldH);
     for (let xx = ox - w; xx < W; xx += w) ctx.drawImage(L.img, xx, oy);
   }
+}
+// 배경 빛 (조명 패스 뒤, 더하기): 그림 층의 불·달·창 빛 + 불길 일렁임(세로 12px 띠마다 다른 박자) + 불에서 피어오르는 불티.
+// 타일(tiles, 월드 크기 캔버스) 자리는 지워서 땅·벽 앞으로 빛이 번지지 않게
+let glowBuf = null;
+export function drawBackdropGlow(ctx, layers, cam, W, H, worldH, time, dt, tiles) {
+  if (!layers.some(L => L.glow)) return;
+  if (!glowBuf) { glowBuf = document.createElement('canvas'); glowBuf.width = W; glowBuf.height = H; }
+  const g = glowBuf.getContext('2d');
+  g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(0, 0, W, H);
+  g.globalCompositeOperation = 'lighter';
+  for (const L of layers) {
+    if (!L.glow) continue;
+    if (L.fixed) { g.globalAlpha = L.glowK; g.drawImage(L.glow, 0, 0); continue; }
+    const w = L.img.width, [ox, oy] = layerOffset(L, cam, H, worldH), S = 12;
+    for (let xx = ox - w; xx < W; xx += w) {
+      if (xx + w < 0) continue;
+      for (let s = 0; s < w; s += S) {
+        const sx = xx + s; if (sx + S < 0 || sx > W) continue;
+        const n = s / S;
+        g.globalAlpha = L.glowK * (0.72 + 0.28 * Math.sin(time * 9 + n * 1.7) * Math.sin(time * 5.3 + n * 0.9 + L.f * 10));
+        g.drawImage(L.glow, s, 0, Math.min(S, w - s), L.glow.height, sx, oy, Math.min(S, w - s), L.glow.height);
+      }
+    }
+    // 불티: 불 점에서 생겨 위로 흔들리며 올라가다 꺼짐 (층 좌표, 시차 그대로)
+    if (L.fire?.length && dt > 0) {
+      for (let k = 0; k < L.rate * dt * 3; k++) if (Math.random() < 0.34) {
+        const [px, py] = L.fire[Math.floor(Math.random() * L.fire.length)];
+        L.embers.push({ x: px, y: py, vx: (Math.random() - 0.5) * 6, vy: -8 - Math.random() * 16, t: 0, life: 1 + Math.random() * 1.6, ph: Math.random() * 6 });
+      }
+      for (const e of L.embers) { e.t += dt; e.x += (e.vx + Math.sin(time * 3 + e.ph) * 5) * dt; e.y += e.vy * dt; }
+      L.embers = L.embers.filter(e => e.t < e.life).slice(-160);
+    }
+    for (const e of L.embers || []) {
+      const k = 1 - e.t / e.life, ex = ((Math.round(ox + e.x) % w) + w) % w;
+      g.globalAlpha = Math.min(1, k * 1.5);
+      g.fillStyle = k > 0.6 ? '#ffd080' : k > 0.3 ? '#ff8a3a' : '#c04a20';
+      for (let xx = ex - w; xx < W; xx += w) if (xx >= 0) g.fillRect(xx, Math.round(oy + e.y), 1, 1);
+    }
+  }
+  g.globalAlpha = 1;
+  if (tiles) { g.globalCompositeOperation = 'destination-out'; g.drawImage(tiles, Math.round(cam.x), Math.round(cam.y), W, H, 0, 0, W, H); }
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(glowBuf, 0, 0); ctx.restore();
 }
 
 // 등불: 붉은 종이 등 + 흔들림. 빛은 따로 (main.js light pass)

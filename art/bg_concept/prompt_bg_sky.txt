@@ -1,0 +1,6 @@
+Use your built-in image generation tool to create ONE image and save it as PNG to: bg_sky.png (in the current working directory). Do not write code to draw it; it must be a generated illustration. After saving, reply only with the file name.
+
+- Image spec: 1536x1024. Only the SKY layer of a side-scrolling stage background: a deep blue-violet night sky with a few dithered gradient bands (darker at the top), small stars, ONE huge pale cratered MOON in the upper right third, long drifting dark SMOKE clouds lit from below by orange fire glow, and a warm orange-red FIRE HAZE glowing along the bottom 25% (the city burning below the horizon, but NO buildings, NO mountains, NO ground drawn - only sky, moon, smoke and glow).
+- RENDERING: authentic PIXEL ART drawn at low resolution and upscaled exactly 4x with nearest-neighbor: every pixel is a crisp solid 4x4 square block on one grid. NO anti-aliasing, NO painterly brushwork, NO blur. Limited palette, flat tones.
+- STYLE AND PALETTE must match the attached reference image exactly (THE FALLEN JOSEON: a Korean Joseon-dynasty capital in ruins at night after a demon invasion, deep blue-violet night, cold blue shadows, warm orange FIRE as the main light, a few faint green ghost-fire wisps).
+- No text, no letters, no numbers, no UI, no characters, no people, no monsters.

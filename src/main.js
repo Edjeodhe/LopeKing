@@ -2,7 +2,7 @@
 // 흐름: 입력 → 고정 스텝(120Hz) 물리·AI·전투 → 자세 → 리그 굽기 → 그리기
 import { input, bindInput, endFrame, hit, setKeyLayout } from './input.js';
 import { World } from './world.js';
-import { bakeTiles, makeBackground, drawBackground, drawLamp, drawRing, drawExit, drawCheck, drawGates, setTheme, PAL } from './scenery.js';
+import { bakeTiles, makeBackground, drawBackground, drawBackdropGlow, loadBackdrops, drawLamp, drawRing, drawExit, drawCheck, drawGates, setTheme, PAL } from './scenery.js';
 import { loadActorType, newBakeCanvas, bakeActor, bakeDeath, bakeFrame, ACT, deathDone } from './actor.js';
 import { Player, TUNE, CTRL } from './player.js';
 import { Enemy, drawEnemyMarks } from './enemies.js';
@@ -52,9 +52,9 @@ globalThis.__G = G; G.cam = cam;   // 콘솔·자동 확인용
 let tilesImg = null, bg = null, levelDef = null, playerLow = newBakeCanvas(), deathT = 0, titleBg = null;
 
 async function boot() {
-  await Promise.all([loadFont(), loadSlashFx()]);
+  await Promise.all([loadFont(), loadSlashFx(), loadBackdrops()]);
   await Promise.all(LEVELS.map(async n => { levelDefs[n] = await (await fetch(`levels/${n}.json`, { cache: 'no-store' })).json(); }));
-  setTheme('night'); titleBg = makeBackground(W, H);
+  setTheme('ruin'); titleBg = makeBackground(W, H);   // 타이틀 뒤도 몰락한 조선
   // 진짜 그림(art/<id>/rig.json)이 없으면 임시 그림으로 같은 파이프라인을 돌림
   const [hero, ghoul, gunner, boss] = await Promise.all([
     // 주인공 = 가면 폼. 기본 폼 도깨비 (예전 삿갓 암살자 그림은 art/assassin 에 남겨 둠). keep = 팔레트에 꼭 남길 색 (진홍·금테·가면 눈빛)
@@ -625,6 +625,7 @@ function render(real) {
   if (p.sock?.eye && !p.dead) lights.push({ x: p.sock.eye[0], y: p.sock.eye[1], r: 14, col: [90, 255, 150], k: 0.45 });   // 가면 눈빛이 얼굴을 살짝 비춤
   fxLights(lights, G.time);
   if (!G.noLight) applyLight(ctx, W, H, { x: cx, y: cy }, G.world.def.ambient || AMBIENT, lights);
+  drawBackdropGlow(ctx, bg, { x: cx, y: cy }, W, H, w.ph, G.time, real, tilesImg);   // 배경 불·달 빛 + 불티 (몰락한 조선)
   // 빛나는 이펙트는 조명 뒤에 그대로 (어두운 화면에서 도드라지게). 몸 뒤 반은 주인공 실루엣만큼 가림
   drawFxGlow(ctx, G.time, { x: cx, y: cy }, W, H, p.dead || playerLow.__skip ? null : { img: playerLow, x: px - cx, y: py - cy });
   drawEye(p, cx, cy);
@@ -662,6 +663,7 @@ function drawBossBar(b) {
 function drawTitle(real) {
   G.time += real;
   drawBackground(ctx, titleBg, { x: G.time * 12, y: 0 }, W, H, H);
+  drawBackdropGlow(ctx, titleBg, { x: G.time * 12, y: 0 }, W, H, H, G.time, real, null);
   ctx.fillStyle = PAL.ink; ctx.fillRect(0, H - 40, W, 40);
   textOut('로 프 킹', W / 2, 70, '#f2e8d0', 'center', 32);
   textOut('달빛 아래, 붉은 실 하나', W / 2, 112, '#c9a0a0');
