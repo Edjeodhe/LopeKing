@@ -500,7 +500,8 @@ function tick(real) {
     G.msg = { text: CTRL.kb ? '키보드 조작' : '마우스 조작', t: 0, sub: true };
   }
   if (G.mode === 'title') {
-    if (input.mPressed[0] || hit('jump')) { G.mode = 'play'; loadLevel(0); G.time = 0; sfx('check'); }
+    if (hit('pause')) G.titleHelp = !G.titleHelp;   // 타이틀에서도 Esc = 조작법 창
+    if (input.mPressed[0] || hit('jump')) { G.titleHelp = false; G.mode = 'play'; loadLevel(0); G.time = 0; sfx('check'); }
     drawTitle(real); endFrame(); return;
   }
   if (G.mode === 'end') { if (input.mPressed[0] || hit('jump')) { G.mode = 'title'; loadLevel(0); } drawEnd(real); endFrame(); return; }
@@ -669,13 +670,58 @@ function drawTitle(real) {
   textOut('로 프 킹', W / 2, 70, '#f2e8d0', 'center', 32);
   textOut('달빛 아래, 붉은 실 하나', W / 2, 112, '#c9a0a0');
   if (Math.floor(G.time * 2) % 2) textOut('클릭 또는 Space 로 시작', W / 2, 170, '#ffffff');
-  textOut(CTRL.kb ? 'Ctrl 베기 · F 로프·쿠나이 · Shift 대시 · Tab 조작 바꾸기' : '좌클릭 베기 · 우클릭 로프 · Shift 대시 · Tab 조작 바꾸기', W / 2, H - 30, '#8a86a0');
+  textOut('Esc 조작법 · Tab 조작 바꾸기 (' + (CTRL.kb ? '지금: 키보드' : '지금: 마우스') + ')', W / 2, H - 30, '#8a86a0');
+  if (G.titleHelp) drawControls(false);
 }
-function drawPause() {
+function drawPause() { drawControls(true); }
+// 조작법 창 (Esc·P = 일시정지하며 엶, 타이틀에선 Esc): 가면 색 흑칠 판 + 금테, 지금 조작 방식(CTRL.kb)의 키 목록을 묶음(기본 · 로프 · 쿠나이)으로.
+// 창이 열린 채 Tab 을 누르면 바로 다른 조작 목록으로 바뀜. 귀보 묶음 옆엔 스킬 아이콘
+const CONTROLS = {
+  kb: [
+    [['방향키', '이동 · 겨누기 (베기·로프 방향)'], ['Space', '점프 · 공중 한 번 더 · 벽 차고 뛰기'], ['Shift', '대시 (8방향 · 무적)'], ['Ctrl', '베기 (4타 콤보 · 총알 되받아치기)']],
+    [['F', '로프: 걸 곳에 꽂힘 → 위면 바로 스윙'], ['방향키', '매달려 위·아래 감기 · 좌우 흔들기'], ['F 다시', '꽂힌 자리로 돌진'], ['Space·Shift', '매달린 로프 끊기']],
+    [['F (적 근처)', '쿠나이: 둘레 적들에게 표식'], ['F 다시', '귀보 — 표식 적을 연달아 그어 벰'], ['', '쿨타임 5초 (왼쪽 위 칸)']],
+  ],
+  mouse: [
+    [['A/D', '이동 (조준은 마우스)'], ['Space', '점프 · 공중 한 번 더 · 벽 차고 뛰기'], ['Shift', '대시 (방향키 8방향 · 무적)'], ['좌클릭', '베기 (마우스 쪽 · 4타 콤보)']],
+    [['우클릭 톡', '로프 꽂기 (E 도 됨)'], ['우클릭 꾹', '꽂히면 스윙 · W/S 감기 · A/D 흔들기'], ['우클릭 다시', '꽂힌 자리로 돌진'], ['Space·Shift', '매달린 로프 끊기']],
+    [['', '쿠나이 귀보는 키보드 조작에서 (Tab)']],
+  ],
+};
+function drawControls(paused) {
   ctx.fillStyle = '#05040a';
-  for (let y = 0; y < H; y += 2) ctx.fillRect(0, y, W, 1);
-  textOut('일시정지', W / 2, 90, '#f2e8d0', 'center', 32);
-  textOut('P 계속 · R 레벨 처음부터', W / 2, 140, '#c9c1d4');
+  for (let y = 0; y < H; y += 2) ctx.fillRect(0, y, W, 1);   // 뒤 화면을 줄무늬로 어둡게
+  const x0 = 14, y0 = 10, pw = W - 28, ph = H - 20;
+  ctx.fillStyle = PAL.ink; ctx.fillRect(x0 - 2, y0 - 2, pw + 4, ph + 4);
+  ctx.fillStyle = '#0e0c16'; ctx.fillRect(x0, y0, pw, ph);
+  // 금테 + 안쪽 진홍 실선 + 모서리 장식
+  const frame = (o, col) => { ctx.fillStyle = col; ctx.fillRect(x0 + o, y0 + o, pw - o * 2, 1); ctx.fillRect(x0 + o, y0 + ph - 1 - o, pw - o * 2, 1); ctx.fillRect(x0 + o, y0 + o, 1, ph - o * 2); ctx.fillRect(x0 + pw - 1 - o, y0 + o, 1, ph - o * 2); };
+  frame(0, '#c08a3a'); frame(2, '#5a0e14');
+  for (const [cx, cy] of [[x0, y0], [x0 + pw - 4, y0], [x0, y0 + ph - 4], [x0 + pw - 4, y0 + ph - 4]]) { ctx.fillStyle = '#f0c060'; ctx.fillRect(cx, cy, 4, 4); ctx.fillStyle = PAL.ink; ctx.fillRect(cx + 1, cy + 1, 2, 2); }
+  // 제목 + 지금 조작 방식
+  textOut(paused ? '일시정지 · 조작법' : '조작법', W / 2, y0 + 6, '#f2e8d0');
+  textOut(CTRL.kb ? '키보드' : '마우스', x0 + pw - 10, y0 + 6, CTRL.kb ? '#4ef0a0' : '#c9c1d4', 'right');
+  const kx = x0 + 14, dx = x0 + 120;
+  let y = y0 + 28;
+  const groups = CONTROLS[CTRL.kb ? 'kb' : 'mouse'];
+  groups.forEach((rows, gi) => {
+    // 묶음 사이 금빛 점선
+    if (gi) { for (let xx = kx; xx < x0 + pw - 14; xx += 3) { ctx.fillStyle = '#5a4a30'; ctx.fillRect(xx, y + 2, 1, 1); } y += 7; }
+    const gy = y;
+    for (const [k, d] of rows) {
+      if (k) textOut(k, kx, y, gi === 2 ? '#4ef0a0' : '#f0c060', 'left');
+      textOut(d, dx, y, '#e8e0f0', 'left');
+      y += 16;
+    }
+    // 귀보 묶음 옆 스킬 아이콘 (키보드)
+    if (gi === 2 && CTRL.kb && iconGwibo) {
+      const ix = x0 + pw - 50, iy = gy + 4;
+      ctx.fillStyle = '#c08a3a'; ctx.fillRect(ix - 1, iy - 1, 34, 34);
+      ctx.drawImage(iconGwibo, ix, iy, 32, 32);
+    }
+  });
+  // 아래: 창 닫기·기타 키
+  textOut(paused ? 'Esc 계속 · Tab 조작 바꾸기 · R 처음부터 · M 소리' : 'Esc 닫기 · Tab 조작 바꾸기 · Space 시작', W / 2, y0 + ph - 22, '#8a86a0');
 }
 function drawEnd(real) {
   G.time += real;
@@ -967,19 +1013,9 @@ function drawHud(p, prev) {
     ctx.fillStyle = PAL.ink; ctx.fillText(s, x + 1, y + 1);
     ctx.fillStyle = c; ctx.fillText(s, x, y);
   };
-  const help = G.level === 0 && G.time - (G.levelT || 0) < 12 && !G.boss;
-  if (CTRL.kb) {
-    if (help && !p.dead) { text('방향키 이동 · Space 점프 · Shift 대시 · Ctrl 베기', W / 2, H - 40, '#c9c1d4', 'center'); text('F 로프: 걸고 스윙 · 적이 가까우면 쿠나이 표식 → F 다시 = 귀보', W / 2, H - 22, '#c9c1d4', 'center'); }
-    else if (p.seals.some(s => s.state === 'stuck') && G.level === 0) text('F 다시 = 귀보: 표식 찍힌 적을 연달아 그어 벰', W / 2, H - 22, '#8af0b8', 'center');
-    else if (p.rope?.tether && G.level === 0 && !G.boss) { text('위·아래 감기 · 좌우 흔들기 · Space·Shift 끊기', W / 2, H - 40, '#c9c1d4', 'center'); text('F 다시 = 로프로 돌진', W / 2, H - 22, '#c9c1d4', 'center'); }
-    else if (p.rope?.state === 'stuck' && !p.rope.target && G.level === 0) text('F 다시 = 로프로 돌진', W / 2, H - 22, '#c9c1d4', 'center');
-  }
-  else if (help && !p.dead) { text('A/D 이동 · Space 점프 · Shift 대시 · 좌클릭 베기', W / 2, H - 40, '#c9c1d4', 'center'); text('우클릭 로프 (톡: 꽂기 · 꾹: 스윙)', W / 2, H - 22, '#c9c1d4', 'center'); }
-  else if (p.rope?.tether && G.level === 0 && !G.boss) { text('W/S 감기 · A/D 흔들기 · Space·Shift 끊기', W / 2, H - 40, '#c9c1d4', 'center'); text('우클릭 다시 = 로프로 돌진', W / 2, H - 22, '#c9c1d4', 'center'); }
-  else if (p.rope?.state === 'stuck' && G.level === 0) text('우클릭 다시 = 로프로 돌진', W / 2, H - 22, '#c9c1d4', 'center');
+  // 조작 안내는 화면에 안 띄움 (사용자 요청) — Esc 조작법 창(drawControls)으로
   if (p.dead && deathT > 0.8) text('쓰러졌다', W / 2, H / 2 - 8, BLOOD[3], 'center');
   if (G.msg && (G.msg.t < 2.8 || G.clear)) text(G.msg.text, W / 2, G.msg.sub ? 24 : H / 2 - 30, G.msg.sub ? '#e8e0f0' : '#f7cf6d', 'center');
-  text(CTRL.kb ? '키보드 · Tab' : '마우스 · Tab', W - 4, H - 14, '#5a5470', 'right');
   if (G.debug) text(`${fps}fps 적 ${G.enemies.length}`, W - 4, 4, '#8f8', 'right');
 }
 
