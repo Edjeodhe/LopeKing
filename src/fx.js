@@ -2,7 +2,7 @@
 // 모두 1px 도트로 직접 찍는다 (반투명 없음). 사라질 땐 체크무늬 대신 띠가 가늘어지고·짧아짐(잡티 없이) → 캐릭터 굽기와 같은 결. 콤보 베기는 Codex 그림을 도트로 구워 씀 (pixfx.js)
 import { loadSheet, pixelFx } from './pixfx.js';
 
-export const fx = { rings: [], parts: [], lines: [], flashes: [], texts: [], cuts: [], sprites: [], arcs: [], ghosts: [], trail: null };
+export const fx = { rings: [], parts: [], lines: [], flashes: [], texts: [], cuts: [], sprites: [], arcs: [], ghosts: [], soft: [], trail: null };
 export const cam = { x: 0, y: 0, shake: 0, kick: [0, 0] };
 let decal = null, decalCtx = null, world = null;
 
@@ -89,32 +89,81 @@ function drawArc(ctx, A, front) {
 // 줄: 0 가로 베기 초승달 · 1 회전 타원 고리 · 2 마무리 큰 초승달 · 3 타격 섬광. 그림 기준점 = 칸 가운데 · 위에서 40% (그림이 그 높이에 있음)
 // { row, x, y(follow 가 있으면 그 몸 기준), w(칸 가로 = 게임 px), ang(라디안, 15° 단위), flip, vflip, life,
 //   layer: 'front' 몸 앞 · 'back' 몸 뒤 · 'split' 위(먼) 반은 몸 뒤 + 아래(가까운) 반은 몸 앞 }
-// 귀보 그림 (art/fx/fx_flash.png, 같은 4×4 칸, sheet: 'flash'): 줄 0 표식(삼태극 문양) · 1 사라짐 · 2 나타남 · 3 순간이동 길(가로 줄기). 기준점 = 칸 가운데
-// 색 = 가면 색 진홍 → 금 (GWIBO). 표식은 몸에 붙어 계속 그려야 해서 drawFlashCell 로 따로 그림
-let sheet = null, flashSheet = null;
-export const GWIBO = ['#5a0c18', '#c01c28', '#f0b040', '#fff4d0'];
+let sheet = null;
 export async function loadSlashFx() {
   sheet = await loadSheet('art/fx/fx_slash.png', 4, 4);
-  try { flashSheet = await loadSheet('art/fx/fx_flash.png', 4, 4); } catch { flashSheet = null; }   // 없으면 불티만
+  try { soft = await loadSheet('art/fx/fx_gwibo.png', 4, 4); } catch { soft = null; }   // 없으면 불티·줄기만
 }
 export function slashFx(o) { fx.sprites.push({ t: 0, life: 0.2, w: 80, ang: 0, layer: 'front', ramp: [...SMEAR.cols].reverse(), ...o }); }
-export function flashFx(o) { fx.sprites.push({ t: 0, life: 0.25, w: 60, ang: 0, layer: 'front', ramp: GWIBO, sheet: 'flash', py: 0.5, light: [255, 190, 110], ...o }); }
-export function drawFlashCell(ctx, row, f, x, y, w, ang = 0) {
-  if (!flashSheet) return false;
-  const c = pixelFx(flashSheet[row][f], GWIBO, w, false, { ang, py: 0.5 });
-  ctx.drawImage(c, Math.round(x) - c.ax, Math.round(y) - c.ay);
-  return true;
-}
 function drawSprite(ctx, s, back) {
-  const sh = s.sheet === 'flash' ? flashSheet : sheet;
-  if (!sh || (s.layer !== 'split' && (s.layer === 'back') !== back)) return;
+  if (!sheet || (s.layer !== 'split' && (s.layer === 'back') !== back)) return;
   const k = s.t / s.life, f = Math.min(3, Math.floor(k * 4));
-  const c = pixelFx(sh[s.row][f], s.ramp, s.w, false, { ang: s.ang, flip: s.flip, vflip: s.vflip, py: s.py ?? 0.4 });
+  const c = pixelFx(sheet[s.row][f], s.ramp, s.w, false, { ang: s.ang, flip: s.flip, vflip: s.vflip, py: 0.4 });
   const x = Math.round((s.follow?.x ?? 0) + s.x) - c.ax, y = Math.round((s.follow?.y ?? 0) + s.y) - c.ay;
   if (s.layer !== 'split') { ctx.drawImage(c, x, y); return; }
   const h = c.ay, top = !s.vflip;   // 뒤집으면 위·아래 반도 바뀜
   if (back === top) ctx.drawImage(c, 0, 0, c.width, h, x, y, c.width, h);
   else ctx.drawImage(c, 0, h, c.width, c.height - h, x, y + h, c.width, c.height - h);
+}
+
+// ---------- 귀보·처형 혼불 이펙트 (부드러운 빛, 사용자: 자글자글한 도트 말고 테두리 연하게 부드럽게 · 발로란트 도깨비 트레일러처럼 초록) ----------
+// art/fx/fx_gwibo.png (Codex 흑백 그림, 4×4 칸): 줄 0 표식(삼태극) · 1 사라짐(피어오르는 혼불 기둥) · 2 나타남(바닥 고리 + 불꽃 잎) · 3 처형 초승달.
+// 도트로 굽지 않고 밝기 → 초록 혼불 색(SPIRIT)·알파로 물들여 부드럽게 줄여 '더하기'(lighter)로 겹쳐 그림 → 검은 테두리 없이 빛만. 조명 뒤(빛나는 층)
+// { row, x, y(follow 기준), w(칸 가로 = 게임 px), ang, flip, life, py(기준점 세로 비율), a(세기) } · 순간이동 길 = { streak: [x0, y0, x1, y1] }
+let soft = null;
+export const SPIRIT = { dark: [20, 120, 70], mid: [60, 230, 130], hi: [190, 255, 210] };   // 짙은 초록 → 혼불 초록 → 흰 민트
+export const SPIRIT_COLS = ['#ffffff', '#c8ffdc', '#4ef0a0', '#2aa870'];   // 점 이펙트(불티·띠)용: 심 → 겉 (겉도 검지 않게 밝은 초록)
+const tinted = new Map();
+function softCell(row, f, w) {
+  const src = soft[row][f], key = `${row},${f},${Math.max(8, Math.round(w / 4) * 4)}`;
+  if (tinted.has(key)) return tinted.get(key);
+  // 반씩 줄여(부드럽게) 목표 크기의 2배까지 → 밝기를 색·알파로
+  let cur = src, cw = src.width, ch = src.height;
+  while (cw / 2 >= w * 2) { const c = document.createElement('canvas'); c.width = Math.ceil(cw / 2); c.height = Math.ceil(ch / 2); const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(cur, 0, 0, c.width, c.height); cur = c; cw = c.width; ch = c.height; }
+  const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+  const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(cur, 0, 0);
+  const d = g.getImageData(0, 0, cw, ch), p = d.data, { dark, mid, hi } = SPIRIT;
+  for (let i = 0; i < p.length; i += 4) {
+    const L = Math.max(p[i], p[i + 1], p[i + 2]) / 255 * p[i + 3] / 255;
+    const u = L < 0.5 ? L / 0.5 : (L - 0.5) / 0.5, A = L < 0.5 ? dark : mid, B = L < 0.5 ? mid : hi;
+    p[i] = A[0] + (B[0] - A[0]) * u; p[i + 1] = A[1] + (B[1] - A[1]) * u; p[i + 2] = A[2] + (B[2] - A[2]) * u;
+    p[i + 3] = Math.min(255, Math.pow(L, 0.85) * 290);
+  }
+  g.putImageData(d, 0, 0);
+  tinted.set(key, c);
+  return c;
+}
+export function spiritFx(o) { fx.soft.push({ t: 0, life: 0.3, w: 60, ang: 0, py: 0.5, a: 1, ...o }); }
+// 칸 한 장을 (x, y) 에 그림 (기준점 = 가로 가운데 · 세로 py). 몸에 붙은 표식처럼 계속 그리는 것도 이걸로
+export function drawSpiritCell(ctx, row, f, x, y, w, o = {}) {
+  if (!soft) return false;
+  const c = softCell(row, f, w), k = w / c.width, py = o.py ?? 0.5;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = o.a ?? 1; ctx.imageSmoothingEnabled = true;
+  ctx.translate(x, y); if (o.ang) ctx.rotate(o.ang); ctx.scale(o.flip ? -k : k, k);
+  ctx.drawImage(c, -c.width / 2, -c.height * py);
+  ctx.restore();
+  return true;
+}
+function drawSoft(ctx) {
+  for (const S of fx.soft) {
+    const k = S.t / S.life;
+    if (S.streak) {
+      // 순간이동 길: 출발 → 도착을 잇는 부드러운 빛 줄기 (가운데 밝은 심, 둘레 번짐). 출발 쪽부터 사라짐
+      const [x0, y0, x1, y1] = S.streak, u = Math.min(1, k * 1.6), sx = x0 + (x1 - x0) * u, sy = y0 + (y1 - y0) * u;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      for (const [wd, col, al] of [[9, SPIRIT.dark, 0.35], [5, SPIRIT.mid, 0.55], [2, SPIRIT.hi, 0.9]]) {
+        const gr = ctx.createLinearGradient(sx, sy, x1, y1);
+        gr.addColorStop(0, `rgba(${col},0)`); gr.addColorStop(1, `rgba(${col},${al * (1 - k)})`);
+        ctx.strokeStyle = gr; ctx.lineWidth = wd * (1 - k * 0.5);
+        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(x1, y1); ctx.stroke();
+      }
+      ctx.restore();
+      continue;
+    }
+    const f = Math.min(3, Math.floor(k * 4)), fade = f === 3 ? 1 - (k - 0.75) / 0.25 : 1;
+    drawSpiritCell(ctx, S.row, f, (S.follow?.x ?? 0) + S.x, (S.follow?.y ?? 0) + S.y, S.w, { ang: S.ang, flip: S.flip, py: S.py, a: S.a * Math.max(0, fade) });
+  }
 }
 
 // ---------- 입자 ----------
@@ -222,6 +271,7 @@ const TRAIL = { max: 150, w: 6, tail: 0.16 };
 const TRAIL_COLS = {
   zip: [['#9a1a22', 1], ['#ff4a5a', 0.72], ['#ffffff', 0.34]],
   dash: [['#5a1a8a', 1], ['#e0306a', 0.72], ['#ffd0dc', 0.34]],
+  jump: [['#3a2a7a', 1], ['#7a6ae0', 0.72], ['#e4e0ff', 0.34]],   // 이단 점프 = 대시와 같은 띠, 남보라·흰 심
 };
 function trailLen(pts) { let L = 0; for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y); return L; }
 // 몸 쪽(끝)에서 L 만큼만 남기고 꼬리를 자름 (자르는 자리는 사이를 이어 붙임)
@@ -279,6 +329,8 @@ export function updateFx(dt) {
   for (const R of fx.rings) R.t += dt;
   fx.rings = fx.rings.filter(R => R.t < R.life);
   for (const S of fx.sprites) S.t += dt;
+  for (const S of fx.soft) S.t += dt;
+  fx.soft = fx.soft.filter(S => S.t < S.life);
   for (const A of fx.arcs) A.t += dt;
   fx.arcs = fx.arcs.filter(A => A.t < A.life);
   for (const G of fx.ghosts) G.t += dt;
@@ -349,6 +401,7 @@ export function drawFxGlow(ctx, time, cam, W, H, occ) {
   for (const R of fx.rings) drawRingHalf(ctx, R, true);
   for (const S of fx.sprites) drawSprite(ctx, S, false);
   for (const A of fx.arcs) drawArc(ctx, A, true);
+  drawSoft(ctx);
   ctx.restore();
 }
 // 이펙트가 내는 빛: 베기 그림·고리·궤적·관통 자국 둘레를 비춤 (조명 패스에 넣음). 막 생겼을 때 가장 밝고 사라지며 약해짐
@@ -357,10 +410,13 @@ export function fxLights(out, time) {
   const add = (x, y, r, k) => { if (k > 0.05) out.push({ x, y, r, col: FX_LIGHT, k, glow: 0.25 * k }); };
   for (const S of fx.sprites) {
     const k = 1 - S.t / S.life;
-    if (S.light) { if (k > 0.05) out.push({ x: (S.follow?.x ?? 0) + S.x, y: (S.follow?.y ?? 0) + S.y, r: S.w * 0.6, col: S.light, k, glow: 0.3 * k }); continue; }
     add((S.follow?.x ?? 0) + S.x, (S.follow?.y ?? 0) + S.y, S.row === 3 ? S.w * 0.6 : S.w * 0.75, k);
   }
   for (const R of fx.rings) add(R.x, R.y, R.rx * 1.6, 1 - R.t / R.life);
+  for (const S of fx.soft) {   // 혼불은 초록 빛
+    const k = 1 - S.t / S.life, x = S.streak ? S.streak[2] : (S.follow?.x ?? 0) + S.x, y = S.streak ? S.streak[3] : (S.follow?.y ?? 0) + S.y;
+    if (k > 0.05) out.push({ x, y, r: S.streak ? 40 : S.w * 0.6, col: [120, 255, 170], k: k * 0.5, glow: 0.12 * k });
+  }
   for (const A of fx.arcs) add((A.follow?.x ?? 0) + A.x, (A.follow?.y ?? 0) + A.y, A.rx * 1.3, 1 - A.t / A.life);
   for (const c of fx.cuts) add((c.x0 + c.x1) / 2, (c.y0 + c.y1) / 2, 40, 1 - c.t / c.life);
   const T = fx.trail;   // 돌진 흔적: 몸 쪽 끝과 가운데를 비춤
@@ -368,12 +424,12 @@ export function fxLights(out, time) {
 }
 // 새 베기가 시작되면 앞 타의 베기 그림은 바로 사라지는 끝물(체크무늬)로 넘김 — 겹쳐 지저분해지지 않고, 뚝 끊기지도 않게. 타격 섬광(줄 3)은 그대로
 export function fadeSlashFx(rows = [0, 1, 2], arcs = true) {
-  for (const S of fx.sprites) if (!S.sheet && rows.includes(S.row)) S.t = Math.max(S.t, S.life * 0.9);
+  for (const S of fx.sprites) if (rows.includes(S.row)) S.t = Math.max(S.t, S.life * 0.9);
   if (arcs) for (const A of fx.arcs) A.t = Math.max(A.t, A.life * 0.85);
 }
 // 칼이 닿은 순간: 막 생긴 베기 그림을 가장 큰 장(2번째 칸)으로 → 타격 멈춤 화면에 다 그려진 궤적이 찍힘
 export function popSlashFx() {
-  for (const S of fx.sprites) if (!S.sheet && S.row < 3 && S.t < S.life * 0.25) S.t = S.life * 0.25;
+  for (const S of fx.sprites) if (S.row < 3 && S.t < S.life * 0.25) S.t = S.life * 0.25;
   for (const A of fx.arcs) if (A.t < A.dur * 0.85) A.t = A.dur * 0.85;
 }
 

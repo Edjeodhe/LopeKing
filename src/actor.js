@@ -46,7 +46,7 @@ async function loadDeath(dir, def) {
     const img = await cachedImage(`${dir}/${f.src}`);
     return { img, pivot: f.pivot, w: f.w || img.width, h: f.h || img.height, scaled: new Map() };
   }));
-  return { frames: frames.map((f, i) => ({ ...f, mouth: def.frames[i].mouth })), size: def.size, times: def.times || [0, 0.1, 0.3, 0.55] };
+  return { frames: frames.map((f, i) => ({ ...f, mouth: def.frames[i].mouth, eye: def.frames[i].eye })), size: def.size, times: def.times || [0, 0.1, 0.3, 0.55] };
 }
 export const deathFrame = (type, t) => { const T = type.death.times; let i = 0; while (i < T.length - 1 && t >= T[i + 1]) i++; return i; };
 export const deathDone = (type, t) => !type.death || t >= type.death.times[type.death.times.length - 1];
@@ -56,13 +56,12 @@ function scaledFrame(f, k) {
   return f.scaled.get(key);
 }
 export function bakeDeath(type, t, facing, low) { bakeCut(type, type.death, type.death.frames[deathFrame(type, t)], facing, low); }
-// 프레임 애니메이션 한 장 굽기 (대기·달리기). 돌려주는 값 = 그 장의 입 자리(low px, 가면 숨 steam.js 용)
+// 프레임 애니메이션 한 장 굽기 (대기·달리기). 돌려주는 값 = 그 장의 { mouth(입, 가면 숨 steam.js), eye(가면 눈빛) } 자리 (low px, 없으면 null)
 export function bakeFrame(type, name, i, facing, low, flash = false) {
   const set = type.anims[name], f = set.frames[i % set.frames.length];
   bakeCut(type, set, f, facing, low, flash);
-  if (!f.mouth) return null;
-  const k = set.size * type.scale;
-  return [low.ax + (f.mouth[0] - f.pivot[0]) * k * (facing < 0 ? -1 : 1), low.ay + (f.mouth[1] - f.pivot[1]) * k];
+  const k = set.size * type.scale, at = q => q && [low.ax + (q[0] - f.pivot[0]) * k * (facing < 0 ? -1 : 1), low.ay + (q[1] - f.pivot[1]) * k];
+  return { mouth: at(f.mouth), eye: at(f.eye) };
 }
 // 통그림 한 장(사망 컷·프레임 애니메이션)을 발 기준점에 맞춰 리그와 같은 굽기(팔레트·외곽선)로
 function bakeCut(type, set, f, facing, low, flash = false) {

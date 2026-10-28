@@ -8,7 +8,7 @@ import { Player, TUNE, CTRL } from './player.js';
 import { Enemy, drawEnemyMarks } from './enemies.js';
 import { Boss, drawBossMarks, stepHazards, drawHazards } from './boss.js';
 import * as A from './anim.js';
-import { fx, cam, flashFx, drawFlashCell, GWIBO, initFx, updateFx, updateFlash, cutLine, dust, drawFxBack, drawFxFront, drawFxGlow, fxLights, fadeSlashFx, popSlashFx, sweepArc, pushGhost, moveTrail, speedLine, drawFlash, decalCanvas, shake, ring, flash, spark, blood, BLOOD, slashFx, loadSlashFx } from './fx.js';
+import { fx, cam, spiritFx, drawSpiritCell, SPIRIT_COLS, initFx, updateFx, updateFlash, cutLine, dust, drawFxBack, drawFxFront, drawFxGlow, fxLights, fadeSlashFx, popSlashFx, sweepArc, pushGhost, moveTrail, speedLine, drawFlash, decalCanvas, shake, ring, flash, spark, blood, BLOOD, slashFx, loadSlashFx } from './fx.js';
 import { initGore, updateGore, drawGore, killActor } from './gore.js';
 import { stepSteam, drawSteam } from './steam.js';
 import { sfx } from './sfx.js';
@@ -58,7 +58,7 @@ async function boot() {
   // 진짜 그림(art/<id>/rig.json)이 없으면 임시 그림으로 같은 파이프라인을 돌림
   const [hero, ghoul, gunner, boss] = await Promise.all([
     // 주인공 = 가면 폼. 기본 폼 도깨비 (예전 삿갓 암살자 그림은 art/assassin 에 남겨 둠). keep = 팔레트에 꼭 남길 색 (진홍·금테·가면 눈빛)
-    loadActorType('art/dokkaebi', { colors: 18, keep: [[200, 32, 40], [222, 172, 64], [255, 120, 40]] }),
+    loadActorType('art/dokkaebi', { colors: 18, keep: [[200, 32, 40], [222, 172, 64], [70, 240, 130]] }),   // 가면 눈빛 = 초록 (발로란트 도깨비)
     loadActorType('art/ghoul', { colors: 14, weapon: 'saber', placeholder: { cloth: '#4a4a3a', clothD: '#2c2c22', clothL: '#6a6a50', skin: '#8a9a88', skinD: '#5a6a5a', accent: '#b8e040' }, tint: [40, 30, 60, 0.08] }),
     loadActorType('art/gunner', { colors: 14, weapon: 'gun', placeholder: { cloth: '#26304a', clothD: '#161c2e', clothL: '#3a4868', metal: '#8a7a50', metalD: '#5a4a30', metalL: '#c8b070', accent: '#b8e040' }, tint: [40, 30, 60, 0.08] }),
     // 보스: 거대 도깨비, 같은 뼈대를 1.9배로 (그림 키 44px → 약 84px). keep = 눈빛 (예전 망나니 구울은 art/executioner)
@@ -227,14 +227,13 @@ G.onAttack = (p, exec) => {
     const hitInfo = { kind: 'exec', ang: a, power: 1.3 };
     if (exec.kind === 'boss') exec.damage(G, 4, hitInfo);   // 보스는 처형 대신 큰 한 방 (등 뒤·휘청이면 더 큼)
     else G.killEnemy(exec, hitInfo);
-    // 칼 궤적: 3타와 같은 세운 원 띠를 휘두름 전체로, 처음부터 다 그어진 채 (처형은 칼질 한가운데부터 시작해 칼끝 궤적이 부채꼴 조각으로 잘려 보였음)
-    const D = Math.PI / 180;
-    sweepArc({ follow: p, y: -19, rx: 36, ry: 36, f: p.facing, vert: true, th: 11, a0: (205 - p.aim) * D, a1: (-5 - p.aim) * D, dur: 0.05, life: 0.34, t: 0.05,
-      cols: ['#ffffff', '#ffe8e0', '#ff5050', '#901020'] });
-    ring({ x: p.x, y: p.y - 14, rx: 26, ry: 8, life: 0.32, th: 3, a0: Math.PI, dir: p.facing, grow: 0.5 });
-    ring({ x: p.x, y: p.y - 14, rx: 16, ry: 5, life: 0.22, th: 2, a0: 0, dir: -p.facing, grow: 0.8, cols: ['#ffffff', '#ffe8e0', '#ff9090', '#b02030'] });
-    flash('#ffffff', 0.05);
-    G.flares.push({ x: p.x, y: p.cy, r: 110, col: [255, 200, 200], t: 0.3, glow: 0.35 });
+    // 칼 궤적 = 초록 혼불 초승달 (fx_gwibo 줄 3, 부드러운 빛 — 사용자: 도트 띠는 자글자글하고 검은 테두리가 진했음). 겨눈 쪽으로 기울이고, 왼쪽이면 뒤집음
+    const ca = Math.cos(a), sa = Math.sin(a);
+    let tilt = p.facing < 0 ? a - Math.PI : a; while (tilt > Math.PI) tilt -= 2 * Math.PI; while (tilt < -Math.PI) tilt += 2 * Math.PI;
+    spiritFx({ row: 3, x: p.x + ca * 16, y: p.cy + sa * 16, w: 96, ang: Math.max(-0.9, Math.min(0.9, tilt)), flip: p.facing < 0, life: 0.34 });
+    ring({ x: p.x, y: p.y - 14, rx: 24, ry: 7, life: 0.28, th: 2, a0: Math.PI, dir: p.facing, grow: 0.6, cols: SPIRIT_COLS });
+    flash('#e8fff0', 0.03);
+    G.flares.push({ x: p.x, y: p.cy, r: 90, col: [170, 255, 200], t: 0.3, glow: 0.18 });
     G.stop = 0.1; G.slow = 0.35; G.slowScale = 0.3;
     shake(5, Math.cos(a) * 4, Math.sin(a) * 4);
     sfx('exec');
@@ -294,9 +293,9 @@ function stepCombat(dt) {
       const ang = at.combo === 3 ? Math.atan2(e.cy - oy, e.x - ox) : at.ang;   // 회전은 몸 바깥쪽으로 튕김
       const hitInfo = { kind: 'slash', ang, power: fin ? 1.4 : 1, kb: at.exec ? 1 : fin ? 1.4 : 0.3 };
       const contact = [(ox + e.x) / 2, (oy + e.cy) / 2];
-      spark(contact[0], contact[1], ang, fin ? 12 : 8, { cols: ['#ffffff', '#ffe0e0', '#ff6060'], v: fin ? 280 : 220, life: 0.14 });
+      spark(contact[0], contact[1], ang, fin ? 12 : 8, { cols: at.exec ? SPIRIT_COLS.slice(0, 3) : ['#ffffff', '#ffe0e0', '#ff6060'], v: fin ? 280 : 220, life: 0.14 });
       popSlashFx();
-      slashFx({ row: 3, x: contact[0], y: contact[1], w: fin ? 56 : 40, life: 0.16 });
+      if (!at.exec) slashFx({ row: 3, x: contact[0], y: contact[1], w: fin ? 56 : 40, life: 0.16 });   // 처형은 혼불 초승달만 (도트 섬광 없이)
       e.damage(G, at.exec ? 1 : m.dmg, hitInfo);
       if (!e.dead) { sfx('hit'); G.stop = Math.max(G.stop, fin ? 0.11 : 0.07); shake(fin ? 6 : 3.5, Math.cos(ang) * (fin ? 6 : 4), Math.sin(ang) * (fin ? 6 : 4)); }
     }
@@ -535,7 +534,9 @@ function render(real) {
     if (set) {
       const n = set.frames.length, i = fa.name === 'run' ? Math.floor(fa.ph * n) : Math.floor(fa.t * set.fps);
       const m = bakeFrame(TYPES.hero, fa.name, ((i % n) + n) % n, p.drawFacing ?? p.facing, playerLow);
-      p.sock = m ? { mouth: [m[0] + px, m[1] + py] } : {};
+      p.sock = {};
+      if (m.mouth) p.sock.mouth = [m.mouth[0] + px, m.mouth[1] + py];
+      if (m.eye) p.sock.eye = [m.eye[0] + px, m.eye[1] + py];
     } else {
       const o = bakeActor(TYPES.hero, p.pose, p.drawFacing ?? p.facing, playerLow, p.hurtT > 0.18);
       p.sock = {}; for (const k in o.sock) p.sock[k] = [o.sock[k][0] + px, o.sock[k][1] + py];
@@ -572,11 +573,13 @@ function render(real) {
   for (const e of G.enemies) lights.push({ x: e.x, y: e.cy, r: e.kind === 'boss' ? 56 : 30, col: [200, 190, 235], k: 0.4 });   // 적은 어둠 속 실루엣이 겨우 읽힐 만큼
   for (const f of G.flares) lights.push(f);
   if (p.rope && p.rope.state !== 'back') lights.push({ x: p.rope.x, y: p.rope.y, r: 12, col: [255, 140, 140] });
-  for (const s of p.seals) lights.push({ x: s.x, y: s.y, r: s.state === 'stuck' ? 22 : 12, col: [255, 190, 110], k: 0.7 });
+  for (const s of p.seals) lights.push({ x: s.x, y: s.y, r: s.state === 'stuck' ? 22 : 12, col: [120, 255, 170], k: 0.7 });
+  if (p.sock?.eye && !p.dead) lights.push({ x: p.sock.eye[0], y: p.sock.eye[1], r: 14, col: [90, 255, 150], k: 0.45 });   // 가면 눈빛이 얼굴을 살짝 비춤
   fxLights(lights, G.time);
   if (!G.noLight) applyLight(ctx, W, H, { x: cx, y: cy }, G.world.def.ambient || AMBIENT, lights);
   // 빛나는 이펙트는 조명 뒤에 그대로 (어두운 화면에서 도드라지게). 몸 뒤 반은 주인공 실루엣만큼 가림
   drawFxGlow(ctx, G.time, { x: cx, y: cy }, W, H, p.dead || playerLow.__skip ? null : { img: playerLow, x: px - cx, y: py - cy });
+  drawEye(p, cx, cy);
   zoomPulse(real, p.x - cx, p.cy - cy);
 
   drawFlash(ctx, W, H);
@@ -656,14 +659,14 @@ function drawRope(p) {
   drawKunai(hx, hy, r.state === 'fly' ? Math.atan2(r.dy, r.dx) : Math.atan2(hy - hand[1], hx - hand[0]), r.state === 'stuck');
 }
 // 쿠나이: 칼날(흰 끝) + 손잡이 고리. stuck 이면 날 반쯤이 박혀 보이게 짧게
-function drawKunai(x, y, a, stuck, gold = false) {
+function drawKunai(x, y, a, stuck, spirit = false) {
   const c = Math.cos(a), s = Math.sin(a), L = stuck ? 3 : 5;
   const at = (k, w) => [Math.round(x - c * k - s * w), Math.round(y - s * k + c * w)];
   ctx.fillStyle = PAL.ink;
   for (let k = -1; k <= L + 4; k++) { const [X, Y] = at(k, 0); ctx.fillRect(X, Y + 1, 1, 1); }
   for (let k = 0; k <= L; k++) { const [X, Y] = at(k, 0); ctx.fillStyle = k === 0 ? '#ffffff' : '#c8ccd8'; ctx.fillRect(X, Y, 1, 1); if (k === L) { for (const w of [-1, 1]) { const [A1, B1] = at(k, w); ctx.fillStyle = '#8a8fa0'; ctx.fillRect(A1, B1, 1, 1); } } }
-  for (let k = L + 1; k <= L + 3; k++) { const [X, Y] = at(k, 0); ctx.fillStyle = gold ? '#c01c28' : '#3a2a2a'; ctx.fillRect(X, Y, 1, 1); }   // 표식 쿠나이 = 진홍 손잡이 · 금 고리
-  const [X, Y] = at(L + 4, 0); ctx.fillStyle = gold ? '#ffd060' : '#c08a3a'; ctx.fillRect(X, Y, 1, 1);
+  for (let k = L + 1; k <= L + 3; k++) { const [X, Y] = at(k, 0); ctx.fillStyle = spirit ? '#1f7a50' : '#3a2a2a'; ctx.fillRect(X, Y, 1, 1); }   // 표식 쿠나이 = 초록 손잡이 · 고리
+  const [X, Y] = at(L + 4, 0); ctx.fillStyle = spirit ? '#8affc0' : '#c08a3a'; ctx.fillRect(X, Y, 1, 1);
 }
 
 // 맞은 몸 떨림: shudder 초 동안 프레임마다 좌우 2px → 1px 로 번갈아 밀림 (실제 시간으로 줄어 타격 멈춤 중에도 떨림)
@@ -675,23 +678,18 @@ function shudderOf(o, real) {
 
 // ---------- 잔상·흔적 (대시·쿠나이 돌진·더블 점프) ----------
 // 대시·쿠나이 돌진 = 흔적: 잔상 대신 몸 등에 붙어 따라오는 띠 하나 (fx.js moveTrail, 사용자 요청 — 대시는 보라·자홍, 돌진은 진홍·흰 심)
-// 더블 점프 = 잔상: 지나온 거리 기준 간격으로 한 장씩 — fx.js pushGhost (반투명 한 색, 나이 들며 색이 바뀌고 가로 조각으로 쓸려 사라짐)
+// 더블 점프도 대시처럼 (사용자 요청): 잔상 대신 몸 뒤에 붙는 띠 흔적(남보라) + 속도선 + 솟는 쪽으로 늘임 — 늘임은 대시보다 약하게
 // 대시·돌진 중엔 몸 뒤로 가는 속도선 + 몸을 움직이는 쪽으로 늘임(stretch), 끝나는 순간 화면이 살짝 당겨졌다 놓임(zoomPulse) → 속도감
-const GHOST_GAP = { jump: 24 };   // 몸 너비(약 20px)쯤 → 잔상끼리 거의 안 겹침
-let lastGhost = null, moveKind = null;
+let moveKind = null;
 function afterimages(p, px, py, real) {
   const kind = p.rope?.state === 'zip' ? 'zip' : p.dashT > 0 ? 'dash' : p.flipT > TUNE.flipT * 0.5 && !p.onGround ? 'jump' : null;
   const sp = Math.hypot(p.vx, p.vy) || 1, ux = p.vx / sp, uy = p.vy / sp;
-  moveTrail(p.cx, p.cy, kind === 'zip' || kind === 'dash' ? kind : null, real);
-  // 늘임 세기: 돌진 중 1, 대시는 처음이 가장 세고 감속하며 줄어듦, 끝나면 빠르게 원래 모양으로
-  const want = kind === 'zip' ? 1 : kind === 'dash' ? Math.max(0, p.dashT) / TUNE.dashT : 0;
+  moveTrail(p.cx, p.cy, kind, real);
+  // 늘임 세기: 돌진 중 1, 대시는 처음이 가장 세고 감속하며 줄어듦, 이단 점프는 막 뛸 때 0.5 에서 줄어듦, 끝나면 빠르게 원래 모양으로
+  const want = kind === 'zip' ? 1 : kind === 'dash' ? Math.max(0, p.dashT) / TUNE.dashT : kind === 'jump' ? 0.5 * (p.flipT - TUNE.flipT * 0.5) / (TUNE.flipT * 0.5) : 0;
   p.str = want > (p.str || 0) ? want : (p.str || 0) * Math.exp(-real * 22);
-  if (kind === 'zip' || kind === 'dash') p.strDir = [ux, uy];
-  if (kind !== 'jump') lastGhost = null;
-  else if (!lastGhost || lastGhost.kind !== kind || Math.hypot(px - lastGhost.x, py - lastGhost.y) >= GHOST_GAP[kind]) {
-    pushGhost(playerLow, px, py, kind, ux, uy); lastGhost = { x: px, y: py, kind };
-  }
-  if (kind && kind !== 'jump' && Math.random() < 0.8) speedLine(p.x - ux * 6, p.y - 4 - Math.random() * 30, -ux, -uy, 16 + Math.random() * 14);
+  if (kind) p.strDir = [ux, uy];
+  if (kind && Math.random() < (kind === 'jump' ? 0.5 : 0.8)) speedLine(p.x - ux * 6, p.y - 4 - Math.random() * 30, -ux, -uy, 16 + Math.random() * 14);
   const mv = kind === 'jump' ? null : kind;
   if (moveKind && mv !== moveKind) G.zoomT = ZOOM.life;   // 대시·돌진이 끝나는 순간 화면 살짝 당김
   moveKind = mv;
@@ -713,19 +711,20 @@ function zoomPulse(real, fx0, fy0) {
 }
 // 대시·돌진 손맛 (Celeste·카타나 제로·산나비류에서 흔히 쓰는 것): 출발 순간 2~3프레임 멈춤(예비 동작) → 몸을 움직이는 쪽으로 늘여 튀어 나감
 // → 화면을 가는 쪽으로 툭 → (돌진) 도착하면 짧은 멈춤 + 흔들림 + 부딪힌 면에서 불티
-// 귀보: 표식 쿠나이가 꽂힘 → 진홍·금 불티 · 표식이 풀림 → 작은 불티 · 사라짐(그 자리 세로 섬광) → 나타남(적 등 뒤 터짐 + 지나온 길 줄기)
-G.onSeal = s => { spark(s.x, s.y, -Math.PI / 2, 6, { cols: GWIBO.slice(1), v: 80, g: 0, life: 0.2, drag: 5 }); };
-G.onSealFade = s => { spark(s.x, s.y, -Math.PI / 2, 3, { cols: GWIBO.slice(1, 3), v: 30, g: -20, life: 0.3 }); };
+// 귀보 (초록 혼불, fx.js spiritFx — 발로란트 도깨비 트레일러 색): 표식 쿠나이가 꽂힘 → 초록 불티 · 표식이 풀림 → 작은 불티 위로
+// 사라짐 = 선 자리에서 혼불 기둥이 피어올라 흩어짐 · 나타남 = 적 등 뒤 발밑에 고리 + 불꽃 잎, 지나온 길엔 부드러운 빛 줄기
+G.onSeal = s => { spark(s.x, s.y, -Math.PI / 2, 6, { cols: SPIRIT_COLS.slice(0, 3), v: 80, g: 0, life: 0.2, drag: 5 }); };
+G.onSealFade = s => { spark(s.x, s.y, -Math.PI / 2, 3, { cols: SPIRIT_COLS.slice(1, 3), v: 30, g: -20, life: 0.3 }); };
 G.onFlashOut = p => {
-  flashFx({ row: 1, x: p.x, y: p.y - 15, w: 60, life: 0.22 });
-  spark(p.x, p.cy, -Math.PI / 2, 6, { cols: GWIBO.slice(1), v: 120, spread: 3, g: 0, life: 0.18, drag: 6 });
+  spiritFx({ row: 1, x: p.x, y: p.y + 2, py: 0.95, w: 58, life: 0.34 });
+  spark(p.x, p.cy, -Math.PI / 2, 5, { cols: SPIRIT_COLS.slice(1, 3), v: 70, spread: 1.5, g: -60, life: 0.3, drag: 3 });
   sfx('zip');
 };
 G.onFlashIn = (p, x0, y0) => {
   const dx = p.cx - x0, dy = p.cy - y0, d = Math.hypot(dx, dy);
-  if (d > 12) flashFx({ row: 3, x: (x0 + p.cx) / 2, y: (y0 + p.cy) / 2, w: d * 1.1, ang: Math.atan2(dy, dx), life: 0.3, layer: 'back' });
-  flashFx({ row: 2, x: p.x, y: p.y - 15, w: 70, life: 0.26 });
-  G.flares.push({ x: p.x, y: p.cy, r: 70, col: [255, 190, 120], t: 0.2, glow: 0.25 });
+  if (d > 12) spiritFx({ streak: [x0, y0, p.cx, p.cy], life: 0.28 });
+  spiritFx({ row: 2, x: p.x, y: p.y + 1, py: 0.7, w: 84, life: 0.38 });
+  G.flares.push({ x: p.x, y: p.cy, r: 70, col: [140, 255, 180], t: 0.2, glow: 0.25 });
   shake(3, Math.sign(dx) * 3, 0);
 };
 
@@ -752,8 +751,11 @@ G.onZipEnd = (p, ux, uy, r) => {
   spark(r.x, r.y, Math.atan2(-uy, -ux), 10, { cols: ['#ffffff', '#ffd0d0', '#ff4a5a'], v: 200, g: 300, life: 0.22, drag: 4 });
   for (let i = 0; i < 5; i++) { const a = Math.atan2(-uy, -ux) + (i - 2) * 0.45; speedLine(r.x, r.y, Math.cos(a), Math.sin(a), 6 + Math.random() * 6); }
 };
-// 더블 점프: 발밑에서 공기가 아래·옆으로 터짐 (짧은 속도선 + 먼지), 고리는 없음
+// 더블 점프: 대시처럼 출발 순간 아주 짧게 멈췄다 튀어 오름 + 발밑에서 공기가 아래·옆으로 터짐 (짧은 속도선 + 먼지 + 남보라 불티)
 G.onDoubleJump = p => {
+  G.stop = Math.max(G.stop, 0.025);
+  spark(p.x, p.y, Math.PI / 2, 6, { cols: ['#ffffff', '#9a8aff'], v: 130, g: 0, life: 0.14, drag: 6 });
+  shake(1, 0, 2);
   for (let i = 0; i < 6; i++) { const a = Math.PI / 2 + (i - 2.5) * 0.35; speedLine(p.x + Math.cos(a) * 3, p.y + 1, Math.cos(a), Math.sin(a), 8 + Math.random() * 6); }
   dust(p.x - 3, p.y, -1, 4); dust(p.x + 3, p.y, 1, 4);
 };
@@ -779,9 +781,26 @@ function drawSeals(p, cx, cy) {
   for (const s of p.seals) {
     if (s.state !== 'stuck') continue;
     const left = TUNE.sealLife - s.t, f = s.t < 0.08 ? 0 : left < 0.5 ? (Math.floor(G.time * 10) % 2 ? 3 : 2) : 1 + Math.floor(s.t * 3) % 2;
-    const w = s.enemy.kind === 'boss' ? 64 : 44;   // 문양이 칸 높이의 절반쯤 → 몸 위에서 약 14px
-    if (!drawFlashCell(ctx, 0, f, s.x - cx, s.y - cy, w)) { ctx.fillStyle = GWIBO[2]; ctx.fillRect(Math.round(s.x - cx) - 1, Math.round(s.y - cy) - 1, 3, 3); }
+    const w = s.enemy.kind === 'boss' ? 72 : 48;   // 문양이 칸 높이의 절반쯤 → 몸 위에서 약 15px
+    const pulse = 0.85 + 0.15 * Math.sin(G.time * 8 + s.x);
+    if (!drawSpiritCell(ctx, 0, f, s.x - cx, s.y - cy, w, { a: pulse })) { ctx.fillStyle = SPIRIT_COLS[2]; ctx.fillRect(Math.round(s.x - cx) - 1, Math.round(s.y - cy) - 1, 3, 3); }
   }
+}
+// 가면 눈 (발로란트 도깨비 가면처럼 뒤로 치켜 올라간 초록 눈빛): 그림 속 눈은 1px 도 안 돼 굽기에서 사라지니, 눈 자리(p.sock.eye)에
+// 조명 뒤로 따로 찍음 → 어둠 속에서도 또렷. 둘레 은은한 번짐 + 코 쪽 끝 흰 민트 심 → 뒤로 갈수록 한 칸 올라감
+function drawEye(p, cx, cy) {
+  const e = p.sock?.eye;
+  if (!e || p.dead || playerLow.__skip) return;
+  const f = p.drawFacing ?? p.facing, x = Math.round(e[0] - cx + f * 0.5), y = Math.round(e[1] - cy);
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createRadialGradient(x + 0.5, y + 0.5, 0, x + 0.5, y + 0.5, 6);
+  g.addColorStop(0, 'rgba(80,255,150,0.5)'); g.addColorStop(1, 'rgba(80,255,150,0)');
+  ctx.fillStyle = g; ctx.fillRect(x - 6, y - 6, 13, 13);
+  ctx.restore();
+  ctx.fillStyle = '#2ee88a'; ctx.fillRect(x - 2 * f, y - 1, 1, 1);
+  ctx.fillStyle = '#5cffaa'; ctx.fillRect(x - f, y, 1, 1);
+  ctx.fillStyle = '#eafff2'; ctx.fillRect(x, y, 1, 1);
 }
 // 키보드 조작 표식 (조명 뒤라 어둠 속에서도 또렷): F 를 누르면 표식 쿠나이가 갈 적 = 가슴 둘레 붉은 꺾쇠, 첫 대상 = 크게 깜빡임
 // 적이 없으면 걸 곳(고리는 drawRing 이 밝힘)에 흰 마름모
@@ -838,7 +857,7 @@ function drawHud(p, prev) {
   const help = G.level === 0 && G.time - (G.levelT || 0) < 12 && !G.boss;
   if (CTRL.kb) {
     if (help && !p.dead) { text('방향키 이동 · Space 점프 · Shift 대시 · Ctrl 베기', W / 2, H - 40, '#c9c1d4', 'center'); text('F 쿠나이: 적 = 표식 → F 다시 = 귀보 · 없으면 걸고 스윙', W / 2, H - 22, '#c9c1d4', 'center'); }
-    else if (p.seals.some(s => s.state === 'stuck') && G.level === 0) text('F 다시 = 귀보: 표식 적 등 뒤로 순간이동해 벰', W / 2, H - 22, '#f0c070', 'center');
+    else if (p.seals.some(s => s.state === 'stuck') && G.level === 0) text('F 다시 = 귀보: 표식 적 등 뒤로 순간이동해 벰', W / 2, H - 22, '#8af0b8', 'center');
     else if (p.rope?.tether && G.level === 0 && !G.boss) { text('위·아래 감기 · 좌우 흔들기 · Space·Shift 끊기', W / 2, H - 40, '#c9c1d4', 'center'); text('F 다시 = 쿠나이로 돌진', W / 2, H - 22, '#c9c1d4', 'center'); }
     else if (p.rope?.state === 'stuck' && !p.rope.target && G.level === 0) text('F 다시 = 쿠나이로 돌진', W / 2, H - 22, '#c9c1d4', 'center');
   }

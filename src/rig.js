@@ -277,6 +277,7 @@ export function drawRig(ctx, P, pose, ax, ay, facing, scale = 1) {
     ctx.translate(...J(P.torso, 'neck'));
     ctx.rotate(-R(pose.head));
     mark(ctx, 'head');
+    if (P.head.def.joints?.eye) mark(ctx, 'eye', J(P.head, 'eye'));   // 가면 눈빛 자리 (main.js drawEye)
     if (shown(pose, 'head')) draw(ctx, P.head, false);
   }));
   ly.at(Z.nearUpperArm, () => arm('shoulderN', pose.nU, pose.nF, false, 'upper'));
