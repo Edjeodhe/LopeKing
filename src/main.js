@@ -4,7 +4,7 @@ import { input, bindInput, endFrame, hit } from './input.js';
 import { World } from './world.js';
 import { bakeTiles, makeBackground, drawBackground, drawLamp, drawRing, drawExit, drawCheck, drawGates, setTheme, PAL } from './scenery.js';
 import { loadActorType, newBakeCanvas, bakeActor, bakeDeath, bakeFrame, ACT, deathDone } from './actor.js';
-import { Player, TUNE } from './player.js';
+import { Player, TUNE, CTRL } from './player.js';
 import { Enemy, drawEnemyMarks } from './enemies.js';
 import { Boss, drawBossMarks, stepHazards, drawHazards } from './boss.js';
 import * as A from './anim.js';
@@ -42,6 +42,9 @@ const G = {
 };
 // 레벨 순서 (levels/*.json). 마지막 레벨을 깨면 끝 화면
 const LEVELS = ['level1', 'level2'];
+// 조작 방식 (Tab 으로 바꿈, 브라우저에 기억 · ?mouse / ?kb 로 강제)
+try { const c = localStorage.getItem('lopeking.ctrl'); if (c) CTRL.kb = c === 'kb'; } catch {}
+{ const q = new URLSearchParams(location.search); if (q.has('mouse')) CTRL.kb = false; if (q.has('kb')) CTRL.kb = true; }
 const levelDefs = {};
 const TYPES = {};
 globalThis.__G = G; G.cam = cam;   // 콘솔·자동 확인용
@@ -127,6 +130,52 @@ G.ropeAssist = (ox, oy, dx, dy) => {
   };
   for (const e of G.enemies) if (!e.dead) consider(e.x, e.y - e.h / 2, 16);
   for (const r of G.world.rings) consider(r.x, r.y, 20);
+  return best;
+};
+
+// ---------- 키보드 조작: 조준 대신 고르기 (player.js kbPick) ----------
+// 표식: 주인공 둘레 MARK_R 안, 사이에 벽이 없는 산 적 전부 (자는 보스 빼고)
+const MARK_R = 180, PICK_CONE = 0.8;
+const chest = e => [e.x, e.y - e.h / 2];
+G.markedEnemies = (x, y) => G.enemies.filter(e => {
+  if (e.dead || e.state === 'sleep') return false;
+  const [tx, ty] = chest(e);
+  return Math.hypot(tx - x, ty - y) < MARK_R && G.world.clear(x, y, tx, ty);
+});
+// 벽력일섬 다음 적: (ax, ay) 를 주면 그 쪽(±70°)에 가까운 적 먼저(첫 대상 = 겨눈 적), 없으면·안 주면 지금 자리에서 가장 가까운 적
+G.chainNext = (x, y, pool, ax, ay) => {
+  let best = null, bs = Infinity;
+  for (const e of pool) {
+    if (e.dead) continue;
+    const [tx, ty] = chest(e), dx = tx - x, dy = ty - y, d = Math.hypot(dx, dy) || 1;
+    if (d > TUNE.hookMax || !G.world.clear(x, y, tx, ty)) continue;
+    let s = d;
+    if (ax !== undefined) { const ang = Math.acos(Math.max(-1, Math.min(1, (dx * ax + dy * ay) / d))); s = ang < 1.2 ? ang * 200 + d * 0.3 : 1000 + d; }
+    if (s < bs) { bs = s; best = e; }
+  }
+  return best;
+};
+// 걸 곳: (ax, ay) 쪽 ±PICK_CONE 부채꼴 안에서 고리(가장 먼저) > 대나무 > 바위·벽돌 면. 겨눈 쪽에 가깝고, 조금 가까운 것
+// 면은 부채꼴로 쏜 광선 9줄이 처음 닿는 걸리는 면, 고리는 사이가 뚫린 것만
+G.anchorPick = (ox, oy, ax, ay) => {
+  const w = G.world, base = Math.atan2(ay, ax);
+  let best = null, bs = Infinity;
+  const consider = (h, bonus) => {
+    const dx = h.x - ox, dy = h.y - oy, d = Math.hypot(dx, dy);
+    if (d < TUNE.hookMin + 4 || d > TUNE.hookMax) return;
+    let da = Math.atan2(dy, dx) - base; while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
+    if (Math.abs(da) > PICK_CONE) return;
+    const s = Math.abs(da) + d / TUNE.hookMax * 0.3 - bonus;
+    if (s < bs) { bs = s; best = h; }
+  };
+  for (const r of w.rings) {
+    const d = Math.hypot(r.x - ox, r.y - oy);
+    if (d > 1 && !w.ray(ox, oy, r.x - ox, r.y - oy, d - 4, false)) consider({ x: r.x, y: r.y, ring: r }, 0.45);
+  }
+  for (let i = -4; i <= 4; i++) {
+    const a = base + i * PICK_CONE / 4, h = w.ray(ox, oy, Math.cos(a), Math.sin(a), TUNE.hookMax);
+    if (h?.hook) consider(h, h.pole ? 0.2 : 0);
+  }
   return best;
 };
 
@@ -397,6 +446,11 @@ function tick(real) {
   frameNo++;
   if (hit('debug')) G.debug = !G.debug;
   if (hit('mute')) G.muted = toggleMute();
+  if (hit('ctrl')) {
+    CTRL.kb = !CTRL.kb;
+    try { localStorage.setItem('lopeking.ctrl', CTRL.kb ? 'kb' : 'mouse'); } catch {}
+    G.msg = { text: CTRL.kb ? '키보드 조작' : '마우스 조작', t: 0, sub: true };
+  }
   if (G.mode === 'title') {
     if (input.mPressed[0] || hit('jump')) { G.mode = 'play'; loadLevel(0); G.time = 0; sfx('check'); }
     drawTitle(real); endFrame(); return;
@@ -442,10 +496,12 @@ function render(real) {
   for (const x of G.exits) drawExit(ctx, x, G.time);
   for (const c of G.checks) drawCheck(ctx, c, G.time);
   drawGates(ctx, w, G.time);
-  // 로프 겨냥 미리보기: 지금 쏘면 걸리는 고리 깜빡임
-  const aimDir = !p.dead && !p.rope ? G.ropeAssist(p.cx, p.cy, Math.cos(p.aimRad), Math.sin(p.aimRad)) || [Math.cos(p.aimRad), Math.sin(p.aimRad)] : null;
+  // 로프 겨냥 미리보기: 지금 쏘면 걸리는 고리 깜빡임. 키보드면 지금 K 를 누르면 갈 곳(표식 적·걸 곳)
+  const kbPick = CTRL.kb && !p.dead && !p.chain && (!p.rope || p.rope.state === 'back') ? p.kbPick(G) : null;
+  const aimDir = !CTRL.kb && !p.dead && !p.rope ? G.ropeAssist(p.cx, p.cy, Math.cos(p.aimRad), Math.sin(p.aimRad)) || [Math.cos(p.aimRad), Math.sin(p.aimRad)] : null;
   const prev = aimDir ? G.ropeTarget(p.cx, p.cy, aimDir[0], aimDir[1], TUNE.hookMax) : null;   // 조준 보정까지 반영한 미리보기 (적이면 조준점이 붉게)
-  for (const r of w.rings) drawRing(ctx, r, prev?.ring === r, G.time);
+  const prevRing = prev?.ring || kbPick?.anchor?.ring;
+  for (const r of w.rings) drawRing(ctx, r, prevRing === r, G.time);
   drawFxBack(ctx, G.time);
   drawGore(ctx, frameNo % 2 === 0);
 
@@ -521,6 +577,7 @@ function render(real) {
   zoomPulse(real, p.x - cx, p.cy - cy);
 
   drawFlash(ctx, W, H);
+  if (CTRL.kb && !p.dead) drawKbMarks(p, kbPick, cx, cy);
   drawHud(p, prev);
   if (G.boss && !G.boss.dead && G.boss.state !== 'sleep') drawBossBar(G.boss);
   if (G.mode === 'fade' && G.fade > 1.2) {
@@ -697,6 +754,32 @@ function drawDebug() {
   for (const k in p.sock || {}) { ctx.fillStyle = '#0ff'; ctx.fillRect(Math.round(p.sock[k][0]), Math.round(p.sock[k][1]), 1, 1); }
 }
 
+// 키보드 조작 표식 (조명 뒤라 어둠 속에서도 또렷): 표식 적 = 가슴 둘레 붉은 꺾쇠, 첫 대상 = 크게 깜빡임
+// 벽력일섬 중엔 남은 표식만 · 적이 없으면 걸 곳(고리는 drawRing 이 밝힘)에 흰 마름모
+function drawKbMarks(p, pick, cx, cy) {
+  const pool = p.chain ? [...p.chain.pool].filter(e => !e.dead) : pick?.pool || [];
+  const blink = Math.floor(G.time * 12) % 2;
+  for (const e of pool) {
+    const first = pick?.first === e, [ex, ey] = chest(e), x = Math.round(ex - cx), y = Math.round(ey - cy);
+    const s = (e.kind === 'boss' ? 22 : 10) + (first ? 3 : 0), k = 3;
+    const corner = (col, o) => {
+      ctx.fillStyle = col;
+      for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+        const X = x + sx * s + o, Y = y + sy * s + o;
+        ctx.fillRect(sx < 0 ? X : X - k + 1, Y, k, 1); ctx.fillRect(X, sy < 0 ? Y : Y - k + 1, 1, k);
+      }
+    };
+    corner(PAL.ink, 1);
+    corner(first ? (blink ? '#ffffff' : '#ff4040') : '#c02030', 0);
+  }
+  const a = pick?.anchor;
+  if (a && !a.ring && blink) {
+    const x = Math.round(a.x - cx), y = Math.round(a.y - cy);
+    ctx.fillStyle = PAL.ink; ctx.fillRect(x - 1, y - 1, 3, 3);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(x, y - 2, 1, 5); ctx.fillRect(x - 2, y, 5, 1);
+  }
+}
+
 // ---------- HUD ----------
 function drawHud(p, prev) {
   // 체력: 붉은 마름모
@@ -709,7 +792,7 @@ function drawHud(p, prev) {
     if (on) { ctx.fillStyle = '#ffb0a0'; ctx.fillRect(x - 1, y - 2, 1, 1); }
   }
   // 조준점: 걸리는 곳이면 색이 바뀜 (흰 = 벽·고리, 붉음 = 적 처형, 회색 = 안 걸림)
-  const mx = Math.round(input.mx), my = Math.round(input.my);
+  const mx = CTRL.kb ? -99 : Math.round(input.mx), my = Math.round(input.my);
   const col = !prev ? '#6a6684' : prev.enemy ? '#ff4040' : prev.hook ? '#ffffff' : '#8a7a7a';
   ctx.fillStyle = PAL.ink;
   for (const [a, b] of [[-4, 0], [-3, 0], [3, 0], [4, 0], [0, -4], [0, -3], [0, 3], [0, 4]]) ctx.fillRect(mx + a + 1, my + b + 1, 1, 1);
@@ -724,11 +807,17 @@ function drawHud(p, prev) {
     ctx.fillStyle = c; ctx.fillText(s, x, y);
   };
   const help = G.level === 0 && G.time - (G.levelT || 0) < 12 && !G.boss;
-  if (help && !p.dead) { text('A/D 이동 · Space 점프 · Shift 대시 · 좌클릭 베기', W / 2, H - 40, '#c9c1d4', 'center'); text('우클릭 쿠나이 (톡: 꽂기 · 꾹: 스윙)', W / 2, H - 22, '#c9c1d4', 'center'); }
+  if (CTRL.kb) {
+    if (help && !p.dead) { text('A/D 이동 · Space 점프 · L(Shift) 대시 · J 베기 (방향키 쪽)', W / 2, H - 40, '#c9c1d4', 'center'); text('K 쿠나이: 적 = 벽력일섬 · 없으면 위 대각선에 걸고 스윙', W / 2, H - 22, '#c9c1d4', 'center'); }
+    else if (p.rope?.tether && G.level === 0 && !G.boss) { text('W/S 감기 · A/D 흔들기 · Space 놓기', W / 2, H - 40, '#c9c1d4', 'center'); text('K 다시 = 쿠나이로 돌진', W / 2, H - 22, '#c9c1d4', 'center'); }
+    else if (p.rope?.state === 'stuck' && !p.rope.target && G.level === 0) text('K 다시 = 쿠나이로 돌진', W / 2, H - 22, '#c9c1d4', 'center');
+  }
+  else if (help && !p.dead) { text('A/D 이동 · Space 점프 · Shift 대시 · 좌클릭 베기', W / 2, H - 40, '#c9c1d4', 'center'); text('우클릭 쿠나이 (톡: 꽂기 · 꾹: 스윙)', W / 2, H - 22, '#c9c1d4', 'center'); }
   else if (p.rope?.tether && G.level === 0 && !G.boss) { text('W/S 감기 · A/D 흔들기 · Space 놓기', W / 2, H - 40, '#c9c1d4', 'center'); text('우클릭 다시(Shift) = 쿠나이로 돌진', W / 2, H - 22, '#c9c1d4', 'center'); }
   else if (p.rope?.state === 'stuck' && G.level === 0) text('우클릭 다시(Shift) = 쿠나이로 돌진', W / 2, H - 22, '#c9c1d4', 'center');
   if (p.dead && deathT > 0.8) text('쓰러졌다', W / 2, H / 2 - 8, BLOOD[3], 'center');
   if (G.msg && (G.msg.t < 2.8 || G.clear)) text(G.msg.text, W / 2, G.msg.sub ? 24 : H / 2 - 30, G.msg.sub ? '#e8e0f0' : '#f7cf6d', 'center');
+  text(CTRL.kb ? '키보드 · Tab' : '마우스 · Tab', W - 4, H - 14, '#5a5470', 'right');
   if (G.debug) text(`${fps}fps 적 ${G.enemies.length}`, W - 4, 4, '#8f8', 'right');
 }
 

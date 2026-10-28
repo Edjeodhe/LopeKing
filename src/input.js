@@ -6,7 +6,9 @@ export const input = {
 };
 
 const KEYMAP = { KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right', KeyW: 'up', ArrowUp: 'up', KeyS: 'down', ArrowDown: 'down',
-  Space: 'jump', ShiftLeft: 'dash', ShiftRight: 'dash', KeyE: 'rope', KeyR: 'restart', KeyF: 'full', Backquote: 'debug', KeyP: 'pause', Escape: 'pause', KeyM: 'mute' };
+  Space: 'jump', ShiftLeft: 'dash', ShiftRight: 'dash', KeyE: 'rope', KeyR: 'restart', KeyF: 'full', Backquote: 'debug', KeyP: 'pause', Escape: 'pause', KeyM: 'mute',
+  // 키보드만 조작(Tab 으로 마우스 조작과 바꿈): J 베기 · K 쿠나이 · L 대시
+  KeyJ: 'attack', KeyK: 'rope', KeyL: 'dash', Tab: 'ctrl' };
 
 export function bindInput(canvas, toGame) {
   addEventListener('keydown', e => {

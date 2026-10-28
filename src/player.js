@@ -5,6 +5,10 @@
 //   우클릭 꾹 누른 채 꽂히면 = 실이 팽팽해져 진자 스윙 (W/S 감기, A/D 흔들기, Space 놓고 뛰기) — 떼면 실만 느슨해지고 쿠나이는 남음
 //   벽에 도착하면 잠깐 매달림(벽 점프·다음 투척으로 연쇄), 천장이면 잠깐 매달렸다 떨어짐
 // 대시(Shift) = 방향키 8방향, 공중 1회 · 더블 점프 = 공중 1회 (벽·천장에 매달리거나 쿠나이 돌진이 끝나면 다시 채워짐)
+// 키보드만 조작 (CTRL.kb, Tab 으로 바꿈) — 조준 대신 고르기 (main.js G.chainNext · G.anchorPick):
+//   J 베기 = 방향키 쪽 (안 누르면 보는 쪽) · K 쿠나이:
+//   둘레에 표식 찍힌 적이 있으면 = 벽력일섬: 겨눈 쪽 적부터 → 가까운 적 순으로 쿠나이 꽂고 돌진·처형을 이어 감 (Space·대시로 끊음)
+//   적이 없으면 = 방향키 쪽 걸 곳(안 누르면 보는 쪽 위 대각선)에 쿠나이가 반드시 꽂힘 → 몸보다 위면 바로 스윙. K 다시 = 돌진 · Space = 놓기
 // 물리는 고정 스텝(120Hz)으로 돈다 (main.js). 수치는 게임 px · 초 단위.
 import { input, held } from './input.js';
 import * as A from './anim.js';
@@ -21,7 +25,10 @@ export const TUNE = {
   zip: 1050, zipCd: 0.12, zipKeep: 0.35, cling: 0.6, ceilHang: 0.35, leash: 400,
   atkLunge: 190, riseHop: 150,
   hp: 5, iframes: 1.0,
+  chainGap: 0.05, chainCd: 0.3,   // 벽력일섬: 처형 → 다음 쿠나이까지 · 끝난 뒤 다시 쓰기까지
 };
+// 조작 방식: kb = 키보드만 · false = 마우스 조준 (main.js 가 Tab 으로 바꾸고 기억함)
+export const CTRL = { kb: true };
 
 export class Player {
   constructor(x, y) {
@@ -51,7 +58,7 @@ export class Player {
     if (input.pressed.has('jump')) this.buf = TUNE.buffer;
     if (input.released.has('jump')) this.jumpRelease = true;
     if (input.pressed.has('dash')) this.dashReq = true;
-    if (input.mPressed[0]) this.atkReq = 0.2;
+    if (input.mPressed[0] || input.pressed.has('attack')) this.atkReq = 0.2;
     if (input.mPressed[2] || input.pressed.has('rope')) this.ropeReq = true;
     if (input.mReleased[2] || input.released.has('rope')) this.ropeRel = true;
     this.ropeHeld = input.mouse[2] || held('rope');
@@ -75,20 +82,35 @@ export class Player {
     this.flipT = Math.max(0, this.flipT - dt);
     if (this.dead) { this.deadT += dt; this.vy = Math.min(TUNE.maxFall, this.vy + TUNE.grav * dt); this.vx *= Math.exp(-dt * 6); W.move(this, this.vx * dt, this.vy * dt); return; }
 
-    // 조준 (마우스 - 가슴)
-    this.aimRad = Math.atan2(this.mouse[1] - this.cy, this.mouse[0] - this.cx);
-
     const dir = (held('right') ? 1 : 0) - (held('left') ? 1 : 0);
     this.drop = held('down') && this.onGround;
 
+    // 조준: 마우스 - 가슴 · 키보드 = 방향키 8방향 (안 누르면 보는 쪽, 땅에선 아래로 안 겨눔)
+    if (CTRL.kb) {
+      let ax = dir, ay = (held('down') ? 1 : 0) - (held('up') ? 1 : 0);
+      if (this.onGround && ay > 0) ay = 0;
+      if (!ax && !ay) ax = this.facing;
+      this.aimRad = Math.atan2(ay, ax);
+    } else this.aimRad = Math.atan2(this.mouse[1] - this.cy, this.mouse[0] - this.cx);
+
     // ---- 로프 쿠나이 ----
+    this.chainCd = Math.max(0, (this.chainCd || 0) - dt);
     if (this.ropeReq) {
       this.ropeReq = false;
       const r = this.rope;
-      if (!r || r.state === 'back') this.throwKunai(G);
+      if (CTRL.kb) this.kbRope(G, dir);
+      else if (!r || r.state === 'back') this.throwKunai(G);
       else if (r.state === 'stuck') this.startZip(G);
     }
-    if (this.ropeRel) { this.ropeRel = false; this.releaseRope(); }
+    if (this.ropeRel) { this.ropeRel = false; if (!CTRL.kb) this.releaseRope(); }   // 키보드는 Space 로 놓음
+    // 벽력일섬: 처형이 끝나면 잠깐 뒤 다음 적으로 (남은 표식 중 지금 자리에서 가장 가까운 적)
+    if (this.chain && !this.rope) {
+      this.chain.t -= dt;
+      if (this.chain.t <= 0) {
+        const next = G.chainNext(this.cx, this.cy, this.chain.pool);
+        if (next) this.throwKunai(G, { enemy: next }); else { this.chain = null; this.chainCd = TUNE.chainCd; }
+      }
+    }
     if (this.rope) this.stepRope(dt, G, dir);
     const rope = this.rope;
 
@@ -103,6 +125,7 @@ export class Player {
         const L = Math.hypot(dx, dy);
         this.dashDir = [dx / L, dy / L];
         if (this.rope?.tether) this.rope.tether = false;
+        if (this.chain) { this.chain = null; this.chainCd = TUNE.chainCd; }
         this.cling = 0; this.ceil = 0; this.pole = null; this.atkT = -1;
         this.dashT = TUNE.dashT; this.dashCd = TUNE.dashCd; this.inv = Math.max(this.inv, TUNE.dashT + 0.05);
         this.vx = this.dashDir[0] * TUNE.dash; this.vy = this.dashDir[1] * TUNE.dash;
@@ -163,6 +186,7 @@ export class Player {
     // ---- 점프 ----
     if (this.onGround || this.cling > 0 || this.ceil > 0) { this.airJump = TUNE.airJumps; this.airDash = true; }
     if (this.onGround) { this.coyote = TUNE.coyote; this.airAtk = true; } else this.coyote -= dt;
+    if (this.buf > 0 && !zipping && this.chain) { this.chain = null; this.chainCd = TUNE.chainCd; if (this.rope?.state === 'fly') this.rope.state = 'back'; }   // 점프로 벽력일섬을 끊음
     if (this.buf > 0 && !zipping) {
       if (hooked) {
         // 로프에서 뛰어내림: 지금 탄력 + 위로 (쿠나이는 꽂힌 채 남음)
@@ -253,37 +277,81 @@ export class Player {
   }
 
   // ---- 로프 쿠나이 ----
-  throwKunai(G) {
+  // aim (키보드): { enemy } = 그 적 가슴으로 · { point } = 고른 걸 곳으로 (둘 다 유도돼 반드시 꽂힘) · { dir } = 그 방향으로 그냥
+  throwKunai(G, aim) {
+    let dx, dy;
+    if (aim?.enemy || aim?.point) {
+      const [tx, ty] = homeOf(aim), L = Math.hypot(tx - this.cx, ty - this.cy) || 1;
+      dx = (tx - this.cx) / L; dy = (ty - this.cy) / L;
+    } else if (aim?.dir) [dx, dy] = aim.dir;
     // 조준 보정: 대충 적 근처로 던지면 그 적 가슴으로 날아감 (main.js G.ropeAssist)
-    const [dx, dy] = G.ropeAssist?.(this.cx, this.cy, Math.cos(this.aimRad), Math.sin(this.aimRad)) || [Math.cos(this.aimRad), Math.sin(this.aimRad)];
-    this.rope = { state: 'fly', x: this.cx, y: this.cy, dx, dy, d: 0, len: 0, tether: false };
+    else [dx, dy] = G.ropeAssist?.(this.cx, this.cy, Math.cos(this.aimRad), Math.sin(this.aimRad)) || [Math.cos(this.aimRad), Math.sin(this.aimRad)];
+    const home = aim?.enemy || aim?.point ? aim : null, chain = !!(aim?.enemy && this.chain);
+    if (chain) this.chain.pool.delete(aim.enemy);
+    this.rope = { state: 'fly', x: this.cx, y: this.cy, dx, dy, d: 0, len: 0, tether: false, home, chain };
     this.throwT = 0.12;   // 던지는 팔 자세
     G.sfx?.('rope');
   }
+  // 키보드 K: 꽂혀 있으면 돌진 · 날아가는 중이면 꽂히자마자 돌진(두 번 톡) · 아니면 고른 곳(kbPick)으로 던짐
+  kbRope(G, dir) {
+    const r = this.rope;
+    if (r?.state === 'stuck') { this.startZip(G); return; }
+    if (r?.state === 'fly') { if (!r.chain) this.zipBuf = 0.35; return; }
+    if (r && r.state !== 'back') return;
+    if (this.chain || this.chainCd > 0) return;
+    const pick = this.kbPick(G, dir);
+    if (pick.first) { this.chain = { pool: new Set(pick.pool), t: 0 }; this.throwKunai(G, { enemy: pick.first }); }
+    else this.throwKunai(G, pick.anchor ? { point: pick.anchor } : { dir: pick.dir });
+  }
+  // 지금 K 를 누르면 갈 곳 (미리보기도 같은 것 — main.js): 표식 적이 있으면 { pool, first }, 없으면 { anchor | null, dir }
+  kbPick(G, dir = (held('right') ? 1 : 0) - (held('left') ? 1 : 0)) {
+    const pool = G.markedEnemies(this.cx, this.cy);
+    const first = pool.length ? G.chainNext(this.cx, this.cy, pool, Math.cos(this.aimRad), Math.sin(this.aimRad)) : null;
+    if (first) return { pool, first };
+    // 위·아래를 안 누르면 위 대각선 (스윙할 곳)
+    let ax = dir, ay = (held('down') ? 1 : 0) - (held('up') ? 1 : 0);
+    if (!ay) { ay = -1; ax = ax || this.facing; }
+    const L = Math.hypot(ax, ay), d = [ax / L, ay / L];
+    return { pool, anchor: G.anchorPick(this.cx, this.cy, d[0], d[1]), dir: d };
+  }
+  // 쿠나이가 hit 자리에 닿음: 적 = 꽂힘 · 걸 곳 = 꽂힘 · 안 걸리는 면 = 튕겨 돌아옴
+  stickKunai(r, hit, ox, oy, G) {
+    const back = Math.atan2(-r.dy, -r.dx);
+    if (hit.enemy) {
+      Object.assign(r, { state: 'stuck', x: hit.x, y: hit.y, target: hit.enemy, ox: hit.x - hit.enemy.x, oy: hit.y - hit.enemy.y });
+      spark(hit.x, hit.y, back, 6, { cols: ['#ff6060', '#ffffff'], v: 90 }); G.sfx?.('hookEnemy');
+    } else if (hit.hook) {
+      Object.assign(r, { state: 'stuck', x: hit.x, y: hit.y, nx: hit.nx || 0, ny: hit.ny || 0, ring: hit.ring || null, pole: !!hit.pole });
+      spark(hit.x, hit.y, back, 5, { v: 90 }); G.sfx?.('hook');
+    } else { r.state = 'back'; r.x = hit.x; r.y = hit.y; spark(hit.x, hit.y, back, 3, { cols: ['#8a8fa0'], v: 60 }); G.sfx?.('clink'); }
+    if (r.state !== 'stuck') return;
+    shake(1);
+    if (CTRL.kb) {
+      // 벽력일섬은 꽂히자마자 돌진 · 걸 곳이 몸보다 위면 바로 스윙 (누르고 있을 필요 없음, Space 로 놓음)
+      if (r.target) { if (r.chain) this.startZip(G); }
+      else if (r.y < oy - 8) this.attachRope(r, ox, oy, G);
+    } else if (this.ropeHeld && !r.target) this.attachRope(r, ox, oy, G);   // 누른 채 꽂히면 실이 팽팽 → 스윙 (적에게 꽂혔으면 스윙 없음)
+  }
   stepRope(dt, G, dir) {
     const r = this.rope;
+    if (r.state === 'fly' && r.home) {
+      // 고른 곳으로 유도: 적·내 몸이 움직여도 그 자리로 꺾여 반드시 꽂힘 (고른 뒤 적이 죽거나 너무 멀어지면 돌아옴)
+      const ox = this.cx, oy = this.cy, e = r.home.enemy;
+      const [tx, ty] = homeOf(r.home), L = Math.hypot(tx - ox, ty - oy) || 1;
+      if (e?.dead || L > TUNE.leash) { r.state = 'back'; return; }
+      r.dx = (tx - ox) / L; r.dy = (ty - oy) / L;
+      r.d = Math.min(L, r.d + TUNE.hookSpeed * dt);
+      r.x = ox + r.dx * r.d; r.y = oy + r.dy * r.d;
+      if (r.d >= L) this.stickKunai(r, e ? { x: tx, y: ty, enemy: e } : { ...r.home.point, hook: true }, ox, oy, G);
+      return;
+    }
     if (r.state === 'fly') {
       // 날아가는 쿠나이: 이번 스텝 구간에서 벽·고리·적을 찾음 (실은 늘 손에 이어짐)
       const from = r.d;
       r.d = Math.min(TUNE.hookMax, r.d + TUNE.hookSpeed * dt);
       const ox = this.cx, oy = this.cy;
       const hit = G.ropeTarget(ox, oy, r.dx, r.dy, r.d, from);
-      if (hit) {
-        const back = Math.atan2(-r.dy, -r.dx);
-        if (hit.enemy) {
-          Object.assign(r, { state: 'stuck', x: hit.x, y: hit.y, target: hit.enemy, ox: hit.x - hit.enemy.x, oy: hit.y - hit.enemy.y });
-          spark(hit.x, hit.y, back, 6, { cols: ['#ff6060', '#ffffff'], v: 90 }); G.sfx?.('hookEnemy');
-        } else if (hit.hook) {
-          Object.assign(r, { state: 'stuck', x: hit.x, y: hit.y, nx: hit.nx || 0, ny: hit.ny || 0, ring: hit.ring || null, pole: !!hit.pole });
-          spark(hit.x, hit.y, back, 5, { v: 90 }); G.sfx?.('hook');
-        } else { r.state = 'back'; r.x = hit.x; r.y = hit.y; spark(hit.x, hit.y, back, 3, { cols: ['#8a8fa0'], v: 60 }); G.sfx?.('clink'); }
-        if (r.state === 'stuck') {
-          shake(1);
-          // 누른 채 꽂히면 실이 팽팽 → 스윙 (적에게 꽂혔으면 스윙 없음)
-          if (this.ropeHeld && !r.target) this.attachRope(r, ox, oy, G);
-        }
-        return;
-      }
+      if (hit) { this.stickKunai(r, hit, ox, oy, G); return; }
       r.x = ox + r.dx * r.d; r.y = oy + r.dy * r.d;
       if (r.d >= TUNE.hookMax) r.state = 'back';
       return;
@@ -401,6 +469,11 @@ export class Player {
       // 적에 꽂힌 쿠나이: 닿는 순간 처형
       this.aimRad = Math.atan2(uy, ux); this.vx = ux * 120; this.vy = -140;
       this.startAttack(G, r.target);
+      if (this.chain) {
+        // 벽력일섬: 다음 적이 남았으면 처형 멈춤·슬로모션을 짧게 → 한 호흡으로 이어 벰 (마지막 적만 길게)
+        this.chain.t = TUNE.chainGap;
+        if ([...this.chain.pool].some(e => !e.dead)) { G.stop = Math.min(G.stop, 0.06); G.slow = Math.min(G.slow, 0.1); }
+      }
       return;
     }
     // 도착한 면에 따라: 벽 = 매달림 · 천장 = 잠깐 매달림 · 바닥/고리 = 탄력 조금 남기고 멈춤
@@ -431,6 +504,7 @@ export class Player {
     this.vx = k * 170; this.vy = -170;
     if (this.rope?.state === 'zip' || this.rope?.state === 'fly') this.rope = null;
     if (this.rope) this.rope.tether = false;
+    if (this.chain) { this.chain = null; this.chainCd = TUNE.chainCd; }
     this.cling = this.ceil = 0;
     G.onPlayerHurt(this, from);
     if (this.hp <= 0) { this.dead = true; this.deadT = 0; this.rope = null; this.facing = -k; }
@@ -484,3 +558,5 @@ export class Player {
     this.pose.cape = A.stepCape(this.cape, this.vx, this.vy, this.drawFacing, dt);
   }
 }
+// 유도 쿠나이가 갈 자리: 적 가슴 · 고른 걸 곳
+const homeOf = h => h.enemy ? [h.enemy.x, h.enemy.y - h.enemy.h / 2] : [h.point.x, h.point.y];
