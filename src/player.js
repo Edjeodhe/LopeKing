@@ -88,6 +88,7 @@ export class Player {
     if (this.atkReq) this.atkReq = Math.max(0, this.atkReq - dt);
     this.hurtT = Math.max(0, this.hurtT - dt);
     this.flipT = Math.max(0, this.flipT - dt);
+    if (!this.dead && W.unstick(this)) { this.vx = this.vy = 0; if (this.flash?.hop) this.endHop(G); }   // 혹시 벽 속에 끼었으면 꺼냄
     if (this.dead) { this.deadT += dt; this.vy = Math.min(TUNE.maxFall, this.vy + TUNE.grav * dt); this.vx *= Math.exp(-dt * 6); W.move(this, this.vx * dt, this.vy * dt); return; }
 
     const dir = (held('right') ? 1 : 0) - (held('left') ? 1 : 0);

@@ -1,7 +1,8 @@
 // 타일 월드: 충돌 · 로프 레이캐스트 · 한쪽 발판 · 가시 · 갈고리 고리.
 // 맵은 그림이 아니라 데이터(levels/*.json: 사각형 채우기 + 점 배치)로 짓는다 → 같은 데이터를 유니티 타일맵으로 옮길 수 있게.
 export const TILE = 16;
-const POLE_NEAR = 20;   // 쿠나이가 대나무 줄기에 꽂히는 최소 거리 (손 바로 옆 줄기는 지나침 — 로프 최소 길이 hookMin 18 쯤)
+const POLE_NEAR = 20;
+const MOVE_STEP = 6;   // 한 번에 이보다 많이 움직이면 잘게 나눠 감 (빠른 귀보 2600px/s = 한 스텝 22px 가 타일 16px 을 건너뛰어 벽 속에 끼던 것)   // 쿠나이가 대나무 줄기에 꽂히는 최소 거리 (손 바로 옆 줄기는 지나침 — 로프 최소 길이 hookMin 18 쯤)
 
 // 타일 종류. hook = 로프가 박히는가
 export const T = {
@@ -52,7 +53,39 @@ export class World {
   solidPx(x, y) { return SOLID(this.atPx(x, y)); }
 
   // 상자 움직이기 (축마다 따로). e = { x, y(발), w, h, vx, vy, drop }. 결과: e.onGround · e.wall(-1|0|1) · e.ceil
+  // 많이 움직이면 MOVE_STEP 씩 나눠 감: 벽에 막힌 축은 거기서 멈추고 나머지 축만 마저 감
   move(e, dx, dy) {
+    const n = Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / MOVE_STEP);
+    if (n <= 1) return this.moveStep(e, dx, dy);
+    let wall = 0, ceil = false, hx = true, hy = true;
+    for (let k = 0; k < n; k++) {
+      this.moveStep(e, hx ? dx / n : 0, hy ? dy / n : 0);
+      if (e.wall) { wall = e.wall; hx = false; }
+      if (e.ceil || (dy > 0 && e.onGround)) { ceil ||= e.ceil; hy = false; }
+    }
+    e.wall = wall; e.ceil = ceil;
+    return e;
+  }
+  // 벽 속에 끼었으면 가장 가까운 빈자리로 꺼냄 (옆 → 위 → 아래 순, 32px 까지)
+  unstick(e) {
+    if (!this.overlaps(e)) return false;
+    const x0 = e.x, y0 = e.y;
+    for (let d = 2; d <= 32; d += 2) {
+      for (const [ox, oy] of [[d, 0], [-d, 0], [0, -d], [0, d], [d, -d], [-d, -d]]) {
+        e.x = x0 + ox; e.y = y0 + oy;
+        if (!this.overlaps(e)) return true;
+      }
+    }
+    e.x = x0; e.y = y0;
+    return false;
+  }
+  overlaps(e) {
+    for (let j = Math.floor((e.y - e.h + 0.01) / TILE); j <= Math.floor((e.y - 0.01) / TILE); j++)
+      for (let i = Math.floor((e.x - e.w / 2 + 0.01) / TILE); i <= Math.floor((e.x + e.w / 2 - 0.01) / TILE); i++)
+        if (SOLID(this.at(i, j))) return true;
+    return false;
+  }
+  moveStep(e, dx, dy) {
     e.wall = 0; e.ceil = false;
     const wasGround = e.onGround; e.onGround = false;
     // 가로
