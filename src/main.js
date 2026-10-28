@@ -8,7 +8,7 @@ import { Player, TUNE, CTRL } from './player.js';
 import { Enemy, drawEnemyMarks } from './enemies.js';
 import { Boss, drawBossMarks, stepHazards, drawHazards } from './boss.js';
 import * as A from './anim.js';
-import { fx, cam, initFx, updateFx, updateFlash, cutLine, dust, drawFxBack, drawFxFront, drawFxGlow, fxLights, fadeSlashFx, popSlashFx, sweepArc, pushGhost, moveTrail, speedLine, drawFlash, decalCanvas, shake, ring, flash, spark, blood, BLOOD, slashFx, loadSlashFx } from './fx.js';
+import { fx, cam, flashFx, drawFlashCell, GWIBO, initFx, updateFx, updateFlash, cutLine, dust, drawFxBack, drawFxFront, drawFxGlow, fxLights, fadeSlashFx, popSlashFx, sweepArc, pushGhost, moveTrail, speedLine, drawFlash, decalCanvas, shake, ring, flash, spark, blood, BLOOD, slashFx, loadSlashFx } from './fx.js';
 import { initGore, updateGore, drawGore, killActor } from './gore.js';
 import { stepSteam, drawSteam } from './steam.js';
 import { sfx } from './sfx.js';
@@ -143,7 +143,7 @@ G.markedEnemies = (x, y) => G.enemies.filter(e => {
   const [tx, ty] = chest(e);
   return Math.hypot(tx - x, ty - y) < MARK_R && G.world.clear(x, y, tx, ty);
 });
-// 벽력일섬 다음 적: (ax, ay) 를 주면 그 쪽(±70°)에 가까운 적 먼저(첫 대상 = 겨눈 적), 없으면·안 주면 지금 자리에서 가장 가까운 적
+// 귀보 첫 대상 고르기: (ax, ay) 를 주면 그 쪽(±70°)에 가까운 적 먼저(첫 대상 = 겨눈 적), 없으면·안 주면 지금 자리에서 가장 가까운 적
 G.chainNext = (x, y, pool, ax, ay) => {
   let best = null, bs = Infinity;
   for (const e of pool) {
@@ -498,7 +498,7 @@ function render(real) {
   for (const c of G.checks) drawCheck(ctx, c, G.time);
   drawGates(ctx, w, G.time);
   // 로프 겨냥 미리보기: 지금 쏘면 걸리는 고리 깜빡임. 키보드면 지금 F 를 누르면 갈 곳(표식 적·걸 곳)
-  const kbPick = CTRL.kb && !p.dead && !p.chain && (!p.rope || p.rope.state === 'back') ? p.kbPick(G) : null;
+  const kbPick = CTRL.kb && !p.dead && !p.flash && !p.seals.length && (!p.rope || p.rope.state === 'back') ? p.kbPick(G) : null;
   const aimDir = !CTRL.kb && !p.dead && !p.rope ? G.ropeAssist(p.cx, p.cy, Math.cos(p.aimRad), Math.sin(p.aimRad)) || [Math.cos(p.aimRad), Math.sin(p.aimRad)] : null;
   const prev = aimDir ? G.ropeTarget(p.cx, p.cy, aimDir[0], aimDir[1], TUNE.hookMax) : null;   // 조준 보정까지 반영한 미리보기 (적이면 조준점이 붉게)
   const prevRing = prev?.ring || kbPick?.anchor?.ring;
@@ -519,8 +519,9 @@ function render(real) {
     }
     ctx.drawImage(e.low, Math.round(e.x - e.low.ax) + shudderOf(e, real), Math.round(e.y - e.low.ay));
   }
-  // 로프: 로프 쏘는 손(먼 팔)에서 쿠나이까지 — 몸 뒤에 그림
+  // 로프: 로프 쏘는 손(먼 팔)에서 쿠나이까지 — 몸 뒤에 그림. 귀보 표식 쿠나이는 실 없이
   drawRope(p);
+  for (const s of p.seals) drawKunai(s.x, s.y, Math.atan2(s.dy, s.dx), s.state === 'stuck', true);
   // 주인공
   const px = Math.round(p.x - ACT.AX), py = Math.round(p.y - ACT.AY);
   if (p.dead) {
@@ -571,6 +572,7 @@ function render(real) {
   for (const e of G.enemies) lights.push({ x: e.x, y: e.cy, r: e.kind === 'boss' ? 56 : 30, col: [200, 190, 235], k: 0.4 });   // 적은 어둠 속 실루엣이 겨우 읽힐 만큼
   for (const f of G.flares) lights.push(f);
   if (p.rope && p.rope.state !== 'back') lights.push({ x: p.rope.x, y: p.rope.y, r: 12, col: [255, 140, 140] });
+  for (const s of p.seals) lights.push({ x: s.x, y: s.y, r: s.state === 'stuck' ? 22 : 12, col: [255, 190, 110], k: 0.7 });
   fxLights(lights, G.time);
   if (!G.noLight) applyLight(ctx, W, H, { x: cx, y: cy }, G.world.def.ambient || AMBIENT, lights);
   // 빛나는 이펙트는 조명 뒤에 그대로 (어두운 화면에서 도드라지게). 몸 뒤 반은 주인공 실루엣만큼 가림
@@ -578,6 +580,7 @@ function render(real) {
   zoomPulse(real, p.x - cx, p.cy - cy);
 
   drawFlash(ctx, W, H);
+  drawSeals(p, cx, cy);
   if (CTRL.kb && !p.dead) drawKbMarks(p, kbPick, cx, cy);
   drawHud(p, prev);
   if (G.boss && !G.boss.dead && G.boss.state !== 'sleep') drawBossBar(G.boss);
@@ -653,14 +656,14 @@ function drawRope(p) {
   drawKunai(hx, hy, r.state === 'fly' ? Math.atan2(r.dy, r.dx) : Math.atan2(hy - hand[1], hx - hand[0]), r.state === 'stuck');
 }
 // 쿠나이: 칼날(흰 끝) + 손잡이 고리. stuck 이면 날 반쯤이 박혀 보이게 짧게
-function drawKunai(x, y, a, stuck) {
+function drawKunai(x, y, a, stuck, gold = false) {
   const c = Math.cos(a), s = Math.sin(a), L = stuck ? 3 : 5;
   const at = (k, w) => [Math.round(x - c * k - s * w), Math.round(y - s * k + c * w)];
   ctx.fillStyle = PAL.ink;
   for (let k = -1; k <= L + 4; k++) { const [X, Y] = at(k, 0); ctx.fillRect(X, Y + 1, 1, 1); }
   for (let k = 0; k <= L; k++) { const [X, Y] = at(k, 0); ctx.fillStyle = k === 0 ? '#ffffff' : '#c8ccd8'; ctx.fillRect(X, Y, 1, 1); if (k === L) { for (const w of [-1, 1]) { const [A1, B1] = at(k, w); ctx.fillStyle = '#8a8fa0'; ctx.fillRect(A1, B1, 1, 1); } } }
-  for (let k = L + 1; k <= L + 3; k++) { const [X, Y] = at(k, 0); ctx.fillStyle = '#3a2a2a'; ctx.fillRect(X, Y, 1, 1); }
-  const [X, Y] = at(L + 4, 0); ctx.fillStyle = '#c08a3a'; ctx.fillRect(X, Y, 1, 1);
+  for (let k = L + 1; k <= L + 3; k++) { const [X, Y] = at(k, 0); ctx.fillStyle = gold ? '#c01c28' : '#3a2a2a'; ctx.fillRect(X, Y, 1, 1); }   // 표식 쿠나이 = 진홍 손잡이 · 금 고리
+  const [X, Y] = at(L + 4, 0); ctx.fillStyle = gold ? '#ffd060' : '#c08a3a'; ctx.fillRect(X, Y, 1, 1);
 }
 
 // 맞은 몸 떨림: shudder 초 동안 프레임마다 좌우 2px → 1px 로 번갈아 밀림 (실제 시간으로 줄어 타격 멈춤 중에도 떨림)
@@ -710,6 +713,22 @@ function zoomPulse(real, fx0, fy0) {
 }
 // 대시·돌진 손맛 (Celeste·카타나 제로·산나비류에서 흔히 쓰는 것): 출발 순간 2~3프레임 멈춤(예비 동작) → 몸을 움직이는 쪽으로 늘여 튀어 나감
 // → 화면을 가는 쪽으로 툭 → (돌진) 도착하면 짧은 멈춤 + 흔들림 + 부딪힌 면에서 불티
+// 귀보: 표식 쿠나이가 꽂힘 → 진홍·금 불티 · 표식이 풀림 → 작은 불티 · 사라짐(그 자리 세로 섬광) → 나타남(적 등 뒤 터짐 + 지나온 길 줄기)
+G.onSeal = s => { spark(s.x, s.y, -Math.PI / 2, 6, { cols: GWIBO.slice(1), v: 80, g: 0, life: 0.2, drag: 5 }); };
+G.onSealFade = s => { spark(s.x, s.y, -Math.PI / 2, 3, { cols: GWIBO.slice(1, 3), v: 30, g: -20, life: 0.3 }); };
+G.onFlashOut = p => {
+  flashFx({ row: 1, x: p.x, y: p.y - 15, w: 60, life: 0.22 });
+  spark(p.x, p.cy, -Math.PI / 2, 6, { cols: GWIBO.slice(1), v: 120, spread: 3, g: 0, life: 0.18, drag: 6 });
+  sfx('zip');
+};
+G.onFlashIn = (p, x0, y0) => {
+  const dx = p.cx - x0, dy = p.cy - y0, d = Math.hypot(dx, dy);
+  if (d > 12) flashFx({ row: 3, x: (x0 + p.cx) / 2, y: (y0 + p.cy) / 2, w: d * 1.1, ang: Math.atan2(dy, dx), life: 0.3, layer: 'back' });
+  flashFx({ row: 2, x: p.x, y: p.y - 15, w: 70, life: 0.26 });
+  G.flares.push({ x: p.x, y: p.cy, r: 70, col: [255, 190, 120], t: 0.2, glow: 0.25 });
+  shake(3, Math.sign(dx) * 3, 0);
+};
+
 // 대시 시작: 발밑 먼지 뭉치 + 뒤로 튀는 불티 + 출발 방향으로 화면 툭
 G.onDash = p => {
   const [ux, uy] = p.dashDir;
@@ -755,10 +774,19 @@ function drawDebug() {
   for (const k in p.sock || {}) { ctx.fillStyle = '#0ff'; ctx.fillRect(Math.round(p.sock[k][0]), Math.round(p.sock[k][1]), 1, 1); }
 }
 
-// 키보드 조작 표식 (조명 뒤라 어둠 속에서도 또렷): 표식 적 = 가슴 둘레 붉은 꺾쇠, 첫 대상 = 크게 깜빡임
-// 벽력일섬 중엔 남은 표식만 · 적이 없으면 걸 곳(고리는 drawRing 이 밝힘)에 흰 마름모
+// 귀보 표식 (조명 뒤라 어둠 속에서도 또렷): 꽂힌 적 가슴에 삼태극 문양 — 나타나며 그려지고, 두 장을 번갈아 돌다가, 풀리기 직전 깨짐
+function drawSeals(p, cx, cy) {
+  for (const s of p.seals) {
+    if (s.state !== 'stuck') continue;
+    const left = TUNE.sealLife - s.t, f = s.t < 0.08 ? 0 : left < 0.5 ? (Math.floor(G.time * 10) % 2 ? 3 : 2) : 1 + Math.floor(s.t * 3) % 2;
+    const w = s.enemy.kind === 'boss' ? 64 : 44;   // 문양이 칸 높이의 절반쯤 → 몸 위에서 약 14px
+    if (!drawFlashCell(ctx, 0, f, s.x - cx, s.y - cy, w)) { ctx.fillStyle = GWIBO[2]; ctx.fillRect(Math.round(s.x - cx) - 1, Math.round(s.y - cy) - 1, 3, 3); }
+  }
+}
+// 키보드 조작 표식 (조명 뒤라 어둠 속에서도 또렷): F 를 누르면 표식 쿠나이가 갈 적 = 가슴 둘레 붉은 꺾쇠, 첫 대상 = 크게 깜빡임
+// 적이 없으면 걸 곳(고리는 drawRing 이 밝힘)에 흰 마름모
 function drawKbMarks(p, pick, cx, cy) {
-  const pool = p.chain ? [...p.chain.pool].filter(e => !e.dead) : pick?.pool || [];
+  const pool = pick?.pool || [];
   const blink = Math.floor(G.time * 12) % 2;
   for (const e of pool) {
     const first = pick?.first === e, [ex, ey] = chest(e), x = Math.round(ex - cx), y = Math.round(ey - cy);
@@ -809,7 +837,8 @@ function drawHud(p, prev) {
   };
   const help = G.level === 0 && G.time - (G.levelT || 0) < 12 && !G.boss;
   if (CTRL.kb) {
-    if (help && !p.dead) { text('방향키 이동 · Space 점프 · Shift 대시 · Ctrl 베기', W / 2, H - 40, '#c9c1d4', 'center'); text('F 쿠나이: 적 = 벽력일섬 · 없으면 위 대각선에 걸고 스윙', W / 2, H - 22, '#c9c1d4', 'center'); }
+    if (help && !p.dead) { text('방향키 이동 · Space 점프 · Shift 대시 · Ctrl 베기', W / 2, H - 40, '#c9c1d4', 'center'); text('F 쿠나이: 적 = 표식 → F 다시 = 귀보 · 없으면 걸고 스윙', W / 2, H - 22, '#c9c1d4', 'center'); }
+    else if (p.seals.some(s => s.state === 'stuck') && G.level === 0) text('F 다시 = 귀보: 표식 적 등 뒤로 순간이동해 벰', W / 2, H - 22, '#f0c070', 'center');
     else if (p.rope?.tether && G.level === 0 && !G.boss) { text('위·아래 감기 · 좌우 흔들기 · Space·Shift 끊기', W / 2, H - 40, '#c9c1d4', 'center'); text('F 다시 = 쿠나이로 돌진', W / 2, H - 22, '#c9c1d4', 'center'); }
     else if (p.rope?.state === 'stuck' && !p.rope.target && G.level === 0) text('F 다시 = 쿠나이로 돌진', W / 2, H - 22, '#c9c1d4', 'center');
   }

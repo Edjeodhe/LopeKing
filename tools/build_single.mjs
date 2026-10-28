@@ -21,7 +21,7 @@ const IMPORT = /(\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)(['"])\.\/([\w-]+\.js)\2
 })('main.js');
 
 // ---- 그림·데이터 ----
-const assets = new Set(['art/fonts/neodgm.woff2', 'art/fx/fx_slash.png']);
+const assets = new Set(['art/fonts/neodgm.woff2', 'art/fx/fx_slash.png', 'art/fx/fx_flash.png']);
 for (const f of readdirSync('levels')) if (f.endsWith('.json')) assets.add(`levels/${f}`);
 const PARTS = ['head', 'torso', 'hips', 'cape', 'upperArm', 'foreArm', 'thigh', 'shin'];
 for (const [, dir] of mods.get('main.js').matchAll(/loadActorType\('([^']+)'/g)) {

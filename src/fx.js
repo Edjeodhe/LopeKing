@@ -89,13 +89,27 @@ function drawArc(ctx, A, front) {
 // 줄: 0 가로 베기 초승달 · 1 회전 타원 고리 · 2 마무리 큰 초승달 · 3 타격 섬광. 그림 기준점 = 칸 가운데 · 위에서 40% (그림이 그 높이에 있음)
 // { row, x, y(follow 가 있으면 그 몸 기준), w(칸 가로 = 게임 px), ang(라디안, 15° 단위), flip, vflip, life,
 //   layer: 'front' 몸 앞 · 'back' 몸 뒤 · 'split' 위(먼) 반은 몸 뒤 + 아래(가까운) 반은 몸 앞 }
-let sheet = null;
-export async function loadSlashFx() { sheet = await loadSheet('art/fx/fx_slash.png', 4, 4); }
+// 귀보 그림 (art/fx/fx_flash.png, 같은 4×4 칸, sheet: 'flash'): 줄 0 표식(삼태극 문양) · 1 사라짐 · 2 나타남 · 3 순간이동 길(가로 줄기). 기준점 = 칸 가운데
+// 색 = 가면 색 진홍 → 금 (GWIBO). 표식은 몸에 붙어 계속 그려야 해서 drawFlashCell 로 따로 그림
+let sheet = null, flashSheet = null;
+export const GWIBO = ['#5a0c18', '#c01c28', '#f0b040', '#fff4d0'];
+export async function loadSlashFx() {
+  sheet = await loadSheet('art/fx/fx_slash.png', 4, 4);
+  try { flashSheet = await loadSheet('art/fx/fx_flash.png', 4, 4); } catch { flashSheet = null; }   // 없으면 불티만
+}
 export function slashFx(o) { fx.sprites.push({ t: 0, life: 0.2, w: 80, ang: 0, layer: 'front', ramp: [...SMEAR.cols].reverse(), ...o }); }
+export function flashFx(o) { fx.sprites.push({ t: 0, life: 0.25, w: 60, ang: 0, layer: 'front', ramp: GWIBO, sheet: 'flash', py: 0.5, light: [255, 190, 110], ...o }); }
+export function drawFlashCell(ctx, row, f, x, y, w, ang = 0) {
+  if (!flashSheet) return false;
+  const c = pixelFx(flashSheet[row][f], GWIBO, w, false, { ang, py: 0.5 });
+  ctx.drawImage(c, Math.round(x) - c.ax, Math.round(y) - c.ay);
+  return true;
+}
 function drawSprite(ctx, s, back) {
-  if (!sheet || (s.layer !== 'split' && (s.layer === 'back') !== back)) return;
+  const sh = s.sheet === 'flash' ? flashSheet : sheet;
+  if (!sh || (s.layer !== 'split' && (s.layer === 'back') !== back)) return;
   const k = s.t / s.life, f = Math.min(3, Math.floor(k * 4));
-  const c = pixelFx(sheet[s.row][f], s.ramp, s.w, false, { ang: s.ang, flip: s.flip, vflip: s.vflip, py: 0.4 });
+  const c = pixelFx(sh[s.row][f], s.ramp, s.w, false, { ang: s.ang, flip: s.flip, vflip: s.vflip, py: s.py ?? 0.4 });
   const x = Math.round((s.follow?.x ?? 0) + s.x) - c.ax, y = Math.round((s.follow?.y ?? 0) + s.y) - c.ay;
   if (s.layer !== 'split') { ctx.drawImage(c, x, y); return; }
   const h = c.ay, top = !s.vflip;   // 뒤집으면 위·아래 반도 바뀜
@@ -343,6 +357,7 @@ export function fxLights(out, time) {
   const add = (x, y, r, k) => { if (k > 0.05) out.push({ x, y, r, col: FX_LIGHT, k, glow: 0.25 * k }); };
   for (const S of fx.sprites) {
     const k = 1 - S.t / S.life;
+    if (S.light) { if (k > 0.05) out.push({ x: (S.follow?.x ?? 0) + S.x, y: (S.follow?.y ?? 0) + S.y, r: S.w * 0.6, col: S.light, k, glow: 0.3 * k }); continue; }
     add((S.follow?.x ?? 0) + S.x, (S.follow?.y ?? 0) + S.y, S.row === 3 ? S.w * 0.6 : S.w * 0.75, k);
   }
   for (const R of fx.rings) add(R.x, R.y, R.rx * 1.6, 1 - R.t / R.life);
@@ -353,12 +368,12 @@ export function fxLights(out, time) {
 }
 // 새 베기가 시작되면 앞 타의 베기 그림은 바로 사라지는 끝물(체크무늬)로 넘김 — 겹쳐 지저분해지지 않고, 뚝 끊기지도 않게. 타격 섬광(줄 3)은 그대로
 export function fadeSlashFx(rows = [0, 1, 2], arcs = true) {
-  for (const S of fx.sprites) if (rows.includes(S.row)) S.t = Math.max(S.t, S.life * 0.9);
+  for (const S of fx.sprites) if (!S.sheet && rows.includes(S.row)) S.t = Math.max(S.t, S.life * 0.9);
   if (arcs) for (const A of fx.arcs) A.t = Math.max(A.t, A.life * 0.85);
 }
 // 칼이 닿은 순간: 막 생긴 베기 그림을 가장 큰 장(2번째 칸)으로 → 타격 멈춤 화면에 다 그려진 궤적이 찍힘
 export function popSlashFx() {
-  for (const S of fx.sprites) if (S.row < 3 && S.t < S.life * 0.25) S.t = S.life * 0.25;
+  for (const S of fx.sprites) if (!S.sheet && S.row < 3 && S.t < S.life * 0.25) S.t = S.life * 0.25;
   for (const A of fx.arcs) if (A.t < A.dur * 0.85) A.t = A.dur * 0.85;
 }
 
