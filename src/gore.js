@@ -59,7 +59,7 @@ export function killActor(e, hit, kind = pickDeath(hit)) {
     fly(['upper'], chest, waist, dx * 160 * pw, -170 - Math.random() * 60, (Math.random() < 0.5 ? -1 : 1) * (5 + Math.random() * 6), 7);
     topple(['upper'], waist);
     blood(base.ox + waist[0], base.oy + waist[1], ang, 34, 1.4);
-    spark(base.ox + waist[0], base.oy + waist[1], ang, 6, { cols: ['#ffffff', '#ffd0d0'], v: 240, life: 0.12 });
+    spark(base.ox + waist[0], base.oy + waist[1], ang, 6, { cols: ['#ffffff', '#d0ffe0'], v: 240, life: 0.12 });   // 베인 자리 불티 = 주인공 이펙트 색(초록)
   } else if (kind === 'sever') {
     const el = at('nearElbow', chest);
     fly(['nearArm'], el, at('nearShoulder', chest), dx * 120 * pw, -220, (Math.random() < 0.5 ? -1 : 1) * 14, 4);

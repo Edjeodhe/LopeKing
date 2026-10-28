@@ -254,7 +254,7 @@ function comboFx(p, at, t) {
     // 몸이 뛰어올라도 띠가 몸을 따라가 한 덩어리로 이어짐 (예전엔 매 프레임 칼 자리를 이어 붙여 위·아래 두 조각으로 갈라졌음)
     if (at.combo === 2) sweepArc({ follow: p, y: -19, rx: 31, ry: 31, f, vert: true, th: 9, a0: (205 - p.aim) * D, a1: (-5 - p.aim) * D, dur: m.act, life: m.act + 0.17 });
     // 4타: 몸을 감싸며 한 바퀴 반 도는 띠 (먼 반은 몸 뒤, 가까운 반은 몸 앞)
-    if (at.combo === 3) { sweepArc({ follow: p, y: -16, rx: 62, ry: 19, f, th: 7, a0: 178 * D, a1: -370 * D, dur: m.act, life: m.act + 0.12 }); G.flares.push({ x: p.x, y: p.cy, r: 50, col: [255, 200, 200], t: 0.2, glow: 0.1 }); }
+    if (at.combo === 3) { sweepArc({ follow: p, y: -16, rx: 62, ry: 19, f, th: 7, a0: 178 * D, a1: -370 * D, dur: m.act, life: m.act + 0.12 }); G.flares.push({ x: p.x, y: p.cy, r: 50, col: [190, 255, 210], t: 0.2, glow: 0.1 }); }
   }
   // 4타 끝: 겨눈 쪽으로 큰 초승달 + 속도선
   if (at.combo === 3 && at.fx === 1 && t >= m.wind + m.act * 0.7) {
@@ -293,7 +293,7 @@ function stepCombat(dt) {
       const ang = at.combo === 3 ? Math.atan2(e.cy - oy, e.x - ox) : at.ang;   // 회전은 몸 바깥쪽으로 튕김
       const hitInfo = { kind: 'slash', ang, power: fin ? 1.4 : 1, kb: at.exec ? 1 : fin ? 1.4 : 0.3 };
       const contact = [(ox + e.x) / 2, (oy + e.cy) / 2];
-      spark(contact[0], contact[1], ang, fin ? 12 : 8, { cols: at.exec ? SPIRIT_COLS.slice(0, 3) : ['#ffffff', '#ffe0e0', '#ff6060'], v: fin ? 280 : 220, life: 0.14 });
+      spark(contact[0], contact[1], ang, fin ? 12 : 8, { cols: ['#ffffff', '#d0ffe0', '#3ee08a'], v: fin ? 280 : 220, life: 0.14 });
       popSlashFx();
       if (!at.exec) slashFx({ row: 3, x: contact[0], y: contact[1], w: fin ? 56 : 40, life: 0.16 });   // 처형은 혼불 초승달만 (도트 섬광 없이)
       e.damage(G, at.exec ? 1 : m.dmg, hitInfo);
@@ -305,7 +305,7 @@ function stepCombat(dt) {
     if (b.owner !== 'enemy' || !inside(b.x, b.y, 8)) continue;
     const sp = 460;
     b.owner = 'player'; b.vx = Math.cos(at.ang) * sp; b.vy = Math.sin(at.ang) * sp; b.t = 0;
-    spark(b.x, b.y, at.ang, 10, { cols: ['#ffffff', '#fff0a0', '#80e0ff'], v: 200, life: 0.15 });
+    spark(b.x, b.y, at.ang, 10, { cols: ['#ffffff', '#d0ffe0', '#3ee08a'], v: 200, life: 0.15 });
     G.stop = Math.max(G.stop, 0.08); shake(2); sfx('deflect');
   }
 }
@@ -329,13 +329,13 @@ G.zipCut = (p, x0, y0, x1, y1, target) => {
     const t = segBox(x0, y0, dx / L, dy / L, e.x - hw, top, e.x + hw, e.y + 2);
     if (t === null || t > L) continue;
     e.zipHit = p.zipId;
-    spark(e.x, e.cy, ang, 10, { cols: ['#ffffff', '#ffd0d0', '#ff4040'], v: 240, life: 0.14 });
+    spark(e.x, e.cy, ang, 10, { cols: ['#ffffff', '#d0ffe0', '#3ee08a'], v: 240, life: 0.14 });
     cutLine(e.x - Math.cos(ang) * 30, e.cy - Math.sin(ang) * 30, e.x + Math.cos(ang) * 30, e.cy + Math.sin(ang) * 30);
     e.damage(G, e.kind === 'boss' ? 2 : 99, { kind: 'slash', ang, power: 1.2 });
     G.stop = Math.max(G.stop, 0.05);
   }
   // 돌진 길의 총알도 베어 냄
-  for (const b of G.bullets) if (b.owner === 'enemy' && Math.abs((b.x - x0) * dy - (b.y - y0) * dx) / L < 8 && (b.x - x0) * dx + (b.y - y0) * dy >= -4 && (b.x - x0) * dx + (b.y - y0) * dy <= L * L + 4) { b.dead = true; spark(b.x, b.y, ang, 6, { cols: ['#ffffff', '#fff0a0'], v: 120 }); sfx('deflect'); }
+  for (const b of G.bullets) if (b.owner === 'enemy' && Math.abs((b.x - x0) * dy - (b.y - y0) * dx) / L < 8 && (b.x - x0) * dx + (b.y - y0) * dy >= -4 && (b.x - x0) * dx + (b.y - y0) * dy <= L * L + 4) { b.dead = true; spark(b.x, b.y, ang, 6, { cols: ['#ffffff', '#d0ffe0'], v: 120 }); sfx('deflect'); }
 };
 // 보스 처치: 참수 + 사지 분산, 긴 슬로모션, 문 열림 → 잠시 뒤 레벨 끝
 G.killBoss = (b, hit) => {
@@ -682,7 +682,7 @@ function shudderOf(o, real) {
 // 대시·돌진 중엔 몸 뒤로 가는 속도선 + 몸을 움직이는 쪽으로 늘임(stretch), 끝나는 순간 화면이 살짝 당겨졌다 놓임(zoomPulse) → 속도감
 let moveKind = null;
 function afterimages(p, px, py, real) {
-  const kind = p.rope?.state === 'zip' ? 'zip' : p.dashT > 0 ? 'dash' : p.flipT > TUNE.flipT * 0.5 && !p.onGround ? 'jump' : null;
+  const kind = p.rope?.state === 'zip' || p.flash?.hop ? 'zip' : p.dashT > 0 ? 'dash' : p.flipT > TUNE.flipT * 0.5 && !p.onGround ? 'jump' : null;
   const sp = Math.hypot(p.vx, p.vy) || 1, ux = p.vx / sp, uy = p.vy / sp;
   moveTrail(p.cx, p.cy, kind, real);
   // 늘임 세기: 돌진 중 1, 대시는 처음이 가장 세고 감속하며 줄어듦, 이단 점프는 막 뛸 때 0.5 에서 줄어듦, 끝나면 빠르게 원래 모양으로
@@ -711,21 +711,40 @@ function zoomPulse(real, fx0, fy0) {
 }
 // 대시·돌진 손맛 (Celeste·카타나 제로·산나비류에서 흔히 쓰는 것): 출발 순간 2~3프레임 멈춤(예비 동작) → 몸을 움직이는 쪽으로 늘여 튀어 나감
 // → 화면을 가는 쪽으로 툭 → (돌진) 도착하면 짧은 멈춤 + 흔들림 + 부딪힌 면에서 불티
-// 귀보 (초록 혼불, fx.js spiritFx — 발로란트 도깨비 트레일러 색): 표식 쿠나이가 꽂힘 → 초록 불티 · 표식이 풀림 → 작은 불티 위로
-// 사라짐 = 선 자리에서 혼불 기둥이 피어올라 흩어짐 · 나타남 = 적 등 뒤 발밑에 고리 + 불꽃 잎, 지나온 길엔 부드러운 빛 줄기
+// 귀보 (초록 혼불, 젠이츠 벽력일섬처럼 '긋고 지나감'): 표식 쿠나이가 꽂힘 → 초록 불티 · 표식이 풀림 → 작은 불티 위로
+// 한 줄 시작 = 출발 자리에 혼불 기둥 + 가는 길 전체에 빛 줄기(오래 남음) + 짧은 멈춤 · 적을 지남 = 그 적 몸을 가로지르는 칼 자국 + 불티
+// 연쇄 끝 → hopFinish 초 뒤 그어진 적이 한꺼번에 베임: 적마다 혼불 초승달 + 피·고어 + 긴 슬로모션
 G.onSeal = s => { spark(s.x, s.y, -Math.PI / 2, 6, { cols: SPIRIT_COLS.slice(0, 3), v: 80, g: 0, life: 0.2, drag: 5 }); };
 G.onSealFade = s => { spark(s.x, s.y, -Math.PI / 2, 3, { cols: SPIRIT_COLS.slice(1, 3), v: 30, g: -20, life: 0.3 }); };
-G.onFlashOut = p => {
-  spiritFx({ row: 1, x: p.x, y: p.y + 2, py: 0.95, w: 58, life: 0.34 });
-  spark(p.x, p.cy, -Math.PI / 2, 5, { cols: SPIRIT_COLS.slice(1, 3), v: 70, spread: 1.5, g: -60, life: 0.3, drag: 3 });
+G.onHopStart = (p, h, x1, y1) => {
+  G.stop = Math.max(G.stop, 0.03);
+  spiritFx({ row: 1, x: p.x, y: p.y + 2, py: 0.95, w: 50, life: 0.3, a: 0.8 });
+  spiritFx({ streak: [h.x0, h.y0, x1, y1], life: 0.55 });
+  spark(p.cx, p.cy, Math.atan2(-h.uy, -h.ux), 6, { cols: SPIRIT_COLS.slice(0, 3), v: 160, g: 0, life: 0.14, drag: 6 });
+  p.str = 1; p.strDir = [h.ux, h.uy];
+  shake(2, h.ux * 3, h.uy * 3);
   sfx('zip');
 };
-G.onFlashIn = (p, x0, y0) => {
-  const dx = p.cx - x0, dy = p.cy - y0, d = Math.hypot(dx, dy);
-  if (d > 12) spiritFx({ streak: [x0, y0, p.cx, p.cy], life: 0.28 });
-  spiritFx({ row: 2, x: p.x, y: p.y + 1, py: 0.7, w: 84, life: 0.38 });
-  G.flares.push({ x: p.x, y: p.cy, r: 70, col: [140, 255, 180], t: 0.2, glow: 0.25 });
-  shake(3, Math.sign(dx) * 3, 0);
+G.onHopCut = (p, h) => {
+  const e = h.e, ang = Math.atan2(h.uy, h.ux), ey = e.y - e.h / 2;
+  cutLine(e.x - Math.cos(ang) * 22, ey - Math.sin(ang) * 22, e.x + Math.cos(ang) * 22, ey + Math.sin(ang) * 22);
+  spark(e.x, ey, ang, 8, { cols: SPIRIT_COLS.slice(0, 3), v: 220, life: 0.14 });
+  G.stop = Math.max(G.stop, 0.035);
+  shake(2.5, Math.cos(ang) * 3, Math.sin(ang) * 3);
+  sfx('slash');
+};
+G.onChainFinish = (p, list) => {
+  for (const { e, ang } of list) {
+    if (e.dead) continue;
+    const hitInfo = { kind: 'exec', ang, power: 1.3 };
+    if (e.kind === 'boss') e.damage(G, 4, hitInfo); else G.killEnemy(e, hitInfo);
+    spiritFx({ row: 3, x: e.x, y: e.y - e.h / 2, w: 84, ang: Math.max(-0.9, Math.min(0.9, Math.cos(ang) < 0 ? ang - Math.PI : ang)), flip: Math.cos(ang) < 0, life: 0.34 });
+  }
+  flash('#e8fff0', 0.04);
+  G.flares.push({ x: p.x, y: p.cy, r: 90, col: [170, 255, 200], t: 0.3, glow: 0.18 });
+  G.stop = Math.max(G.stop, 0.08); G.slow = 0.4; G.slowScale = 0.3;
+  shake(5);
+  sfx('exec');
 };
 
 // 대시 시작: 발밑 먼지 뭉치 + 뒤로 튀는 불티 + 출발 방향으로 화면 툭
@@ -733,14 +752,14 @@ G.onDash = p => {
   const [ux, uy] = p.dashDir;
   G.stop = Math.max(G.stop, 0.035);
   dust(p.x, p.y, -Math.sign(ux || p.facing), 8);
-  spark(p.x, p.cy, Math.atan2(-uy, -ux), 6, { cols: ['#ffffff', '#ff8090'], v: 140, g: 0, life: 0.14, drag: 6 });
+  spark(p.x, p.cy, Math.atan2(-uy, -ux), 6, { cols: ['#ffffff', '#5ae8b0'], v: 140, g: 0, life: 0.14, drag: 6 });
   shake(1.5, ux * 3, uy * 3);
 };
 // 쿠나이 돌진 시작: 잠깐 멈췄다가 튀어 나감, 뒤로 불티, 가는 쪽으로 화면 툭
 G.onZip = (p, ux, uy) => {
   G.stop = Math.max(G.stop, 0.045);
   p.str = 1; p.strDir = [ux, uy];
-  spark(p.cx, p.cy, Math.atan2(-uy, -ux), 8, { cols: ['#ffffff', '#ff4a5a'], v: 180, g: 0, life: 0.16, drag: 7 });
+  spark(p.cx, p.cy, Math.atan2(-uy, -ux), 8, { cols: ['#ffffff', '#3ef08a'], v: 180, g: 0, life: 0.16, drag: 7 });
   if (p.onGround) dust(p.x, p.y, -Math.sign(ux || p.facing), 6);
   shake(2, ux * 4, uy * 4);
 };
@@ -748,13 +767,13 @@ G.onZip = (p, ux, uy) => {
 G.onZipEnd = (p, ux, uy, r) => {
   G.stop = Math.max(G.stop, 0.05);
   shake(3, ux * 4, uy * 4);
-  spark(r.x, r.y, Math.atan2(-uy, -ux), 10, { cols: ['#ffffff', '#ffd0d0', '#ff4a5a'], v: 200, g: 300, life: 0.22, drag: 4 });
+  spark(r.x, r.y, Math.atan2(-uy, -ux), 10, { cols: ['#ffffff', '#d0ffe0', '#3ee08a'], v: 200, g: 300, life: 0.22, drag: 4 });
   for (let i = 0; i < 5; i++) { const a = Math.atan2(-uy, -ux) + (i - 2) * 0.45; speedLine(r.x, r.y, Math.cos(a), Math.sin(a), 6 + Math.random() * 6); }
 };
 // 더블 점프: 대시처럼 출발 순간 아주 짧게 멈췄다 튀어 오름 + 발밑에서 공기가 아래·옆으로 터짐 (짧은 속도선 + 먼지 + 남보라 불티)
 G.onDoubleJump = p => {
   G.stop = Math.max(G.stop, 0.025);
-  spark(p.x, p.y, Math.PI / 2, 6, { cols: ['#ffffff', '#9a8aff'], v: 130, g: 0, life: 0.14, drag: 6 });
+  spark(p.x, p.y, Math.PI / 2, 6, { cols: ['#ffffff', '#8ae880'], v: 130, g: 0, life: 0.14, drag: 6 });
   shake(1, 0, 2);
   for (let i = 0; i < 6; i++) { const a = Math.PI / 2 + (i - 2.5) * 0.35; speedLine(p.x + Math.cos(a) * 3, p.y + 1, Math.cos(a), Math.sin(a), 8 + Math.random() * 6); }
   dust(p.x - 3, p.y, -1, 4); dust(p.x + 3, p.y, 1, 4);
@@ -802,7 +821,7 @@ function drawEye(p, cx, cy) {
   ctx.fillStyle = '#5cffaa'; ctx.fillRect(x - f, y, 1, 1);
   ctx.fillStyle = '#eafff2'; ctx.fillRect(x, y, 1, 1);
 }
-// 키보드 조작 표식 (조명 뒤라 어둠 속에서도 또렷): F 를 누르면 표식 쿠나이가 갈 적 = 가슴 둘레 붉은 꺾쇠, 첫 대상 = 크게 깜빡임
+// 키보드 조작 표식 (조명 뒤라 어둠 속에서도 또렷): F 를 누르면 표식 쿠나이가 갈 적 = 가슴 둘레 초록 꺾쇠, 첫 대상 = 크게 깜빡임
 // 적이 없으면 걸 곳(고리는 drawRing 이 밝힘)에 흰 마름모
 function drawKbMarks(p, pick, cx, cy) {
   const pool = pick?.pool || [];
@@ -818,7 +837,7 @@ function drawKbMarks(p, pick, cx, cy) {
       }
     };
     corner(PAL.ink, 1);
-    corner(first ? (blink ? '#ffffff' : '#ff4040') : '#c02030', 0);
+    corner(first ? (blink ? '#ffffff' : '#4ef0a0') : '#1fa060', 0);   // 쿠나이 표식이 갈 적 = 초록 꺾쇠
   }
   const a = pick?.anchor;
   if (a && !a.ring && blink) {
@@ -856,14 +875,14 @@ function drawHud(p, prev) {
   };
   const help = G.level === 0 && G.time - (G.levelT || 0) < 12 && !G.boss;
   if (CTRL.kb) {
-    if (help && !p.dead) { text('방향키 이동 · Space 점프 · Shift 대시 · Ctrl 베기', W / 2, H - 40, '#c9c1d4', 'center'); text('F 쿠나이: 적 = 표식 → F 다시 = 귀보 · 없으면 걸고 스윙', W / 2, H - 22, '#c9c1d4', 'center'); }
-    else if (p.seals.some(s => s.state === 'stuck') && G.level === 0) text('F 다시 = 귀보: 표식 적 등 뒤로 순간이동해 벰', W / 2, H - 22, '#8af0b8', 'center');
-    else if (p.rope?.tether && G.level === 0 && !G.boss) { text('위·아래 감기 · 좌우 흔들기 · Space·Shift 끊기', W / 2, H - 40, '#c9c1d4', 'center'); text('F 다시 = 쿠나이로 돌진', W / 2, H - 22, '#c9c1d4', 'center'); }
-    else if (p.rope?.state === 'stuck' && !p.rope.target && G.level === 0) text('F 다시 = 쿠나이로 돌진', W / 2, H - 22, '#c9c1d4', 'center');
+    if (help && !p.dead) { text('방향키 이동 · Space 점프 · Shift 대시 · Ctrl 베기', W / 2, H - 40, '#c9c1d4', 'center'); text('F 로프: 걸고 스윙 · 적이 가까우면 쿠나이 표식 → F 다시 = 귀보', W / 2, H - 22, '#c9c1d4', 'center'); }
+    else if (p.seals.some(s => s.state === 'stuck') && G.level === 0) text('F 다시 = 귀보: 표식 찍힌 적을 연달아 그어 벰', W / 2, H - 22, '#8af0b8', 'center');
+    else if (p.rope?.tether && G.level === 0 && !G.boss) { text('위·아래 감기 · 좌우 흔들기 · Space·Shift 끊기', W / 2, H - 40, '#c9c1d4', 'center'); text('F 다시 = 로프로 돌진', W / 2, H - 22, '#c9c1d4', 'center'); }
+    else if (p.rope?.state === 'stuck' && !p.rope.target && G.level === 0) text('F 다시 = 로프로 돌진', W / 2, H - 22, '#c9c1d4', 'center');
   }
-  else if (help && !p.dead) { text('A/D 이동 · Space 점프 · Shift 대시 · 좌클릭 베기', W / 2, H - 40, '#c9c1d4', 'center'); text('우클릭 쿠나이 (톡: 꽂기 · 꾹: 스윙)', W / 2, H - 22, '#c9c1d4', 'center'); }
-  else if (p.rope?.tether && G.level === 0 && !G.boss) { text('W/S 감기 · A/D 흔들기 · Space·Shift 끊기', W / 2, H - 40, '#c9c1d4', 'center'); text('우클릭 다시(Shift) = 쿠나이로 돌진', W / 2, H - 22, '#c9c1d4', 'center'); }
-  else if (p.rope?.state === 'stuck' && G.level === 0) text('우클릭 다시(Shift) = 쿠나이로 돌진', W / 2, H - 22, '#c9c1d4', 'center');
+  else if (help && !p.dead) { text('A/D 이동 · Space 점프 · Shift 대시 · 좌클릭 베기', W / 2, H - 40, '#c9c1d4', 'center'); text('우클릭 로프 (톡: 꽂기 · 꾹: 스윙)', W / 2, H - 22, '#c9c1d4', 'center'); }
+  else if (p.rope?.tether && G.level === 0 && !G.boss) { text('W/S 감기 · A/D 흔들기 · Space·Shift 끊기', W / 2, H - 40, '#c9c1d4', 'center'); text('우클릭 다시 = 로프로 돌진', W / 2, H - 22, '#c9c1d4', 'center'); }
+  else if (p.rope?.state === 'stuck' && G.level === 0) text('우클릭 다시 = 로프로 돌진', W / 2, H - 22, '#c9c1d4', 'center');
   if (p.dead && deathT > 0.8) text('쓰러졌다', W / 2, H / 2 - 8, BLOOD[3], 'center');
   if (G.msg && (G.msg.t < 2.8 || G.clear)) text(G.msg.text, W / 2, G.msg.sub ? 24 : H / 2 - 30, G.msg.sub ? '#e8e0f0' : '#f7cf6d', 'center');
   text(CTRL.kb ? '키보드 · Tab' : '마우스 · Tab', W - 4, H - 14, '#5a5470', 'right');

@@ -20,7 +20,7 @@ export function shake(a, kx = 0, ky = 0) { cam.shake = Math.max(cam.shake, a); c
 
 // ---------- 베기 이펙트 색 ----------
 // 칼 궤적 띠·고리 공용 4단: 흰 심 → 밝음 → 본색 → 어둠 (칼 궤적은 몸을 따라가는 띠 sweepArc 로 그림)
-export const SMEAR = { life: 0.12, inner: 0.35, cols: ['#ffffff', '#ffd0d0', '#e04048', '#701020'] };
+export const SMEAR = { life: 0.12, inner: 0.35, cols: ['#ffffff', '#d0ffe0', '#3ee08a', '#126a40'] };   // 주인공 이펙트 색 = 초록 (흰 심 → 민트 → 초록 → 짙은 초록)
 
 // ---------- 몸을 감싸는 고리 (이펙트 안에 캐릭터가 서 있게) ----------
 // 납작한 타원 고리: 위쪽(먼 쪽) 반은 캐릭터 뒤에, 아래쪽(가까운 쪽) 반은 캐릭터 앞에 그린다 → 고리 안에 몸이 들어간 것처럼 보임
@@ -222,7 +222,7 @@ function drawCuts(ctx) {
       if (sAlong < 0 || sAlong > L) continue;
       const w = Math.max(0.5, (1 - Math.abs(sAlong / L - 0.5) * 2) * 3 * (1 - k));
       if (o > w) continue;
-      ctx.fillStyle = o < w * 0.4 ? '#ffffff' : o < w * 0.8 ? '#ff6a6a' : '#9a1a22';
+      ctx.fillStyle = o < w * 0.4 ? '#ffffff' : o < w * 0.8 ? '#6affa8' : '#1a7a48';
       ctx.fillRect(X, Y, 1, 1);
     }
   }
@@ -267,11 +267,11 @@ function drawGhosts(ctx) {
 // 겉 진홍 → 속 붉음 → 심 흰색 세 겹, 도트 칸마다 칠함 (반투명 없음). 길이는 최대 TRAIL.max px, 넘는 꼬리는 잘라 냄.
 // 돌진이 끝나면 머리는 계속 몸에 붙인 채 꼬리 쪽부터 빠르게 몸으로 빨려 들어가며 가늘어져 사라짐
 const TRAIL = { max: 150, w: 6, tail: 0.16 };
-// [색, 굵기 비율] 바깥부터. 돌진 = 진홍·흰 심, 대시 = 보라·자홍·옅은 분홍 심 (예전 대시 잔상 색)
+// [색, 굵기 비율] 바깥부터
 const TRAIL_COLS = {
-  zip: [['#9a1a22', 1], ['#ff4a5a', 0.72], ['#ffffff', 0.34]],
-  dash: [['#5a1a8a', 1], ['#e0306a', 0.72], ['#ffd0dc', 0.34]],
-  jump: [['#3a2a7a', 1], ['#7a6ae0', 0.72], ['#e4e0ff', 0.34]],   // 이단 점프 = 대시와 같은 띠, 남보라·흰 심
+  zip: [['#106a3a', 1], ['#3ef08a', 0.72], ['#ffffff', 0.34]],
+  dash: [['#0c5a44', 1], ['#2ad89a', 0.72], ['#d0ffe8', 0.34]],
+  jump: [['#1a6a30', 1], ['#6ae070', 0.72], ['#e8ffe0', 0.34]],   // 이단 점프 = 대시와 같은 띠. 셋 다 초록 (돌진 = 초록·흰 심, 대시 = 청록, 이단 점프 = 연두)
 };
 function trailLen(pts) { let L = 0; for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y); return L; }
 // 몸 쪽(끝)에서 L 만큼만 남기고 꼬리를 자름 (자르는 자리는 사이를 이어 붙임)
@@ -369,7 +369,7 @@ export function updateFlash(real) {
 export function drawFxBack(ctx, time) {
   for (const l of fx.lines) {
     const k = l.t / l.life, L = l.len * (1 - k);
-    ctx.fillStyle = k > 0.5 ? '#8a86b0' : '#e8e4ff';
+    ctx.fillStyle = k > 0.5 ? '#4a8a6a' : '#dcffe8';
     for (let s = 0; s < L; s++) ctx.fillRect(Math.round(l.x + l.dx * (s + k * 14)), Math.round(l.y + l.dy * (s + k * 14)), 1, 1);
   }
 }
@@ -405,7 +405,7 @@ export function drawFxGlow(ctx, time, cam, W, H, occ) {
   ctx.restore();
 }
 // 이펙트가 내는 빛: 베기 그림·고리·궤적·관통 자국 둘레를 비춤 (조명 패스에 넣음). 막 생겼을 때 가장 밝고 사라지며 약해짐
-const FX_LIGHT = [255, 150, 160];
+const FX_LIGHT = [150, 255, 190];
 export function fxLights(out, time) {
   const add = (x, y, r, k) => { if (k > 0.05) out.push({ x, y, r, col: FX_LIGHT, k, glow: 0.25 * k }); };
   for (const S of fx.sprites) {

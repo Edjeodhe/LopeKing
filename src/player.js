@@ -1,17 +1,18 @@
-// 주인공: 이동(가속·코요테 타임·점프 버퍼·벽 타기) · 대시 · 로프 쿠나이 · 마우스 방향 베기
-// 로프 쿠나이 (레퍼런스: INARI — 던진 자리로 즉시 몸을 던지는 이동+전투):
-//   우클릭 톡 = 붉은 실 달린 쿠나이를 마우스 쪽으로 던짐 → 벽·천장·바닥·고리·적에 꽂힘
+// 주인공: 이동(가속·코요테 타임·점프 버퍼·벽 타기) · 대시 · 로프 · 쿠나이(귀보) · 마우스 방향 베기
+// 이름 (사용자 정함): '로프' = 붉은 실 달린 갈고리를 던져 걸고 스윙·돌진 · '쿠나이' = 적에게 표식을 박고 연쇄로 그어 베는 것(귀보, 키보드 조작)
+// 로프 (레퍼런스: INARI — 던진 자리로 즉시 몸을 던지는 이동+전투):
+//   우클릭 톡 = 붉은 실 달린 로프 끝(쇠촉)을 마우스 쪽으로 던짐 → 벽·천장·바닥·고리·적에 꽂힘
 //   꽂힌 뒤 다시 우클릭 = 그 자리로 순간 돌진 — 지나가는 길의 적을 베고 관통, 적에 꽂혔으면 처형
 //   우클릭 꾹 누른 채 꽂히면 = 실이 팽팽해져 진자 스윙 (W/S 감기, A/D 흔들기) — 떼면 실만 느슨해지고 쿠나이는 남음
 //   스윙 중 Space(뛰어내림)·Shift(대시) = 실을 끊음: 쿠나이가 빠져 손으로 돌아옴 (두 조작 방식 다)
 //   벽에 도착하면 잠깐 매달림(벽 점프·다음 투척으로 연쇄), 천장이면 잠깐 매달렸다 떨어짐
 // 대시(Shift) = 방향키 8방향, 공중 1회 · 더블 점프 = 공중 1회 (벽·천장에 매달리거나 쿠나이 돌진이 끝나면 다시 채워짐)
 // 키보드만 조작 (CTRL.kb, Tab 으로 바꿈) — 조준 대신 고르기 (main.js G.markedEnemies · G.chainNext · G.anchorPick):
-//   방향키 이동 · Ctrl 베기 = 방향키 쪽 (안 누르면 보는 쪽) · F 쿠나이 (마우스 버튼은 안 받음):
-//   둘레에 적이 있으면 = 귀보(鬼步, 도깨비 걸음 — 참고: 아칼리 E 의 표식 → 다시 눌러 날아듦): 실 없는 표식 쿠나이를 범위 안 적마다 던져 꽂음
-//     (표식 = 삼태극 문양, sealLife 초) → F 다시 = 겨눈 쪽 표식 적부터 → 가까운 표식 적 순으로, 도깨비처럼 사라졌다 그 적 등 뒤에 나타나
-//     처형을 이어 감 (Space·Shift 로 끊음). 날아가는 중에 F 다시 = 꽂히자마자. 이펙트 = 진홍·금 (가면 색, art/fx/fx_flash.png)
-//   적이 없으면 = 방향키 쪽 걸 곳(안 누르면 보는 쪽 위 대각선)에 쿠나이가 반드시 꽂힘 → 몸보다 위면 바로 스윙. F 다시 = 돌진 · Space·Shift = 실 끊기
+//   방향키 이동 · Ctrl 베기 = 방향키 쪽 (안 누르면 보는 쪽) · F = 쿠나이 또는 로프 (마우스 버튼은 안 받음):
+//   둘레에 적이 있으면 = 쿠나이 → 귀보(鬼步, 참고: 아칼리 E 의 표식 → 다시 눌러 날아듦 · 젠이츠 벽력일섬의 긋고 지나감): 실 없는 표식 쿠나이를
+//     범위 안 적마다 던져 꽂음 (표식 = 삼태극 문양, sealLife 초) → F 다시 = 겨눈 쪽 표식 적부터 → 가까운 표식 적 순으로 번개처럼 꿰뚫고 지나가며
+//     한 줄씩 그음(그어진 적은 멈춤) → 마지막 적을 지나 잠깐 뒤 그어진 적이 한꺼번에 베임 (Space·Shift 로 끊어도 그은 적은 베임). 이펙트 = 초록 혼불
+//   적이 없으면 = 로프: 방향키 쪽 걸 곳(안 누르면 보는 쪽 위 대각선)에 반드시 꽂힘 → 몸보다 위면 바로 스윙. F 다시 = 돌진 · Space·Shift = 실 끊기
 // 물리는 고정 스텝(120Hz)으로 돈다 (main.js). 수치는 게임 px · 초 단위.
 import { input, held } from './input.js';
 import * as A from './anim.js';
@@ -28,7 +29,8 @@ export const TUNE = {
   zip: 1050, zipCd: 0.12, zipKeep: 0.35, cling: 0.6, ceilHang: 0.35, leash: 400,
   atkLunge: 190, riseHop: 150,
   hp: 5, iframes: 1.0,
-  sealMax: 5, sealLife: 5, flashGap: 0.1, flashCd: 0.3,   // 귀보: 표식 쿠나이 수·남는 시간 · 처형 → 다음 순간이동까지 · 끝난 뒤 다시 쓰기까지
+  sealMax: 5, sealLife: 5, flashGap: 0.06, flashCd: 0.3,   // 귀보: 표식 쿠나이 수·남는 시간 · 한 번 긋고 다음까지 · 끝난 뒤 다시 쓰기까지
+  hop: 2600, hopPast: 26, hopFinish: 0.16,   // 귀보 관통 속도 · 적 너머로 지나가는 거리 · 마지막에 지나간 뒤 한꺼번에 베이기까지
 };
 // 조작 방식: kb = 키보드만 · false = 마우스 조준 (main.js 가 Tab 으로 바꾸고 기억함)
 export const CTRL = { kb: true };
@@ -111,11 +113,13 @@ export class Player {
     }
     if (this.ropeRel) { this.ropeRel = false; if (!CTRL.kb) this.releaseRope(); }   // 키보드는 Space 로 놓음
     this.stepSeals(dt, G);
-    // 귀보: 처형하고 잠깐 뒤 다음 표식 적으로 (지금 자리에서 가장 가까운 것). 남은 표식이 없으면 끝
-    if (this.flash) {
+    // 귀보: 한 번 긋고 잠깐 뒤 다음 표식 적으로 (지금 자리에서 가장 가까운 것). 남은 표식이 없으면 끝
+    if (this.flash && !this.flash.hop) {
       this.flash.t -= dt;
-      if (this.flash.t <= 0) { const s = this.nextSeal(); if (s) this.flashTo(G, s); else this.endFlash(); }
+      if (this.flash.t <= 0) { const s = this.nextSeal(); if (s) this.hopTo(G, s); else this.endFlash(); }
     }
+    // 그어진 적이 한꺼번에 베임 (마지막에 지나가고 hopFinish 초 뒤)
+    if (this.cutWait) { this.cutWait.t -= dt; if (this.cutWait.t <= 0) { G.onChainFinish?.(this, this.cutWait.list); this.cutWait = null; } }
     if (this.rope) this.stepRope(dt, G, dir);
     const rope = this.rope;
 
@@ -148,7 +152,7 @@ export class Player {
       this.startAttack(G, false);
     }
 
-    const zipping = this.rope?.state === 'zip';
+    const zipping = this.rope?.state === 'zip', hopping = !!this.flash?.hop;
     const hooked = this.rope?.state === 'stuck' && this.rope.tether;
     // 벽·천장에 잠깐 매달림: 중력 없이 버팀 (점프·투척·대시로 이어감)
     if (this.cling > 0) {
@@ -159,7 +163,11 @@ export class Player {
     if (this.ceil > 0) { this.ceil -= dt; this.vx *= Math.exp(-dt * 10); this.vy = 0; if (this.ceil <= 0) this.vy = 20; }
     if (this.cling <= 0) this.pole = null;
     const holding = this.cling > 0 || this.ceil > 0;
-    if (zipping || holding) { /* 돌진·매달림 중엔 이동 입력·중력 없음 */ }
+    if (hopping) {
+      // 귀보 관통: 곧게 아주 빠르게 (남은 거리만큼만), 중력 없음
+      const h = this.flash.hop, v = Math.min(TUNE.hop, h.left / dt);
+      this.vx = h.ux * v; this.vy = h.uy * v;
+    } else if (zipping || holding) { /* 돌진·매달림 중엔 이동 입력·중력 없음 */ }
     else if (this.dashT > 0) {
       // 대시 중: 처음에 확 튀어 나가 점점 느려짐 (dash → dashEnd, 감속 곡선) → 잔상 간격도 넓다가 촘촘해짐. 중력 없음
       this.dashT -= dt;
@@ -191,7 +199,7 @@ export class Player {
     // ---- 점프 ----
     if (this.onGround || this.cling > 0 || this.ceil > 0) { this.airJump = TUNE.airJumps; this.airDash = true; }
     if (this.onGround) { this.coyote = TUNE.coyote; this.airAtk = true; } else this.coyote -= dt;
-    if (this.buf > 0 && this.flash) this.endFlash();   // 점프로 귀보 연쇄를 끊음
+    if (this.buf > 0 && this.flash && !hopping) this.endFlash();   // 점프로 귀보 연쇄를 끊음 (긋는 중엔 그 한 줄은 마저)
     if (this.buf > 0 && !zipping) {
       if (hooked) {
         // 로프에서 뛰어내림: 실을 끊고 지금 탄력 + 위로
@@ -239,6 +247,11 @@ export class Player {
     if (!this.onGround && this.vy === 0 && vy0 > 0) this.onGround = W.standing(this);
     if (this.rope?.state === 'stuck' && this.rope.tether) this.constrainRope(G);
     if (this.rope?.state === 'zip') this.zipMoved(G, x0, y0);
+    if (this.flash?.hop) {
+      const h = this.flash.hop, moved = Math.hypot(this.cx - x0, this.cy - y0);
+      h.left -= moved; h.t += dt;
+      if (h.left <= 0.5 || (moved < 0.5 && h.t > 0.02) || h.t > 0.3) this.endHop(G);   // 다 갔거나 벽에 막힘
+    }
     if (this.onGround) { this.cling = 0; this.ceil = 0; }
     this.wall = W.wallAt(this, -1) ? -1 : W.wallAt(this, 1) ? 1 : 0;
     if (!wasGround && this.onGround && vy0 > 250) { dust(this.x - 4, this.y, -1, 4); dust(this.x + 4, this.y, 1, 4); this.landT = 0.12; G.sfx?.('land'); }
@@ -356,31 +369,38 @@ export class Player {
     // 겨눈 쪽: 키보드 조준(방향키, 안 누르면 보는 쪽)
     const s = this.nextSeal(true);
     if (!s) return;
-    this.flash = { t: 0 };
+    this.flash = { t: 0, hop: null, cut: [] };
     this.rope = null; this.zipBuf = 0;
-    this.flashTo(G, s);
+    this.hopTo(G, s);
   }
-  // 순간이동: 지금 자리에서 사라지고 표식 적의 등 뒤(온 쪽 반대편)에 나타나 바로 처형
-  flashTo(G, s) {
-    const W = G.world, e = s.enemy, x0 = this.cx, y0 = this.cy;
-    const side = Math.sign(e.x - this.x) || this.facing;
-    G.onFlashOut?.(this);
-    this.x = e.x; this.y = e.y; this.vx = this.vy = 0;
-    W.move(this, side * (e.w / 2 + this.w / 2 + 4), 0);   // 적 발밑에서 등 뒤로 (벽이면 벽 앞까지)
-    this.onGround = W.standing(this);
+  // 벽력일섬식 관통: 표식 적을 꿰뚫고 그 너머(hopPast)까지 한 줄로 그으며 날아감 (아주 빠름, 무적). 적 발 높이 기준이라 같은 땅이면 곧게 옆으로
+  hopTo(G, s) {
+    const e = s.enemy, side = Math.sign(e.x - this.x) || this.facing;
+    const x1 = e.x + side * (e.w / 2 + TUNE.hopPast), y1 = e.y;
+    const dx = x1 - this.x, dy = y1 - this.y, L = Math.hypot(dx, dy) || 1;
     this.seals = this.seals.filter(o => o !== s);
-    this.cling = this.ceil = 0; this.pole = null; this.dashT = 0; this.atkT = -1; this.flipT = 0;
-    this.facing = -side; this.inv = Math.max(this.inv, 0.3);
-    this.aimRad = Math.atan2(e.y - e.h / 2 - this.cy, e.x - this.x);
-    G.onFlashIn?.(this, x0, y0);
-    this.startAttack(G, e);
-    if (!this.onGround) this.vy = Math.min(this.vy, -60);   // 공중이면 처형하며 살짝 뜸
+    this.flash.hop = { e, x0: this.cx, y0: this.cy, ux: dx / L, uy: dy / L, left: L, t: 0 };
+    this.cling = this.ceil = 0; this.pole = null; this.dashT = 0; this.atkT = -1; this.flipT = 0; this.rope = null;
+    this.facing = side; this.inv = Math.max(this.inv, 0.4);
+    this.aimRad = Math.atan2(dy, dx);
+    if (e.stun !== undefined) e.stun = Math.max(e.stun, 3);   // 그어진 적은 베일 때까지 멈춤 (보스는 안 멈춤)
+    G.onHopStart?.(this, this.flash.hop, x1, y1 - this.h * 0.7);
+  }
+  // 한 줄 다 그음: 그은 적을 '베일 적'에 넣고, 탄력 조금 남기고 다음 줄까지 잠깐
+  endHop(G) {
+    const h = this.flash.hop;
+    this.flash.hop = null;
+    if (!h.e.dead) this.flash.cut.push({ e: h.e, ang: Math.atan2(h.uy, h.ux) });
+    G.onHopCut?.(this, h);
+    this.vx = h.ux * 160; this.vy = Math.min(h.uy * 160, -40);
     this.airDash = true; this.airAtk = true; this.airJump = TUNE.airJumps;
     this.flash.t = TUNE.flashGap;
-    // 다음 표식이 남았으면 처형 멈춤·슬로모션을 짧게 → 한 호흡으로 이어 벰 (마지막 적만 길게)
-    if (this.seals.some(o => o.state === 'stuck' && !o.enemy.dead)) { G.stop = Math.min(G.stop, 0.06); G.slow = Math.min(G.slow, 0.1); }
   }
-  endFlash() { this.flash = null; this.flashCd = TUNE.flashCd; }
+  // 연쇄 끝 (다 그었거나 Space·Shift·맞아서 끊김): 그은 적은 hopFinish 초 뒤 한꺼번에 베임
+  endFlash() {
+    if (this.flash?.cut.length) this.cutWait = { t: TUNE.hopFinish, list: this.flash.cut };
+    this.flash = null; this.flashCd = TUNE.flashCd;
+  }
   // 지금 F 를 누르면 갈 곳 (미리보기도 같은 것 — main.js): 표식 적이 있으면 { pool, first }, 없으면 { anchor | null, dir }
   kbPick(G, dir = (held('right') ? 1 : 0) - (held('left') ? 1 : 0)) {
     const pool = G.markedEnemies(this.cx, this.cy).slice(0, 12);
@@ -397,7 +417,7 @@ export class Player {
     const back = Math.atan2(-r.dy, -r.dx);
     if (hit.enemy) {
       Object.assign(r, { state: 'stuck', x: hit.x, y: hit.y, target: hit.enemy, ox: hit.x - hit.enemy.x, oy: hit.y - hit.enemy.y });
-      spark(hit.x, hit.y, back, 6, { cols: ['#ff6060', '#ffffff'], v: 90 }); G.sfx?.('hookEnemy');
+      spark(hit.x, hit.y, back, 6, { cols: ['#3ee08a', '#ffffff'], v: 90 }); G.sfx?.('hookEnemy');
     } else if (hit.hook) {
       Object.assign(r, { state: 'stuck', x: hit.x, y: hit.y, nx: hit.nx || 0, ny: hit.ny || 0, ring: hit.ring || null, pole: !!hit.pole });
       spark(hit.x, hit.y, back, 5, { v: 90 }); G.sfx?.('hook');
@@ -496,7 +516,7 @@ export class Player {
     const r = this.rope;
     if (!r) return;
     r.state = 'back'; r.tether = false; r.target = null;
-    spark(r.x, r.y, Math.atan2(this.cy - r.y, this.cx - r.x), 3, { cols: ['#ff4a4a', '#ffffff'], v: 60 });
+    spark(r.x, r.y, Math.atan2(this.cy - r.y, this.cx - r.x), 3, { cols: ['#3ee08a', '#ffffff'], v: 60 });
   }
   // 실을 놓음: 스윙 탄력을 살려 조금 더 멀리 던져짐 (산나비식 놓기)
   releaseRope() {
@@ -598,7 +618,7 @@ export class Player {
     const r = this.rope;
     if (this.hurtT > 0) target = A.HURT;
     else if (this.atkT >= 0) target = A.comboPose(this.combo, this.atkT, this.aim);
-    else if (r?.state === 'zip') {
+    else if (r?.state === 'zip' || this.flash?.hop) {
       // 돌진: 몸을 날아가는 쪽으로 눕힘
       const a = Math.atan2(this.vy, Math.abs(this.vx)) * 180 / Math.PI;
       target = { ...A.ZIP, rot: -Math.max(-70, Math.min(70, a)) * 0.8 };
@@ -632,7 +652,7 @@ export class Player {
     // 벽 타기·매달림은 벽 반대쪽을 봄
     this.drawFacing = target.turn ? -this.facing : this.cling > 0 ? (this.pole ? -this.clingSide : -this.clingDir) : !this.onGround && this.wall && this.vy > 0 && !r ? -this.wall : this.facing;
     // 공격·달리기는 끊어 보이게 바로, 나머지는 부드럽게 따라감
-    const snap = this.atkT >= 0 || r?.state === 'zip' || this.dashT > 0 || this.flipT > 0 || (this.onGround && Math.abs(this.vx) > 12 && this.dashT <= 0);
+    const snap = this.atkT >= 0 || r?.state === 'zip' || this.flash?.hop || this.dashT > 0 || this.flipT > 0 || (this.onGround && Math.abs(this.vx) > 12 && this.dashT <= 0);
     this.pose = snap ? { ...target } : A.follow(this.pose, target, dt);
     this.pose.cape = A.stepCape(this.cape, this.vx, this.vy, this.drawFacing, dt);
   }
