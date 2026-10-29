@@ -385,7 +385,7 @@ export function drawFxFront(ctx, time) {
   }
 }
 // 빛나는 이펙트 (칼끝 궤적·베기 그림·고리·관통 자국): 조명을 '받지 않고' 조명 뒤에 그대로 그림 → 어두운 화면에서 도드라짐.
-// 몸 뒤에 있어야 할 반(고리 먼 반·'back'·'split' 위 반)은 따로 그려 주인공 실루엣(occ)만큼 지운 뒤 얹음
+// 몸 뒤에 있어야 할 반은 따로 그리고 전투 공간 실루엣(배우·지형, 화면 좌표 occ)으로 가린다.
 let glowBuf = null;
 export function drawFxGlow(ctx, time, cam, W, H, occ) {
   if (!glowBuf) { glowBuf = document.createElement('canvas'); glowBuf.width = W; glowBuf.height = H; }
@@ -397,6 +397,8 @@ export function drawFxGlow(ctx, time, cam, W, H, occ) {
   for (const A of fx.arcs) drawArc(g, A, false);
   drawTrail(g);    // 쿠나이 돌진 흔적·잔상은 몸 뒤
   drawGhosts(g);
+  // 앞 패스는 화면 좌표의 마스크. 월드 이동 변환을 남기면 카메라가 움직일 때 가림이 어긋난다.
+  g.setTransform(1, 0, 0, 1, 0, 0);
   if (occ?.img) { g.globalCompositeOperation = 'destination-out'; g.drawImage(occ.img, occ.x, occ.y); }
   ctx.save();
   ctx.drawImage(glowBuf, 0, 0);

@@ -78,7 +78,7 @@ export class Player {
     const W = G.world;
     this.t += dt;
     this.inv = Math.max(0, this.inv - dt);
-    this.hurtInv = Math.max(0, (this.hurtInv || 0) - dt);   // 맞은 뒤 무적만 (깜빡임용) — 대시·돌진 무적은 안 깜빡임
+    this.hurtInv = Math.max(0, (this.hurtInv || 0) - dt);   // 피격 무적은 몸을 숨기지 않고 밝기 변화로 표시
     this.dashCd = Math.max(0, this.dashCd - dt);
     this.zipCd = Math.max(0, this.zipCd - dt);
     this.zipBuf = Math.max(0, (this.zipBuf || 0) - dt);

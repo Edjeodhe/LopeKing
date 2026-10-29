@@ -2,7 +2,7 @@
 // 흐름: 입력 → 고정 스텝(120Hz) 물리·AI·전투 → 자세 → 리그 굽기 → 그리기
 import { input, bindInput, endFrame, hit, setKeyLayout } from './input.js';
 import { World } from './world.js';
-import { bakeTiles, makeBackground, drawBackground, drawBackdropGlow, loadBackdrops, drawLamp, drawRing, drawExit, drawCheck, drawGates, setTheme, PAL } from './scenery.js';
+import { bakeTiles, makeBackground, drawBackground, loadBackdrops, drawLamp, drawRing, drawExit, drawCheck, drawGates, setTheme, PAL } from './scenery.js';
 import { loadActorType, newBakeCanvas, bakeActor, bakeDeath, bakeFrame, ACT, deathDone } from './actor.js';
 import { Player, TUNE, CTRL } from './player.js';
 import { Enemy, drawEnemyMarks } from './enemies.js';
@@ -17,10 +17,13 @@ import { startMusic, setMood, toggleMute } from './music.js';
 import { loadFont, font } from './font.js';
 
 const W = 480, H = 270, STEP = 1 / 120;
-const AMBIENT = [96, 90, 150];   // 밤 환경색 (레벨에 ambient 가 없을 때). 어둡게 깔고 빛·이펙트 자리만 밝혀 명암을 또렷하게
+const AMBIENT = [142, 137, 125];   // 먹빛·회갈색 환경광. 주황 등불과 초록 혼불을 받쳐 준다.
 const canvas = document.getElementById('game');
 canvas.width = W; canvas.height = H;
-const ctx = canvas.getContext('2d');
+const screenCtx = canvas.getContext('2d');
+const sceneCanvas = document.createElement('canvas'); sceneCanvas.width = W; sceneCanvas.height = H;
+const sceneCtx = sceneCanvas.getContext('2d'); sceneCtx.imageSmoothingEnabled = false;
+let ctx = screenCtx;
 ctx.imageSmoothingEnabled = false;
 
 // 화면 맞추기: 정수배로만 키움 (도트가 뭉개지지 않게)
@@ -60,10 +63,10 @@ async function boot() {
   const [hero, ghoul, gunner, boss] = await Promise.all([
     // 주인공 = 가면 폼. 기본 폼 도깨비 (예전 삿갓 암살자 그림은 art/assassin 에 남겨 둠). keep = 팔레트에 꼭 남길 색 (진홍·금테·가면 눈빛)
     loadActorType('art/dokkaebi', { colors: 18, keep: [[200, 32, 40], [222, 172, 64], [70, 240, 130]] }),   // 가면 눈빛 = 초록 (발로란트 도깨비)
-    loadActorType('art/ghoul', { colors: 14, weapon: 'saber', placeholder: { cloth: '#4a4a3a', clothD: '#2c2c22', clothL: '#6a6a50', skin: '#8a9a88', skinD: '#5a6a5a', accent: '#b8e040' }, tint: [40, 30, 60, 0.08] }),
-    loadActorType('art/gunner', { colors: 14, weapon: 'gun', placeholder: { cloth: '#26304a', clothD: '#161c2e', clothL: '#3a4868', metal: '#8a7a50', metalD: '#5a4a30', metalL: '#c8b070', accent: '#b8e040' }, tint: [40, 30, 60, 0.08] }),
+    loadActorType('art/ghoul', { colors: 14, weapon: 'saber', placeholder: { cloth: '#4a4a3a', clothD: '#2c2c22', clothL: '#6a6a50', skin: '#8a9a88', skinD: '#5a6a5a', accent: '#b8e040' }, tint: [62, 57, 44, 0.06] }),
+    loadActorType('art/gunner', { colors: 14, weapon: 'gun', placeholder: { cloth: '#26304a', clothD: '#161c2e', clothL: '#3a4868', metal: '#8a7a50', metalD: '#5a4a30', metalL: '#c8b070', accent: '#b8e040' }, tint: [62, 57, 44, 0.06] }),
     // 보스: 거대 도깨비, 같은 뼈대를 1.9배로 (그림 키 44px → 약 84px). keep = 눈빛 (예전 망나니 구울은 art/executioner)
-    loadActorType('art/boss_dokkaebi', { colors: 18, keep: [[190, 230, 40]], scale: 1.9, weapon: 'saber', placeholder: { cloth: '#5a2028', clothD: '#3a1018', clothL: '#8a3038', skin: '#7a6a80', skinD: '#4a3a50', accent: '#b8e040' }, tint: [40, 30, 60, 0.06] }),
+    loadActorType('art/boss_dokkaebi', { colors: 18, keep: [[190, 230, 40]], scale: 1.9, weapon: 'saber', placeholder: { cloth: '#5a2028', clothD: '#3a1018', clothL: '#8a3038', skin: '#7a6a80', skinD: '#4a3a50', accent: '#b8e040' }, tint: [62, 57, 44, 0.05] }),
   ]);
   TYPES.hero = hero; TYPES.grunt = ghoul; TYPES.gunner = gunner; TYPES.boss = boss;
   if (new URLSearchParams(location.search).has('level')) { G.mode = 'play'; loadLevel(+new URLSearchParams(location.search).get('level') || 0); }
@@ -535,10 +538,13 @@ function tick(real) {
 
 function render(real) {
   const p = G.player, w = G.world;
+  ctx = sceneCtx;
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';   // 앞 프레임이 중간에 끊겼어도 화면 상태를 되돌림
+  ctx.clearRect(0, 0, W, H);
   const sx = (Math.random() - 0.5) * cam.shake * 2 + cam.kick[0], sy = (Math.random() - 0.5) * cam.shake * 2 + cam.kick[1];
   const cx = Math.round(cam.x + sx), cy = Math.round(cam.y + sy);
-  drawBackground(ctx, bg, cam, W, H, w.ph);
+  // 하늘 → 먼 산(발광 포함) → 폐허(발광 포함) → 전투 공간. 후경에 전투 조명이 곱해지지 않는다.
+  drawBackground(screenCtx, bg, { x: cx, y: cy }, W, H, w.ph, G.time, real);
   ctx.save();
   ctx.translate(-cx, -cy);
   ctx.drawImage(tilesImg, cx, cy, W, H, cx, cy, W, H);
@@ -579,23 +585,22 @@ function render(real) {
     if (TYPES.hero.death) bakeDeath(TYPES.hero, deathT, p.facing, playerLow);
     else bakeActor(TYPES.hero, { ...A.HURT, rot: Math.min(85, deathT * 300), rotDrop: true }, p.facing, playerLow);
   } else {
-    const blink = p.hurtInv > 0 && p.hurtT <= 0 && Math.floor(G.time * 20) % 2;   // 맞은 뒤 무적만 깜빡임 (대시 무적 중엔 몸이 보여야 흔적이 몸에 붙어 보임)
+    const hurtFlash = p.hurtInv > 0 && p.hurtT <= 0 && Math.floor(G.time * 12) % 2 === 1;
     // 대기·달리기는 장면 그림(프레임 애니메이션, rig.json anims), 나머지는 리그
     const fa = p.frameAnim, set = fa && TYPES.hero.anims?.[fa.name];
     if (set) {
       const n = set.frames.length, i = fa.i ?? (fa.name === 'run' ? Math.floor(fa.ph * n) : Math.floor(fa.t * set.fps));   // i = 정해진 장 (귀보 베기·납도)
-      const m = bakeFrame(TYPES.hero, fa.name, ((i % n) + n) % n, p.drawFacing ?? p.facing, playerLow);
+      const m = bakeFrame(TYPES.hero, fa.name, ((i % n) + n) % n, p.drawFacing ?? p.facing, playerLow, hurtFlash);
       p.sock = {};
       if (m.mouth) p.sock.mouth = [m.mouth[0] + px, m.mouth[1] + py];
       if (m.eye) p.sock.eye = [m.eye[0] + px, m.eye[1] + py];
     } else {
-      const o = bakeActor(TYPES.hero, p.pose, p.drawFacing ?? p.facing, playerLow, p.hurtT > 0.18);
+      const o = bakeActor(TYPES.hero, p.pose, p.drawFacing ?? p.facing, playerLow, p.hurtT > 0.18 || hurtFlash);
       p.sock = {}; for (const k in o.sock) p.sock[k] = [o.sock[k][0] + px, o.sock[k][1] + py];
     }
     afterimages(p, px, py, real);
-    if (blink) playerLow.__skip = true; else playerLow.__skip = false;
   }
-  if (!playerLow.__skip) {
+  {
     const sx = px + shudderOf(p, real);
     if (p.str > 0.03 && !p.dead) {
       // 늘임: 몸 가운데를 축으로 움직이는 쪽은 길게, 옆은 좁게 (부피는 대충 유지)
@@ -616,20 +621,21 @@ function render(real) {
   ctx.restore();
 
   // 조명: 밤 환경색으로 곱하고 등불·주인공·총구·처형 섬광 자리만 밝힘
-  const lights = [{ x: p.x, y: p.cy, r: 60, col: [235, 225, 255], k: 0.8 }];
+  const lights = [{ x: p.x, y: p.cy, r: 64, col: [245, 237, 218], k: 0.8 }];
   for (const l of w.lamps) lights.push({ x: l.x, y: l.y + 4, r: 80 + Math.round(Math.sin(G.time * 9 + l.x)) * 2, col: [255, 200, 165], glow: 0.1 });
   for (const x of G.exits) lights.push({ x: x.x + 6, y: x.y - 20, r: 48, col: [255, 170, 150] });
   for (const b of G.bullets) lights.push({ x: b.x, y: b.y, r: 14, col: [255, 220, 150] });
-  for (const e of G.enemies) lights.push({ x: e.x, y: e.cy, r: e.kind === 'boss' ? 56 : 30, col: [200, 190, 235], k: 0.4 });   // 적은 어둠 속 실루엣이 겨우 읽힐 만큼
+  for (const e of G.enemies) lights.push({ x: e.x, y: e.cy, r: e.kind === 'boss' ? 56 : 34, col: [224, 214, 191], k: 0.6 });
   for (const f of G.flares) lights.push(f);
   if (p.rope && p.rope.state !== 'back') lights.push({ x: p.rope.x, y: p.rope.y, r: 12, col: [255, 140, 140] });
   for (const s of p.seals) lights.push({ x: s.x, y: s.y, r: s.state === 'stuck' ? 22 : 12, col: [120, 255, 170], k: 0.7 });
   if (p.sock?.eye && !p.dead) lights.push({ x: p.sock.eye[0], y: p.sock.eye[1], r: 14, col: [90, 255, 150], k: 0.45 });   // 가면 눈빛이 얼굴을 살짝 비춤
   fxLights(lights, G.time);
   if (!G.noLight) applyLight(ctx, W, H, { x: cx, y: cy }, G.world.def.ambient || AMBIENT, lights);
-  drawBackdropGlow(ctx, bg, { x: cx, y: cy }, W, H, w.ph, G.time, real, tilesImg);   // 배경 불·달 빛 + 불티 (몰락한 조선)
-  // 빛나는 이펙트는 조명 뒤에 그대로 (어두운 화면에서 도드라지게). 몸 뒤 반은 주인공 실루엣만큼 가림
-  drawFxGlow(ctx, G.time, { x: cx, y: cy }, W, H, p.dead || playerLow.__skip ? null : { img: playerLow, x: px - cx, y: py - cy });
+  // 배우/지형 조명의 알파를 보존해 뒤가 비치지 않게 합성하고, 화면 이펙트·HUD를 그린다.
+  screenCtx.drawImage(sceneCanvas, 0, 0); ctx = screenCtx;
+  // 빛나는 이펙트는 조명 뒤에 그대로. 뒤쪽 이펙트는 지형과 모든 배우 실루엣으로 가린다.
+  drawFxGlow(ctx, G.time, { x: cx, y: cy }, W, H, { img: sceneCanvas, x: 0, y: 0 });
   drawEyeFire(ctx, cx, cy);   // 눈에서 새는 초록 혼불 연기 + 눈빛 꼬리 (블리치 호로화)
   drawEye(p, cx, cy);
   zoomPulse(real, p.x - cx, p.cy - cy);
@@ -665,8 +671,7 @@ function drawBossBar(b) {
 // 타이틀: 배경 위 이름과 시작 안내
 function drawTitle(real) {
   G.time += real;
-  drawBackground(ctx, titleBg, { x: G.time * 12, y: 0 }, W, H, H);
-  drawBackdropGlow(ctx, titleBg, { x: G.time * 12, y: 0 }, W, H, H, G.time, real, null);
+  drawBackground(ctx, titleBg, { x: G.time * 12, y: 0 }, W, H, H, G.time, real);
   ctx.fillStyle = PAL.ink; ctx.fillRect(0, H - 40, W, 40);
   textOut('로 프 킹', W / 2, 70, '#f2e8d0', 'center', 32);
   textOut('달빛 아래, 붉은 실 하나', W / 2, 112, '#c9a0a0');
@@ -920,7 +925,7 @@ function drawSeals(p, cx, cy) {
 // 조명 뒤로 따로 찍음 → 어둠 속에서도 또렷. 둘레 은은한 번짐 + 코 쪽 끝 흰 민트 심 → 뒤로 갈수록 한 칸 올라감
 function drawEye(p, cx, cy) {
   const e = p.sock?.eye;
-  if (!e || p.dead || playerLow.__skip) return;
+  if (!e || p.dead) return;
   const f = p.drawFacing ?? p.facing, x = Math.round(e[0] - cx + f * 0.5), y = Math.round(e[1] - cy);
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';

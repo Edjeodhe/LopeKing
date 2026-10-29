@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><base href="/">
+  <title>LopeKing 렌더링 회귀 검사</title>
+  <style>
+    body { margin: 20px; background: #141310; color: #ddd4c3; font: 15px monospace; }
+    #game { width: 960px; height: 540px; image-rendering: pixelated; }
+    #shots { display: flex; flex-wrap: wrap; gap: 16px; }
+    #shots canvas { width: 720px; height: 405px; image-rendering: pixelated; }
+    figure { margin: 0; } pre { white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>렌더링 회귀 검사</h1>
+  <pre id="results">검사 중...</pre>
+  <canvas id="game"></canvas>
+  <div id="shots"></div>
+  <script type="module" src="src/main.js"></script>
+  <script type="module" src="tools/render_regression.js"></script>
+</body>
+</html>

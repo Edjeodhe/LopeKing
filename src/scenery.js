@@ -1,7 +1,8 @@
 // 배경·타일 그림을 코드로 픽셀 단위로 그린다. 타일은 레벨을 읽을 때 한 장으로 구워 둠.
-// 예외: '몰락한 조선'(theme ruin) 배경은 Codex 그림 층(art/bg/ruin_*.png, tools/make_bg.py) — 하늘(고정) · 먼 층 · 중간 층이 가로로 끝없이 이어짐
+// '몰락한 조선'은 일반 원화에 픽셀·음영·거리 안개 셰이더를 적용한다.
 // 규칙: 색은 정해진 몇 단계만, 반투명 없음, 경계는 체크무늬(디더) — 캐릭터 굽기와 같은 결
 import { TILE, T, SOLID } from './world.js';
+import { bakeBackdrop, BACKDROP_STYLE } from './backdrop.js';
 
 const hash = (x, y, s = 0) => { let h = (x * 374761393 + y * 668265263 + s * 2147483647) | 0; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 
@@ -20,7 +21,13 @@ export const PAL = {
 // 테마: 레벨 json 의 theme 으로 팔레트·배경을 바꿈 (밤 기와 마을 · 대나무 숲)
 const THEMES = {
   night: { ...PAL },
-  ruin: {},   // 몰락한 조선: 타일 색은 밤과 같고 배경만 그림 층
+  ruin: {
+    ink: '#0d0c0b', rock: ['#191817', '#282522', '#3a352e', '#575044'], moon: '#918371',
+    brick: ['#191918', '#292a27', '#3c3e37', '#5b5c4d'],
+    metal: ['#1c1c1b', '#2d2e2b', '#44453e', '#626256'],
+    plank: ['#241d17', '#3b3025', '#574634', '#7d664a'],
+    spike: ['#373a34', '#777b6a', '#c3c6ab'], near: '#151411',
+  },
   bamboo: {
     rock: ['#0f1512', '#18231c', '#243228', '#34473a'], moon: '#9ad0a0',
     brick: ['#1a1410', '#2a2018', '#3e3022', '#5a4630'],
@@ -124,39 +131,31 @@ const loadImg = src => new Promise((ok, no) => { const im = new Image(); im.onlo
 export async function loadBackdrops() {
   try {
     for (const k of ['sky', 'far', 'mid']) {
-      BACKDROP[k] = await loadImg(`art/bg/ruin_${k}.png`);
-      BACKDROP[k + 'Glow'] = await loadImg(`art/bg/ruin_${k}_glow.png`);
+      BACKDROP[k] = bakeBackdrop(await loadImg(`art/bg/ruin_${k}.png`), k);
     }
-  } catch { for (const k in BACKDROP) delete BACKDROP[k]; }
+  } catch (e) { console.warn('배경 원화 로드 실패', e); for (const k in BACKDROP) delete BACKDROP[k]; }
 }
-// 빛나는 층의 불 점(알파 255) 목록 — 불티가 피어오를 자리
+// 셰이더가 분리한 절제된 주황 발광에서만 불티를 뽑는다 (달·회색 연기 제외).
 function firePoints(img) {
   const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
   const x = c.getContext('2d'); x.drawImage(img, 0, 0);
   const d = x.getImageData(0, 0, c.width, c.height).data, pts = [];
-  for (let i = 0; i < d.length; i += 4) if (d[i + 3] === 255) pts.push([(i / 4) % c.width, Math.floor(i / 4 / c.width)]);
+  for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 12) pts.push([(i / 4) % c.width, Math.floor(i / 4 / c.width)]);
   return pts;
 }
 function ruinLayers(W, H) {
   const B = BACKDROP, L = [];
-  L.push({ img: B.sky, glow: B.skyGlow, f: 0, y: 0, fixed: true, glowK: 0.55 });
-  // 먼 층·중간 층 (그림 256px): 맵 바닥 카메라에서 성벽 밑동이 화면 땅선(약 175px) 근처에 오게. 카메라가 위로 가면 drawBackground 가 살짝 내림 — 시차 0.12 · 0.3
-  L.push({ img: B.far, glow: B.farGlow, f: 0.12, y: -28, glowK: 0.5, flicker: true, fire: firePoints(B.farGlow), embers: [], rate: 6 });
-  L.push({ img: B.mid, glow: B.midGlow, f: 0.3, y: -6, glowK: 0.7, flicker: true, fire: firePoints(B.midGlow), embers: [], rate: 18 });
+  L.push({ ...B.sky, depth: BACKDROP_STYLE.sky.depth, f: 0, y: 0, fixed: true, glowK: 0 });
+  // depth가 작을수록 먼 층. 먼 산을 지붕보다 높여 산등성이가 처마 뒤로 읽히게 한다.
+  L.push({ ...B.far, depth: BACKDROP_STYLE.far.depth, f: 0.07, y: -85, glowK: 0.34, fire: firePoints(B.far.glow), embers: [], rate: 1.2 });
+  L.push({ ...B.mid, depth: BACKDROP_STYLE.mid.depth, f: 0.24, y: 20, glowK: 0.62, fire: firePoints(B.mid.glow), embers: [], rate: 3.5 });
   return L;
 }
 export function makeBackground(W, H) {
   const layers = [];
   if (theme === 'ruin' && BACKDROP.sky) {
     layers.push(...ruinLayers(W, H));
-    // 가까운 안개 띠는 그대로 (아래 공통)
-    const w = W * 2, Bf = pixels(w, H);
-    for (let y = H - 50; y < H; y++) for (let xx = 0; xx < w; xx++) {
-      const d = (y - (H - 50)) / 50 + 0.15 * Math.sin(xx * 0.03 + y * 0.1);
-      if (d > 0.55 || (d > 0.25 && ((xx + y) & 1))) Bf.set(xx, y, PAL.near);
-    }
-    Bf.flush();
-    layers.push({ img: Bf.c, f: 0.5, y: 20 });
+    layers.sort((a, b) => a.depth - b.depth);
     return layers;
   }
   // 하늘 (고정) + 별 + 달
@@ -250,17 +249,21 @@ const layerOffset = (L, cam, H, worldH) => {
   // 세로: 카메라가 맵 아래로 갈수록 배경이 살짝 올라감
   return [-Math.round(cam.x * L.f) % w, Math.round(L.y - (cam.y - (worldH - H)) * L.f * 0.5)];
 };
-export function drawBackground(ctx, layers, cam, W, H, worldH) {
+export function drawBackground(ctx, layers, cam, W, H, worldH, time = 0, dt = 0) {
+  ctx.save(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = '#191815'; ctx.fillRect(0, 0, W, H);
   for (const L of layers) {
     if (L.fixed) { ctx.drawImage(L.img, 0, 0); continue; }
     const w = L.img.width, [ox, oy] = layerOffset(L, cam, H, worldH);
     for (let xx = ox - w; xx < W; xx += w) ctx.drawImage(L.img, xx, oy);
+    // 각 층의 발광도 다음 가까운 층을 그리기 전에 합성한다.
+    if (L.glow && L.glowK) drawBackdropGlow(ctx, [L], cam, W, H, worldH, time, dt);
   }
+  ctx.restore();
 }
-// 배경 빛 (조명 패스 뒤, 더하기): 그림 층의 불·달·창 빛 + 불길 일렁임(세로 12px 띠마다 다른 박자) + 불에서 피어오르는 불티.
-// 타일(tiles, 월드 크기 캔버스) 자리는 지워서 땅·벽 앞으로 빛이 번지지 않게
+// 발광은 해당 배경 층 안에서만 더한다. 지형·배우를 그린 뒤 호출하지 않는다.
 let glowBuf = null;
-export function drawBackdropGlow(ctx, layers, cam, W, H, worldH, time, dt, tiles) {
+function drawBackdropGlow(ctx, layers, cam, W, H, worldH, time, dt) {
   if (!layers.some(L => L.glow)) return;
   if (!glowBuf) { glowBuf = document.createElement('canvas'); glowBuf.width = W; glowBuf.height = H; }
   const g = glowBuf.getContext('2d');
@@ -276,12 +279,14 @@ export function drawBackdropGlow(ctx, layers, cam, W, H, worldH, time, dt, tiles
         const sx = xx + s; if (sx + S < 0 || sx > W) continue;
         const n = s / S;
         g.globalAlpha = L.glowK * (0.72 + 0.28 * Math.sin(time * 9 + n * 1.7) * Math.sin(time * 5.3 + n * 0.9 + L.f * 10));
-        g.drawImage(L.glow, s, 0, Math.min(S, w - s), L.glow.height, sx, oy, Math.min(S, w - s), L.glow.height);
+        const lift = Math.sin(time * 5.3 + n * 1.7) > 0.6 ? -1 : 0;
+        g.drawImage(L.glow, s, 0, Math.min(S, w - s), L.glow.height, sx, oy + lift, Math.min(S, w - s), L.glow.height);
       }
     }
     // 불티: 불 점에서 생겨 위로 흔들리며 올라가다 꺼짐 (층 좌표, 시차 그대로)
     if (L.fire?.length && dt > 0) {
-      for (let k = 0; k < L.rate * dt * 3; k++) if (Math.random() < 0.34) {
+      const births = L.rate * dt;
+      for (let k = 0; k < Math.floor(births) + (Math.random() < births % 1 ? 1 : 0); k++) {
         const [px, py] = L.fire[Math.floor(Math.random() * L.fire.length)];
         L.embers.push({ x: px, y: py, vx: (Math.random() - 0.5) * 6, vy: -8 - Math.random() * 16, t: 0, life: 1 + Math.random() * 1.6, ph: Math.random() * 6 });
       }
@@ -290,13 +295,12 @@ export function drawBackdropGlow(ctx, layers, cam, W, H, worldH, time, dt, tiles
     }
     for (const e of L.embers || []) {
       const k = 1 - e.t / e.life, ex = ((Math.round(ox + e.x) % w) + w) % w;
-      g.globalAlpha = Math.min(1, k * 1.5);
-      g.fillStyle = k > 0.6 ? '#ffd080' : k > 0.3 ? '#ff8a3a' : '#c04a20';
+      g.globalAlpha = Math.min(0.38, k * L.glowK);
+      g.fillStyle = k > 0.6 ? '#ad7845' : k > 0.3 ? '#87512c' : '#633b25';
       for (let xx = ex - w; xx < W; xx += w) if (xx >= 0) g.fillRect(xx, Math.round(oy + e.y), 1, 1);
     }
   }
   g.globalAlpha = 1;
-  if (tiles) { g.globalCompositeOperation = 'destination-out'; g.drawImage(tiles, Math.round(cam.x), Math.round(cam.y), W, H, 0, 0, W, H); }
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(glowBuf, 0, 0); ctx.restore();
 }
 
