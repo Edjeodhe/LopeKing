@@ -1,0 +1,13 @@
+Use your built-in image generation tool to create ONE image and save it as PNG to: masks.png (in the current working directory). Do not write code to draw it; it must be a generated illustration. After saving, reply only with the file name.
+
+Image spec:
+- 1536x1024 landscape SPRITE SHEET of 4 ITEM ICONS for a dark 2D pixel-art action game. No text, no letters, no numbers, no labels, no grid lines, no frames, no background boxes behind the icons.
+- Solid flat MAGENTA background (#FF00FF) everywhere behind the icons.
+- LAYOUT: exactly 4 icons in ONE horizontal row across the middle of the image, evenly spaced, same size, each centered in its quarter with clear magenta margin.
+- RENDERING: authentic PIXEL ART icons. Each icon is drawn at only 16x16 sprite pixels and every sprite pixel is a crisp SOLID SQUARE block of 16x16 image pixels (so each icon is about 256x256 image pixels), all aligned to one grid. NO anti-aliasing, NO gradients, NO blur, NO glow halos, NO thin lines thinner than one block. 6-8 flat colors per icon, a 1-block very dark outline around each silhouette. Bold, simple, readable at 16x16.
+- CONTENT: each icon is a single Korean DOKKAEBI (horned goblin) MASK seen from the FRONT, filling most of its 16x16 square: two horns (or one big horn) on top, two eye holes, a wide mouth with fangs. No head, no hair, no body - just the mask object.
+- ATTACHED REFERENCE: side-view sprites of the 4 masked heroes, left to right. Copy each MASK's design and colors (not the hair):
+  1. BASE DOKKAEBI mask: glossy CRIMSON-RED face with a BLACK lacquer outline, thin GOLD trim around the edge and a gold ring, short pale bone-cream horns, cream fangs, eye holes glowing bright GREEN.
+  2. FIRE dokkaebi mask: CHARRED BLACK wood / black iron with glowing EMBER-ORANGE cracks, curved dark horns, big blunt teeth, eye holes glowing ember orange.
+  3. WATER dokkaebi mask: deep TEAL-CYAN face with dark NAVY outline and a pale cyan wave-swirl pattern on the forehead and cheeks, a long curved teal horn, white fangs, eye holes glowing bright cyan.
+  4. MOON dokkaebi mask: pale MOONLIGHT-WHITE porcelain face, two short SILVER horns, a small PURPLE crescent moon mark on the forehead, purple-violet eye holes, thin violet lips with small fangs.

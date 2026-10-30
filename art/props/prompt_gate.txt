@@ -1,0 +1,10 @@
+Use your built-in image generation tool to create ONE image and save it as PNG to: gate.png (in the current working directory). Do not write code to draw it; it must be a generated illustration. After saving, reply only with the file name.
+
+Image spec:
+- 1536x1024 landscape SPRITE SHEET for a dark 2D pixel-art action game set in a ruined Joseon-era Korea. No text, no letters, no numbers, no labels, no grid lines, no frames, no ground, no cast shadows.
+- Solid flat MAGENTA background (#FF00FF) everywhere behind the sprites.
+- LAYOUT: exactly 3 sprites in ONE row, evenly spaced in thirds, each centered in its third with clear magenta margin, bottoms aligned on the same line. All drawn at the SAME scale.
+- RENDERING: authentic PIXEL ART. Every sprite pixel is a crisp SOLID SQUARE block of 12x12 image pixels, all aligned to one grid. NO anti-aliasing, NO gradients, NO blur, NO glow, NO thin lines thinner than one block. About 10 flat colors, a 1-block very dark outline around every silhouette. Bold, simple, readable at tiny size.
+- SPRITE 1, GATE CLOSED: a small Korean HONGSALMUN (red arrow gate), front view, about 32 sprite-pixels wide and 56 sprite-pixels tall: two tall weathered dark-RED wooden pillars, a red crossbeam on top with a row of short red vertical arrow-shaped spikes, and above the middle a small EMPTY dark wooden plaque (a blank dark rectangle about 16x12 sprite pixels, nothing drawn on it). The doorway between the pillars is CLOSED by a lattice of dark gray-purple wooden bars (vertical bars with one horizontal tie), black void behind the bars.
+- SPRITE 2, GATE OPEN: exactly the same gate, same size and same position in its cell, but the doorway is OPEN: no bars, just a flat solid black-violet void between the pillars.
+- SPRITE 3, MARKET STALL: a low Korean wooden tray-table (soban / low bench) used as a street stall at a tavern, about 26 sprite-pixels wide and 10 sprite-pixels tall, warm brown wood with a dark red cloth draped over the top, short sturdy legs, empty top (nothing on it).

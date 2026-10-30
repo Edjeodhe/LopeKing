@@ -1,0 +1,18 @@
+Use your built-in image generation tool to create ONE image and save it as PNG to: chests.png (in the current working directory). Do not write code to draw it; it must be a generated illustration. After saving, reply only with the file name.
+
+Image spec:
+- 1536x1024 landscape SPRITE SHEET for a dark 2D pixel-art action game set in a ruined Joseon-era Korea (Korean folklore, dokkaebi goblins). No text, no letters, no numbers, no labels, no grid lines, no frames, no ground, no cast shadows.
+- Solid flat MAGENTA background (#FF00FF) everywhere behind the sprites.
+- LAYOUT: exactly 3 ROWS x 4 COLUMNS = 12 sprites, evenly spaced, each centered in its cell with clear magenta margin around it. Every sprite in the sheet is drawn at the SAME scale, and the chest BODY stays at exactly the same size and position inside its cell in all 4 columns (only the lid, lock and glow change), so the 4 columns play as an opening animation.
+- RENDERING: authentic PIXEL ART. Each chest body is only about 30 sprite-pixels wide and 16 sprite-pixels tall (the closed chest with lid about 30x22 sprite pixels). Every sprite pixel is a crisp SOLID SQUARE block of 8x8 image pixels, all aligned to one grid. NO anti-aliasing, NO gradients, NO blur, NO soft glow halos, NO thin lines thinner than one block. About 12 flat colors per chest, a 1-block very dark outline around every silhouette. Bold, simple, readable at tiny size.
+- THE CHEST: an old Korean lacquered wooden treasure chest (bandaji style): a BLACK-LACQUER wooden box with a domed lid, heavy BRASS/GOLD corner fittings and hinge straps, and a big round brass LOCK PLATE in the middle of the front with a padlock.
+- ROWS = 3 kinds of chest, same chest shape, told apart by their accent color and the emblem on the lock plate:
+  ROW 1 "MASK chest": JADE-GREEN accent band and green spirit-fire glow; the lock plate has a small horned DOKKAEBI goblin face emblem.
+  ROW 2 "GOLD chest": rich GOLD/amber accent band and warm golden glow; the lock plate has a square-holed old Korean COIN emblem; a few gold coins peek out when open.
+  ROW 3 "ITEM chest": SKY-BLUE accent band and cool blue glow; the lock plate has a small blue diamond/talisman emblem.
+- COLUMNS = opening animation, left to right:
+  COLUMN 1 CLOSED and LOCKED: the lid sits completely flat and shut on the box with NO gap, the padlock hangs closed and clearly locked in front of the seam, NO light anywhere, it must read instantly as a firmly closed chest.
+  COLUMN 2 UNLOCKING: the padlock has dropped open and hangs loose, the lid is lifted just a crack (1-2 blocks) and a thin bright line of the accent-color light leaks out of the seam.
+  COLUMN 3 OPENING: the lid is tilted halfway back, hinged at the back, and a column of the accent-color light pours up out of the box.
+  COLUMN 4 OPEN: the lid is thrown fully back behind the box (seen from the front, the underside of the lid is visible above the back edge), the inside of the box is visible and glows with the accent color, sparkles above it.
+- Front three-quarter view slightly from above, facing the viewer.

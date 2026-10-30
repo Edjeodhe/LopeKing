@@ -1,0 +1,13 @@
+Use your built-in image generation tool to create ONE image and save it as PNG to: masks2.png (in the current working directory). Do not write code to draw it; it must be a generated illustration. After saving, reply only with the file name.
+
+Image spec:
+- 1536x1024 landscape SPRITE SHEET of 4 tiny INVENTORY ICONS for a dark 2D pixel-art action game, designed to be shown TINY at 16x20 pixels, so they must be VERY SIMPLE and BOLD. No text, no letters, no numbers, no labels, no grid lines, no frames, no background boxes.
+- Solid flat MAGENTA background (#FF00FF) everywhere behind the icons.
+- LAYOUT: exactly 4 icons in ONE horizontal row across the middle of the image, evenly spaced, same size, each centered in its quarter with wide magenta margin.
+- RENDERING: PIXEL ART on a COARSE grid: each icon is only 16 big pixels wide and 20 big pixels tall, and each big pixel is a solid square block of 20x20 image pixels (each icon about 320x400 image pixels). NO anti-aliasing, NO gradients, NO texture, NO noise, NO fine detail, NO cracks or patterns thinner than 2 blocks. Only 4-5 flat colors per icon: a 1-block BLACK outline around the whole silhouette, ONE main face color with ONE darker shade, and ONE bright glow color for the eyes.
+- CONTENT: each icon is a single Korean DOKKAEBI (horned goblin) MASK seen straight from the FRONT: horns on top, a broad face, TWO BIG GLOWING EYES (each eye a solid bright block 3 blocks wide and 2 blocks tall, clearly visible, the brightest thing on the icon), a wide dark mouth with 2 big white fangs. Just the mask object, no hair, no head, no body. Same silhouette size for all 4.
+- ATTACHED REFERENCE: side-view sprites of the 4 masked heroes, left to right. Copy each MASK's colors (keep it simple):
+  1. BASE mask: CRIMSON-RED face, short CREAM horns, a GOLD rim around the face edge, eyes glowing bright GREEN.
+  2. FIRE mask: CHARCOAL-BLACK face, curved black horns with ORANGE tips, 2-3 thick ember-ORANGE crack lines, eyes glowing bright ORANGE.
+  3. WATER mask: TEAL face with a NAVY outline shade, ONE tall curved teal horn in the middle, one thick pale-cyan swirl on the forehead, eyes glowing bright CYAN-WHITE.
+  4. MOON mask: WHITE face, two short SILVER-GRAY horns, a PURPLE crescent moon on the forehead, eyes glowing bright VIOLET.
