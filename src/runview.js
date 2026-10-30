@@ -1,7 +1,7 @@
 // 로그라이크 화면 그리기: 상자 · 문 · 바닥에 떨어진 가면·아이템 · 주막 좌판 · 정보 창 · HUD(골드·가면·아이템) · 가방 · 판 결과
 // 전부 코드로 그린 도트 (그림 파일 없음). 글씨는 16px 픽셀 글꼴만 (또렷하게)
 import { font } from './font.js';
-import { MASKS, ITEMS, GRADES, STAGE, TAGS, gradeOf, nameOf, priceOf, scrapOf, tagCounts } from './run.js';
+import { MASKS, ITEMS, GRADES, STAGE, TAGS, MAX_ITEMS, gradeOf, nameOf, priceOf, scrapOf, tagCounts } from './run.js';
 
 const INK = '#0b0a14';
 export function text(ctx, s, x, y, c = '#f2e8d0', align = 'left') {
@@ -118,46 +118,74 @@ export function infoFor(o, run, kind) {
   else L.push([`↑ ${obj.type === 'mask' ? '쓰기' : '줍기'} · X 꾹 분해 (+${scrapOf(obj)} 골드)`, '#8a86a0']);
   return { lines: L };
 }
-// 골드 · 지금 가면 · 아이템 줄 (체력·스킬 칸 아래)
-export function drawRunHud(ctx, run, y0) {
+// 골드 · 지금 가면 · 아이템 칸 (체력·스킬 칸 아래). 칸 MAX_ITEMS 개 — 빈 칸도 보여서 몇 개 더 들어가는지 보임.
+// 방금 들어온 칸은 1.2초 동안 깜빡임 (run.got = { i, t })
+export function drawRunHud(ctx, run, y0, t = 0) {
   coinGlyph(ctx, 12, y0 + 6); text(ctx, String(run.gold), 20, y0 - 2, '#f0c060');
   const m = MASKS[run.mask.id];
   text(ctx, m.name, 60, y0 - 2, GRADES[run.mask.g].col);
-  run.items.forEach((k, i) => itemGlyph(ctx, 12 + i * 12, y0 + 22, k));
+  for (let i = 0; i < MAX_ITEMS; i++) {
+    const x = 6 + i * 14, y = y0 + 15, id = run.items[i];
+    slotBox(ctx, x, y, 13, id, newGlow(run, i, t));
+    if (id) itemGlyph(ctx, x + 6, y + 6, id);
+  }
+  text(ctx, 'I', 6 + MAX_ITEMS * 14 + 2, y0 + 13, '#8a86a0');
 }
-// 가방 (I): 아이템 목록 + 각인 효과
-export function drawBag(ctx, W, H, run) {
+const newGlow = (run, i, t) => run.got && run.got.i === i && t - run.got.t < 1.2 ? (Math.floor((t - run.got.t) * 8) % 2 ? 2 : 1) : 0;
+// 아이템 칸: 검은 테 + 안쪽 바탕 + 등급 색 테 (빈 칸은 어둡게). glow 1·2 = 새로 들어옴 깜빡임 · sel = 가방에서 고른 칸
+function slotBox(ctx, x, y, S, id, glow = 0, sel = false) {
+  box(ctx, x, y, S, S, INK);
+  box(ctx, x + 1, y + 1, S - 2, S - 2, id ? '#1c1828' : '#0e0c16');
+  const c = sel ? '#f0c060' : glow === 2 ? '#ffffff' : id ? GRADES[ITEMS[id].g].col : '#2a2636';
+  ctx.globalAlpha = id || sel || glow ? 1 : 0.8;
+  box(ctx, x + 1, y + 1, S - 2, 1, c); box(ctx, x + 1, y + S - 2, S - 2, 1, c); box(ctx, x + 1, y + 1, 1, S - 2, c); box(ctx, x + S - 2, y + 1, 1, S - 2, c);
+  if (sel) { box(ctx, x, y, S, 1, c); box(ctx, x, y + S - 1, S, 1, c); box(ctx, x, y, 1, S, c); box(ctx, x + S - 1, y, 1, S, c); }
+  if (glow) { ctx.globalAlpha = glow === 2 ? 0.35 : 0.15; box(ctx, x + 2, y + 2, S - 4, S - 4, '#ffffff'); }
+  ctx.globalAlpha = 1;
+}
+// 가방 (I): 왼쪽 아이템 칸 3×3 (방향키로 고름) · 오른쪽 고른 아이템 설명 · 아래 각인 효과
+export const BAG_COLS = 3;
+export function drawBag(ctx, W, H, run, sel = 0, t = 0) {
   ctx.fillStyle = '#05040a'; for (let y = 0; y < H; y += 2) ctx.fillRect(0, y, W, 1);
   const x0 = 14, y0 = 10, pw = W - 28, ph = H - 20;
   box(ctx, x0 - 2, y0 - 2, pw + 4, ph + 4, INK); box(ctx, x0, y0, pw, ph, '#0e0c16');
   box(ctx, x0, y0, pw, 1, '#c08a3a'); box(ctx, x0, y0 + ph - 1, pw, 1, '#c08a3a');
   text(ctx, '가방', W / 2, y0 + 6, '#f2e8d0', 'center');
+  text(ctx, `${run.items.length}/${MAX_ITEMS}`, W / 2 + 22, y0 + 6, '#8a86a0');
   const m = MASKS[run.mask.id], g = GRADES[run.mask.g];
   maskGlyph(ctx, x0 + 18, y0 + 36, run.mask.id);
   text(ctx, `${m.name} · ${m.kind} [${g.name}]`, x0 + 30, y0 + 28, g.col);
   text(ctx, `골드 ${run.gold}`, x0 + pw - 10, y0 + 28, '#f0c060', 'right');
-  let y = y0 + 50;
-  if (!run.items.length) text(ctx, '아이템 없음', x0 + 14, y, '#8a86a0');
-  for (const k of run.items) {
-    const it = ITEMS[k];
-    itemGlyph(ctx, x0 + 18, y + 8, k);
-    text(ctx, it.name, x0 + 30, y, GRADES[it.g].col);
-    text(ctx, it.desc, x0 + 150, y, '#e8e0f0');
-    y += 17; if (y > y0 + ph - 76) break;   // 아래 각인 줄과 안 겹치게 (9개면 마지막 하나는 잘림 — 가방 화면 넓힐 때 고칠 것)
+  // 칸 3×3: 아이콘 2배
+  const S = 30, gap = 4, gx = x0 + 14, gy = y0 + 52;
+  for (let i = 0; i < MAX_ITEMS; i++) {
+    const x = gx + (i % BAG_COLS) * (S + gap), y = gy + Math.floor(i / BAG_COLS) * (S + gap), id = run.items[i];
+    slotBox(ctx, x, y, S, id, newGlow(run, i, t), i === sel);
+    if (id) { ctx.save(); ctx.translate(x + S / 2, y + S / 2); ctx.scale(2, 2); itemGlyph(ctx, 0, 0, id); ctx.restore(); }
   }
-  // 각인: 개수 / 다음 단계
+  // 고른 칸 설명
+  const dx = gx + BAG_COLS * (S + gap) + 14, id = run.items[sel];
+  box(ctx, dx - 8, gy, 1, 3 * S + 2 * gap, '#2a2636');
+  if (id) {
+    const it = ITEMS[id], ig = GRADES[it.g];
+    text(ctx, it.name, dx, gy + 2, ig.col);
+    text(ctx, `[${ig.name}]`, dx, gy + 20, ig.col);
+    text(ctx, it.desc, dx, gy + 42, '#e8e0f0');
+    it.tags.forEach((tg, k) => { box(ctx, dx + k * 60, gy + 68, 5, 5, TAGS[tg].col); text(ctx, tg, dx + 8 + k * 60, gy + 62, TAGS[tg].col); });
+    text(ctx, `분해하면 +${scrapOf({ type: 'item', id })} 골드`, dx, gy + 84, '#6a6680');
+  } else text(ctx, run.items.length ? '빈 칸' : '상자에서 얻은 아이템이 여기 들어감', dx, gy + 2, '#6a6680');
+  // 각인: 개수 / 다음 단계 — 한 줄에 안 들어가면 다음 줄 (켜진 각인 먼저)
   const n = tagCounts(run);
-  // 각인: 한 줄에 안 들어가면 다음 줄 (켜진 각인 먼저)
   let tx = x0 + 14, ty = y0 + ph - 58;
   const keys = Object.keys(n).sort((a, b) => (TAGS[b].at[0][0] <= n[b]) - (TAGS[a].at[0][0] <= n[a]));
-  for (const t of keys) {
-    const on = TAGS[t].at.filter(([c]) => n[t] >= c).length, s = `${t} ${n[t]}` + (on ? ` ▸ ${TAGS[t].txt[on - 1]}` : '');
+  for (const tg of keys) {
+    const on = TAGS[tg].at.filter(([c]) => n[tg] >= c).length, s = `${tg} ${n[tg]}` + (on ? ` ▸ ${TAGS[tg].txt[on - 1]}` : '');
     ctx.font = font(16); const w = ctx.measureText(s).width;
     if (tx + w > x0 + pw - 10) { tx = x0 + 14; ty += 17; }
-    text(ctx, s, tx, ty, on ? TAGS[t].col : '#6a6680');
+    text(ctx, s, tx, ty, on ? TAGS[tg].col : '#6a6680');
     tx += w + 14;
   }
-  text(ctx, 'I 닫기', x0 + 10, y0 + 6, '#8a86a0');
+  text(ctx, 'I 닫기 · 방향키 고르기', x0 + 10, y0 + 6, '#8a86a0');
 }
 // 한 판 결과 (죽었을 때 · 보스를 깼을 때)
 export function drawResult(ctx, W, H, run, win, t) {

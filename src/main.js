@@ -17,7 +17,7 @@ import { startMusic, setMood, toggleMute } from './music.js';
 import { loadFont, font } from './font.js';
 import * as FXM from './fx.js';
 import { MASKS, ITEMS, ROOMS, STAGE, newRun, nextRoom, doorChoices, depthHp, rollMask, rollItem, goldAmount, priceOf, scrapOf, statsOf, MAX_ITEMS, PLAN } from './run.js';
-import { drawChest, drawDoor, drawPickup, drawShop, drawCoins, drawPrompt, drawInfo, infoFor, drawRunHud, drawBag, drawResult, maskGlyph } from './runview.js';
+import { drawChest, drawDoor, drawPickup, drawShop, drawCoins, drawPrompt, drawInfo, infoFor, drawRunHud, drawBag, BAG_COLS, drawResult, maskGlyph } from './runview.js';
 
 const W = 480, H = 270, STEP = 1 / 120;
 const AMBIENT = [142, 137, 125];   // 먹빛·회갈색 환경광. 주황 등불과 초록 혼불을 받쳐 준다.
@@ -53,6 +53,7 @@ const LEVELS = ['level1', 'level2'];
 // 조작 방식 (Tab 으로 바꿈, 브라우저에 기억 · ?mouse / ?kb 로 강제)
 try { const c = localStorage.getItem('lopeking.ctrl'); if (c) CTRL.kb = c === 'kb'; } catch {}
 { const q = new URLSearchParams(location.search); if (q.has('mouse')) CTRL.kb = false; if (q.has('kb')) CTRL.kb = true; }
+const DEBUG_OK = new URLSearchParams(location.search).has('debug');
 setKeyLayout(CTRL.kb);
 const levelDefs = {};
 const TYPES = {};
@@ -203,6 +204,7 @@ function stepRun(real) {
   // 방 깨짐: 적이 다 쓰러지면 상자가 솟고 문이 열림
   if (!G.roomClear && !G.enemies.length && !G.boss) { G.roomClear = true; if (G.chest || G.doors.length) { sfx('check'); if (PLAN[run.step] === 'fight') G.msg = { text: '정화', t: 0, sub: true }; } }
   if (G.roomClear && G.chest && G.chest.appear < 1) G.chest.appear = Math.min(1, G.chest.appear + real * 3);
+  if (G.chest?.appear >= 1) G.chest.ready = (G.chest.ready || 0) + real;   // 다 솟고 0.35초 뒤부터 열 수 있음 (싸우다 누른 ↑ 로 솟자마자 열리던 것)
   if (G.chest?.open > 0) G.chest.open += real;
   for (const c of G.coins) {
     c.t += real;
@@ -217,7 +219,7 @@ function stepRun(real) {
   const consider = (o, kind, dy = 30) => { const d = Math.abs(o.x - p.x); if (d < best && Math.abs(o.y - p.y) < dy) { best = d; G.near = { o, kind }; } };
   for (const o of G.pickups) consider(o, 'pickup');
   for (const s of G.shops) if (!s.sold) consider(s, 'shop');
-  if (G.chest && G.chest.appear >= 1 && !G.chest.open) consider(G.chest, 'chest');
+  if (G.chest && G.chest.ready > 0.35 && !G.chest.open) consider(G.chest, 'chest');
   if (G.roomClear) for (const d of G.doors) consider(d, 'door', 44);
   const n = G.near;
   // 분해: X 꾹 0.5초 (바닥의 가면·아이템)
@@ -271,6 +273,7 @@ function takeObj(obj, x, y) {
   }
   if (run.items.length >= MAX_ITEMS) { G.popText('가방이 가득 참', x, y - 40); if (!G.pickups.some(o => o.obj === obj)) dropAt(x, y, obj); return false; }
   run.items.push(obj.id); applyMask(p);
+  run.got = { i: run.items.length - 1, t: G.time }; G.bagSel = run.got.i;   // HUD 칸이 깜빡이고, 가방을 열면 그 칸이 골라져 있음
   G.msg = { text: ITEMS[obj.id].name, t: 0, sub: true }; sfx('check');
   spark(p.x, p.cy, -Math.PI / 2, 12, { cols: ['#ffffff', '#5ab0ff'], v: 120, g: -30, life: 0.5 });
   return true;
@@ -672,7 +675,7 @@ G.advance = (sec, fn) => { for (let i = 0; i < Math.round(sec * 60); i++) { fn?.
 function tick(real) {
   fpsAcc += real; fpsN++; if (fpsAcc > 0.5) { fps = Math.round(fpsN / fpsAcc); fpsAcc = 0; fpsN = 0; }
   frameNo++;
-  if (hit('debug')) G.debug = !G.debug;
+  if (hit('debug') && DEBUG_OK) G.debug = !G.debug;   // ` 키 판정 상자는 ?debug 로 열었을 때만 (사용자: 플레이 중 테두리가 보임)
   if (hit('mute')) G.muted = toggleMute();
   if (hit('ctrl')) {
     CTRL.kb = !CTRL.kb; setKeyLayout(CTRL.kb);
@@ -696,7 +699,15 @@ function tick(real) {
   if (hit('bag') && G.run) G.mode = G.mode === 'bag' ? 'play' : G.mode === 'play' ? 'bag' : G.mode;
   if (hit('restart')) { G.mode = 'play'; if (G.run) startRun(); else { G.checkpoint = null; startLevel(); } }
   if (G.mode === 'pause') { render(0); drawPause(); endFrame(); return; }
-  if (G.mode === 'bag') { render(0); drawBag(ctx, W, H, G.run); endFrame(); return; }
+  if (G.mode === 'bag') {
+    // 방향키로 칸 고르기 (3×3)
+    const n = MAX_ITEMS, s = G.bagSel || 0;
+    if (hit('left')) G.bagSel = (s + n - 1) % n;
+    if (hit('right')) G.bagSel = (s + 1) % n;
+    if (hit('up')) G.bagSel = (s + n - BAG_COLS) % n;
+    if (hit('down')) G.bagSel = (s + BAG_COLS) % n;
+    render(0); drawBag(ctx, W, H, G.run, G.bagSel || 0, G.time); endFrame(); return;
+  }
   if (G.mode === 'fade') {
     G.fade += real;
     if (G.fade > 2.2) {
@@ -858,7 +869,7 @@ function render(real) {
   drawHud(p, prev);
   if (G.boss && !G.boss.dead && G.boss.state !== 'sleep') drawBossBar(G.boss);
   if (G.run && !p.dead) {
-    drawRunHud(ctx, G.run, CTRL.kb ? 60 : 24);
+    drawRunHud(ctx, G.run, CTRL.kb ? 60 : 24, G.time);
     if (G.near && G.mode === 'play') drawInfo(ctx, W, H, infoFor(G.near.o, G.run, G.near.kind));
   }
   if (G.mode === 'fade' && G.fade > 1.2) {
