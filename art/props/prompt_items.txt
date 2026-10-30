@@ -1,0 +1,22 @@
+Use your built-in image generation tool to create ONE image and save it as PNG to: items.png (in the current working directory). Do not write code to draw it; it must be a generated illustration. After saving, reply only with the file name.
+
+Image spec:
+- 1024x1024 square SPRITE SHEET of 14 ITEM ICONS for a dark 2D pixel-art action game set in Joseon-era Korean folklore (dokkaebi goblins, talismans). No text, no letters, no numbers, no labels, no grid lines, no frames, no background boxes behind the icons.
+- Solid flat MAGENTA background (#FF00FF) everywhere behind the icons.
+- LAYOUT: a 4x4 grid of equal cells (each 256x256 image pixels), filled in reading order (left to right, top to bottom) with the 14 icons below; the LAST TWO cells (row 4, columns 3 and 4) stay EMPTY magenta. Each icon centered in its cell with clear magenta margin.
+- RENDERING: authentic PIXEL ART icons. Each icon is drawn at only 16x16 sprite pixels and every sprite pixel is a crisp SOLID SQUARE block of 12x12 image pixels (so each icon is at most 192x192 image pixels), all aligned to one grid. NO anti-aliasing, NO gradients, NO blur, NO glow halos, NO thin lines thinner than one block. 5-7 flat colors per icon, a 1-block very dark outline around each silhouette. One single bold object per icon, simple and readable at 16x16, filling most of the 16x16 square.
+- THE 14 ICONS, in order:
+  1. BROKEN SWORD TIP: the snapped-off pointed tip of a steel blade, diagonal, with a red blood drop.
+  2. WORN STRAW SANDAL: an old Korean woven straw sandal (jipsin), tan straw.
+  3. STRING OF COINS: a bundle of old brass square-holed Korean coins (yeopjeon) threaded on a red cord.
+  4. YAKGWA: a flower-shaped brown honey cookie, glossy amber, with a dot of pine nut.
+  5. SPIRIT LAMP: a small clay oil lamp dish with a bright GREEN ghost flame.
+  6. BLOODY TALISMAN: a vertical yellow paper talisman with red scribbled marks (not real letters) and a red blood smear.
+  7. WIND FEATHER: a long pale mint-white feather with a small cyan wind swirl.
+  8. IRON CLUB PIECE: a broken chunk of a dark iron club studded with knobs.
+  9. THUNDER DRUM: a small red-and-blue Korean barrel drum (buk) with a yellow lightning zigzag.
+  10. FOX BEAD: a glowing violet-and-white marble orb (fox spirit pearl) with a sparkle.
+  11. TRIPLE-SWIRL FAN: an open folding fan painted with a red, blue and yellow three-part swirl (samtaegeuk).
+  12. UNDERWORLD COIN: a dark blackened square-holed coin glowing blood red.
+  13. DRAGON KING SCALE: one big iridescent teal-and-gold dragon scale.
+  14. DOKKAEBI HAT: a small black horsehair dokkaebi cap (gamtu) with two little bumps, a thin gold band.

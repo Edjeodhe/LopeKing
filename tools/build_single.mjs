@@ -26,6 +26,7 @@ for (const f of readdirSync('levels')) if (f.endsWith('.json')) assets.add(`leve
 for (const f of readdirSync('levels/rooms')) if (f.endsWith('.json')) assets.add(`levels/rooms/${f}`);   // 로그라이크 방
 for (const layer of ['sky', 'far', 'mid']) assets.add(`art/bg/ruin_${layer}.png`);   // 일반 원화, 발광은 runtime shader에서 분리
 if (existsSync('art/ui/icon_gwibo.png')) assets.add('art/ui/icon_gwibo.png');   // 스킬 아이콘
+for (const f of readdirSync('art/props')) if (f.endsWith('_px.png')) assets.add(`art/props/${f}`);   // 로그라이크 상자·문·좌판·가면·아이템 (runview.js)
 const PARTS = ['head', 'torso', 'hips', 'cape', 'upperArm', 'foreArm', 'thigh', 'shin'];
 // 캐릭터 그림: main.js 의 loadActorType('art/…') + 가면 폼 (run.js MASKS art)
 const actorDirs = new Set([...mods.get('main.js').matchAll(/loadActorType\('([^']+)'/g)].map(m => m[1]));
