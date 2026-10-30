@@ -158,7 +158,10 @@ export function drawPrompt(ctx, x, y, t) { const b = Math.round(Math.sin(t * 6))
 // ---- 화면 (HUD) ----
 // 정보 창: 손 닿는 가면·아이템·좌판·문. 화면 위 가운데 (방 이름 아래 — 아래쪽은 땅·상자를 가림)
 export function drawInfo(ctx, W, H, info) {
-  const lines = info.lines, w = 300, h = 10 + lines.length * 17, x = W - w - 10, y = 44;   // 오른쪽 위 (왼쪽 위는 HUD)
+  // 오른쪽 위, 글 길이만큼 (왼쪽 위는 HUD — 아이템 칸 줄 오른쪽 끝 HUD_R 과 겹치면 그 아래로)
+  ctx.font = font(16);
+  const lines = info.lines, w = Math.max(160, ...lines.map(([s]) => Math.ceil(ctx.measureText(s).width) + 16));
+  const h = 10 + lines.length * 17, x = W - w - 10, y = x < HUD_R ? 104 : 44;
   box(ctx, x - 2, y - 2, w + 4, h + 4, INK); box(ctx, x, y, w, h, '#0e0c16'); box(ctx, x, y, w, 1, '#c08a3a'); box(ctx, x, y + h - 1, w, 1, '#c08a3a');
   lines.forEach(([s, c], i) => text(ctx, s, x + 8, y + 5 + i * 17, c || '#e8e0f0'));
 }
@@ -184,13 +187,14 @@ export function drawRunHud(ctx, run, y0, t = 0) {
   const m = MASKS[run.mask.id];
   text(ctx, m.name, 60, y0 - 2, GRADES[run.mask.g].col);
   for (let i = 0; i < MAX_ITEMS; i++) {
-    const x = 6 + i * 14, y = y0 + 15, id = run.items[i];
-    slotBox(ctx, x, y, 13, id, newGlow(run, i, t));
-    if (id) itemGlyph(ctx, x + 6, y + 6, id);
+    const x = 6 + i * 23, y = y0 + 15, id = run.items[i];   // 칸 22px (아이템 그림 20px)
+    slotBox(ctx, x, y, 22, id, newGlow(run, i, t));
+    if (id) itemGlyph(ctx, x + 11, y + 11, id);
   }
-  text(ctx, 'I', 6 + MAX_ITEMS * 14 + 2, y0 + 13, '#8a86a0');
+  text(ctx, 'I', 6 + MAX_ITEMS * 23 + 2, y0 + 18, '#8a86a0');
 }
-const newGlow = (run, i, t) => run.got && run.got.i === i && t - run.got.t < 1.2 ? (Math.floor((t - run.got.t) * 8) % 2 ? 2 : 1) : 0;
+const HUD_R = 6 + MAX_ITEMS * 23 + 12;   // HUD 아이템 칸 줄 + 'I' 의 오른쪽 끝
+const newGlow =(run, i, t) => run.got && run.got.i === i && t - run.got.t < 1.2 ? (Math.floor((t - run.got.t) * 8) % 2 ? 2 : 1) : 0;
 // 아이템 칸: 검은 테 + 안쪽 바탕 + 등급 색 테 (빈 칸은 어둡게). glow 1·2 = 새로 들어옴 깜빡임 · sel = 가방에서 고른 칸
 function slotBox(ctx, x, y, S, id, glow = 0, sel = false) {
   box(ctx, x, y, S, S, INK);
@@ -216,7 +220,7 @@ export function drawBag(ctx, W, H, run, sel = 0, t = 0) {
   text(ctx, `${m.name} · ${m.kind} [${g.name}]`, x0 + 30, y0 + 28, g.col);
   text(ctx, `골드 ${run.gold}`, x0 + pw - 10, y0 + 28, '#f0c060', 'right');
   // 칸 3×3: 아이콘 2배
-  const S = 30, gap = 4, gx = x0 + 14, gy = y0 + 52;
+  const S = 44, gap = 2, gx = x0 + 14, gy = y0 + 48;   // 칸 44px · 아이템 그림 2배(40px)
   for (let i = 0; i < MAX_ITEMS; i++) {
     const x = gx + (i % BAG_COLS) * (S + gap), y = gy + Math.floor(i / BAG_COLS) * (S + gap), id = run.items[i];
     slotBox(ctx, x, y, S, id, newGlow(run, i, t), i === sel);
