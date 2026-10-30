@@ -66,6 +66,15 @@ const SFX = {
   wisps: t => { tone(t, 0.35, 420, 880, 0.07, 'sine'); tone(t + 0.06, 0.35, 630, 1320, 0.05, 'sine'); noise(t, 0.3, 1500, 4000, 0.15, 2); },   // 도깨비불: 맑게 울림
   orb: t => { tone(t, 0.12, 700, 1300, 0.06, 'sine'); noise(t, 0.1, 2000, 4500, 0.15, 2); },   // 달 평타 던지기
   orbHit: t => { tone(t, 0.12, 1100, 500, 0.08, 'triangle'); noise(t, 0.12, 3000, 800, 0.3, 1); },
+  // 가면별 평타 (maskfx.js): 불 = 묵직한 휘두름·'쾅' · 물 = 가늘고 빠른 쉭·물 튐 · 달 = 부채 바람 + 맑은 방울
+  swingHeavy: t => { noise(t, 0.26, 1100, 180, 0.6, 0.6, 'lowpass'); tone(t, 0.2, 110, 55, 0.12, 'triangle'); noise(t + 0.05, 0.16, 1800, 600, 0.2, 0.8); },
+  spinHeavy: t => { noise(t, 0.4, 500, 1600, 0.55, 0.7, 'lowpass'); tone(t, 0.32, 90, 160, 0.1, 'triangle'); noise(t + 0.1, 0.3, 2400, 800, 0.2, 0.8); },
+  hitFire: t => { noise(t, 0.32, 700, 50, 1.0, 0.5, 'lowpass'); tone(t, 0.26, 85, 30, 0.5, 'sine'); noise(t + 0.02, 0.22, 3200, 900, 0.3, 0.7); tone(t, 0.06, 220, 80, 0.2); },
+  smash: t => { noise(t, 0.5, 520, 40, 1.0, 0.5, 'lowpass'); tone(t, 0.42, 70, 26, 0.6, 'sine'); noise(t + 0.03, 0.35, 2600, 300, 0.35, 0.6); },
+  swingWater: t => { noise(t, 0.09, 7500, 2600, 0.4, 1.4); tone(t, 0.06, 1500, 2600, 0.03, 'sine'); },
+  spinWater: t => { noise(t, 0.3, 2400, 7000, 0.35, 1.2); tone(t, 0.24, 700, 1500, 0.04, 'sine'); },
+  hitWater: t => { noise(t, 0.14, 4200, 900, 0.5, 0.9); noise(t, 0.1, 1100, 220, 0.45, 0.7, 'lowpass'); tone(t, 0.07, 340, 140, 0.12, 'triangle'); },
+  fan: t => { noise(t, 0.18, 2600, 1100, 0.3, 0.6); tone(t + 0.02, 0.22, 990, 1480, 0.04, 'sine'); tone(t + 0.06, 0.2, 1480, 1980, 0.025, 'sine'); },
   death: t => { tone(t, 0.8, 220, 40, 0.4, 'sawtooth'); noise(t, 0.6, 600, 60, 0.5, 0.5, 'lowpass'); },
 };
 export function sfx(name) {

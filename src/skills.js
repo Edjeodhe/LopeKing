@@ -1,7 +1,7 @@
 // 가면 기술 (31차 로그라이크): F = 쓴 가면마다 다른 기술 · 달 도깨비 평타(도깨비불 던지기)
 // main.js 가 부름: maskSkill(G, p, 둘레 적, 피해 배율) · spawnOrb / stepOrb / drawOrb (orb 총알)
 // 기술 이펙트 색은 가면 색(fx.js setFxTheme)을 따라감 — 불 = 주황·숯불, 물 = 청록, 달 = 보라
-import { spark, cutLine, shake, flash, spiritFx, speedLine, ring, dust, SPIRIT_COLS } from './fx.js';
+import { spark, cutLine, shake, flash, spiritFx, drawSpiritCell, speedLine, ring, dust, SPIRIT_COLS } from './fx.js';
 
 const FIRE = ['#ffffff', '#ffe0b0', '#ff9a48', '#ff6a20'];   // 불기둥 불티: 흰 → 노랑빛 주황 → 주황
 const EMBER = ['#ff8a3a', '#c8501c', '#8a2a10'];             // 숯불 (흩날리는 불똥)
@@ -186,6 +186,9 @@ export function drawOrb(ctx, b, t) {
   gr.addColorStop(0, `rgba(${r},${g},${bl},0.55)`); gr.addColorStop(0.45, `rgba(${r},${g},${bl},0.2)`); gr.addColorStop(1, `rgba(${r},${g},${bl},0)`);
   ctx.fillStyle = gr; ctx.fillRect(b.x - 12 * big, b.y - 12 * big, 24 * big, 24 * big);
   ctx.globalCompositeOperation = 'source-over';
+  // 그림이 있으면 (art/fx/fx_atk_moon.png 줄 3: 초승달 품은 도깨비불 + 뒤로 일렁이는 불꽃 혀, 4장 반복) 그걸로 — 공 심이 칸 오른쪽 3/4 자리
+  const sz = (b.big ? 1.35 : 1) * big, va = Math.atan2(b.vy, b.vx), W = 46 * sz;
+  if (drawSpiritCell(ctx, 3, Math.floor(t * 14 + b.x * 0.01) & 3, b.x - Math.cos(va) * W * 0.24, b.y - Math.sin(va) * W * 0.24, W, { sheet: 'atk_moon', ang: va })) { ctx.restore(); return; }
   // 꼬리: 지나온 자리를 1px 씩 이어 그림 — 오래된 쪽일수록 가늘고 어둡게 (체크무늬 없이 굵기로 사라짐)
   const T = b.tail || [], n = T.length / 2;
   for (let i = 0; i < n; i++) {

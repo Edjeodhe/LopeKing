@@ -16,6 +16,7 @@ import { applyLight } from './light.js';
 import { startMusic, setMood, toggleMute } from './music.js';
 import { loadFont, font } from './font.js';
 import * as FXM from './fx.js';
+import { maskFxOf, maskComboFx } from './maskfx.js';
 import { MASKS, ITEMS, ROOMS, STAGE, newRun, nextRoom, doorChoices, depthHp, rollMask, rollItem, goldAmount, priceOf, scrapOf, statsOf, MAX_ITEMS, PLAN } from './run.js';
 import { drawChest, drawDoor, drawPickup, drawShop, drawCoins, drawPrompt, drawInfo, infoFor, drawRunHud, drawBag, BAG_COLS, drawResult, maskGlyph } from './runview.js';
 
@@ -385,7 +386,8 @@ G.onAttack = (p, exec) => {
   const a = p.aimRad;
   G.atk = { id: p.atkId, ang: a, exec, hit: new Set(), combo: p.combo, move: p.move, fx: 0 };
   fadeSlashFx();
-  sfx(exec ? 'slash' : ['sweep', 'sweep', 'slash', 'spin'][p.combo]);
+  const MF = !exec && maskFxOf(p);   // 불·물·달 가면 = 가면별 휘두름 소리 (src/maskfx.js)
+  sfx(exec ? 'slash' : MF ? MF.swingSfx(p.combo) : ['sweep', 'sweep', 'slash', 'spin'][p.combo]);
   if (exec) {
     // 처형: 끌려간 적은 바로 죽음 + 몸을 감싸는 붉은 고리(앞 반은 몸 앞, 뒤 반은 몸 뒤) + 번쩍 + 슬로모션
     const hitInfo = { kind: 'exec', ang: a, power: 1.3 };
@@ -472,10 +474,15 @@ function stepCombat(dt) {
   const t = p.atkT, m = at.move;
   // 달 도깨비: 평타 = 휘두르는 순간 도깨비불 하나 던짐 (근접 판정 없음, src/skills.js)
   if (p.spec?.m.atk.ranged && !at.exec) {
-    if (!at.thrown && t >= m.wind) { at.thrown = true; SK?.spawnOrb(G, p, at.ang, powMul(p)); sfx('sweep'); }
+    if (!at.thrown && t >= m.wind) {
+      at.thrown = true; SK?.spawnOrb(G, p, at.ang, powMul(p));
+      const b = G.bullets[G.bullets.length - 1]; if (b?.orb && at.combo === 3) b.big = true;   // 마무리 타 = 큰 도깨비불
+      maskFxOf(p)?.swing(G, p, at);   // 부채 달빛 + 부적 종이
+    }
     return;
   }
-  if (!at.exec) comboFx(p, at, t);
+  const MF = !at.exec && maskFxOf(p);
+  if (MF) maskComboFx(G, p, at, t, MF); else if (!at.exec) comboFx(p, at, t);
   if (t < m.wind - 0.01 || t > m.wind + m.act + 0.03) return;
   const ox = p.x, oy = p.cy, ca = Math.cos(at.ang), sa = Math.sin(at.ang);
   const rk = p.spec?.m.atk.reach || 1;   // 가면 범위 배율 (불 1.3 · 물 0.9)
@@ -501,12 +508,16 @@ function stepCombat(dt) {
       const ang = at.combo === 3 ? Math.atan2(e.cy - oy, e.x - ox) : at.ang;   // 회전은 몸 바깥쪽으로 튕김
       const hitInfo = { kind: 'slash', ang, power: fin ? 1.4 : 1, kb: at.exec ? 1 : fin ? 1.4 : 0.3 };
       const contact = [(ox + e.x) / 2, (oy + e.cy) / 2];
-      spark(contact[0], contact[1], ang, fin ? 12 : 8, { cols: FXM.SMEAR.cols, v: fin ? 280 : 220, life: 0.14 });
       popSlashFx();
-      if (!at.exec) slashFx({ row: 3, x: contact[0], y: contact[1], w: fin ? 56 : 40, life: 0.16 });   // 처형은 혼불 초승달만 (도트 섬광 없이)
-      hitBloom(e.x, e.cy, ang, fin ? 1.4 : 1);
+      if (MF) MF.hit(G, p, e, contact[0], contact[1], ang, fin);   // 가면별 타격 (불 = 둔기 폭발·재 · 물 = 물 튐)
+      else {
+        spark(contact[0], contact[1], ang, fin ? 12 : 8, { cols: FXM.SMEAR.cols, v: fin ? 280 : 220, life: 0.14 });
+        if (!at.exec) slashFx({ row: 3, x: contact[0], y: contact[1], w: fin ? 56 : 40, life: 0.16 });   // 처형은 혼불 초승달만 (도트 섬광 없이)
+        hitBloom(e.x, e.cy, ang, fin ? 1.4 : 1);
+      }
       e.damage(G, (at.exec ? 1 : m.dmg) * powMul(p), hitInfo);
-      if (!e.dead) { sfx('hit'); G.stop = Math.max(G.stop, fin ? 0.11 : 0.07); shake(fin ? 6 : 3.5, Math.cos(ang) * (fin ? 6 : 4), Math.sin(ang) * (fin ? 6 : 4)); }
+      const ks = MF?.shake || 1;
+      if (!e.dead) { sfx(MF?.hitSfx || 'hit'); G.stop = Math.max(G.stop, (fin ? 0.11 : 0.07) * (MF?.stop || 1)); shake((fin ? 6 : 3.5) * ks, Math.cos(ang) * (fin ? 6 : 4) * ks, Math.sin(ang) * (fin ? 6 : 4) * ks); }
     }
   }
   // 총알 되받아치기 (카타나 제로식)
@@ -600,7 +611,12 @@ function stepBullets(dt) {
     if (b.owner === 'player') for (const e of G.enemies) {
       if (e.dead || Math.abs(b.x - e.x) > e.w / 2 + 2 || b.y < e.y - e.h || b.y > e.y) continue;
       const hit = { kind: b.orb ? 'slash' : 'bullet', ang: Math.atan2(b.vy, b.vx), power: 1.2, kb: 0.4 };
-      if (b.dmg !== undefined) { e.damage(G, b.dmg, hit); spark(b.x, b.y, hit.ang, 8, { cols: ['#ffffff', b.orb || '#ffd080'], v: 160, life: 0.2 }); if (!e.dead) sfx('hit'); }   // 도깨비불 = 피해
+      if (b.dmg !== undefined) {   // 도깨비불 = 피해 (달 가면이면 달빛 명중 이펙트, src/maskfx.js)
+        e.damage(G, b.dmg, hit);
+        const MF = b.orb && maskFxOf(p);
+        if (MF?.orbHit) { MF.orbHit(G, b, e); if (!e.dead) sfx('orbHit'); }
+        else { spark(b.x, b.y, hit.ang, 8, { cols: ['#ffffff', b.orb || '#ffd080'], v: 160, life: 0.2 }); if (!e.dead) sfx('hit'); }
+      }
       else if (e.kind === 'boss') e.damage(G, 2, hit); else G.killEnemy(e, hit);   // 되받아친 총알 = 즉사
       b.dead = true; break;
     }

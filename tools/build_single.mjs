@@ -21,7 +21,7 @@ const IMPORT = /(\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)(['"])\.\/([\w-]+\.js)\2
 })('main.js');
 
 // ---- 그림·데이터 ----
-const assets = new Set(['art/fonts/neodgm.woff2', 'art/fx/fx_slash.png', 'art/fx/fx_gwibo.png', 'art/fx/fx_flurry.png']);
+const assets = new Set(['art/fonts/neodgm.woff2', 'art/fx/fx_slash.png', 'art/fx/fx_gwibo.png', 'art/fx/fx_flurry.png', 'art/fx/fx_atk_fire.png', 'art/fx/fx_atk_water.png', 'art/fx/fx_atk_moon.png']);   // fx_atk_* = 가면별 평타 (maskfx.js)
 for (const f of readdirSync('levels')) if (f.endsWith('.json')) assets.add(`levels/${f}`);
 for (const f of readdirSync('levels/rooms')) if (f.endsWith('.json')) assets.add(`levels/rooms/${f}`);   // 로그라이크 방
 for (const layer of ['sky', 'far', 'mid']) assets.add(`art/bg/ruin_${layer}.png`);   // 일반 원화, 발광은 runtime shader에서 분리
