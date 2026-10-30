@@ -1,0 +1,464 @@
+{
+ "cell": [
+  512,
+  640
+ ],
+ "scale": 0.03096,
+ "cloak": true,
+ "parts": {
+  "head": {
+   "pivot": [
+    281.3,
+    435.6
+   ],
+   "src": "parts/head.png",
+   "size": 1.37,
+   "joints": {
+    "eye": [
+     350.8,
+     338.1
+    ]
+   }
+  },
+  "torso": {
+   "pivot": [
+    307.3,
+    462.9
+   ],
+   "src": "parts/torso.png",
+   "size": [
+    1.524,
+    1.408
+   ],
+   "joints": {
+    "neck": [
+     273.8,
+     254.4
+    ],
+    "shoulderN": [
+     255.2,
+     300.6
+    ],
+    "shoulderF": [
+     250.9,
+     300.6
+    ],
+    "cape": [
+     246.0,
+     254.4
+    ]
+   }
+  },
+  "hips": {
+   "pivot": [
+    238.9,
+    411.7
+   ],
+   "src": "parts/hips.png",
+   "size": [
+    1.42,
+    1.259
+   ],
+   "joints": {
+    "waist": [
+     250.9,
+     286.6
+    ],
+    "hipN": [
+     253.1,
+     411.7
+    ],
+    "hipF": [
+     242.9,
+     411.7
+    ]
+   }
+  },
+  "cape": {
+   "pivot": [
+    342.1,
+    230.3
+   ],
+   "src": "parts/cape.png",
+   "size": [
+    1.2,
+    1.129
+   ]
+  },
+  "upperArm": {
+   "pivot": [
+    286.3,
+    194.2
+   ],
+   "src": "parts/upperArm.png",
+   "size": [
+    1.565,
+    1.281
+   ],
+   "joints": {
+    "elbow": [
+     266.2,
+     356.8
+    ]
+   }
+  },
+  "foreArm": {
+   "pivot": [
+    280.7,
+    169.7
+   ],
+   "src": "parts/foreArm.png",
+   "size": [
+    1.104,
+    1.166
+   ],
+   "joints": {
+    "hand": [
+     284.3,
+     425.9
+    ]
+   }
+  },
+  "thigh": {
+   "pivot": [
+    296.2,
+    134.1
+   ],
+   "src": "parts/thigh.png",
+   "size": [
+    0.98,
+    0.934
+   ],
+   "joints": {
+    "knee": [
+     257.2,
+     443.9
+    ]
+   }
+  },
+  "shin": {
+   "pivot": [
+    242.0,
+    153.1
+   ],
+   "src": "parts/shin.png",
+   "size": 0.952,
+   "joints": {
+    "sole": [
+     228.0,
+     479.0
+    ]
+   }
+  }
+ },
+ "weapon": {
+  "src": "weapon_cut.png",
+  "cell": [
+   408,
+   1091
+  ],
+  "grip": [
+   220.0,
+   153.7
+  ],
+  "rot": 0,
+  "tip": [
+   186.0,
+   1075.0
+  ],
+  "size": 0.385
+ },
+ "death": {
+  "frames": [
+   {
+    "src": "death/death_0.png",
+    "pivot": [
+     255.3,
+     490.0
+    ],
+    "w": 414,
+    "h": 498
+   },
+   {
+    "src": "death/death_1.png",
+    "pivot": [
+     240.4,
+     351.0
+    ],
+    "w": 394,
+    "h": 359
+   },
+   {
+    "src": "death/death_2.png",
+    "pivot": [
+     335.5,
+     369.0
+    ],
+    "w": 671,
+    "h": 377
+   },
+   {
+    "src": "death/death_3.png",
+    "pivot": [
+     372.5,
+     176.0
+    ],
+    "w": 745,
+    "h": 184
+   }
+  ],
+  "size": 0.08776,
+  "times": [
+   0,
+   0.12,
+   0.34,
+   0.6
+  ]
+ },
+ "anims": {
+  "idle": {
+   "frames": [
+    {
+     "src": "anims/idle_0.png",
+     "pivot": [
+      161.2,
+      445.0
+     ],
+     "w": 320,
+     "h": 453,
+     "mouth": null,
+     "eye": [
+      234.2,
+      86.4
+     ]
+    },
+    {
+     "src": "anims/idle_1.png",
+     "pivot": [
+      162.2,
+      452.0
+     ],
+     "w": 329,
+     "h": 460,
+     "mouth": null,
+     "eye": [
+      242.2,
+      87.4
+     ]
+    },
+    {
+     "src": "anims/idle_2.png",
+     "pivot": [
+      167.2,
+      461.0
+     ],
+     "w": 337,
+     "h": 468,
+     "mouth": null,
+     "eye": [
+      247.2,
+      87.4
+     ]
+    },
+    {
+     "src": "anims/idle_3.png",
+     "pivot": [
+      164.2,
+      457.0
+     ],
+     "w": 338,
+     "h": 465,
+     "mouth": null,
+     "eye": [
+      249.2,
+      88.4
+     ]
+    },
+    {
+     "src": "anims/idle_4.png",
+     "pivot": [
+      166.2,
+      452.0
+     ],
+     "w": 328,
+     "h": 459,
+     "mouth": null,
+     "eye": [
+      241.2,
+      87.4
+     ]
+    },
+    {
+     "src": "anims/idle_5.png",
+     "pivot": [
+      166.2,
+      452.0
+     ],
+     "w": 333,
+     "h": 459,
+     "mouth": null,
+     "eye": [
+      245.6,
+      87.7
+     ]
+    },
+    {
+     "src": "anims/idle_6.png",
+     "pivot": [
+      162.2,
+      452.0
+     ],
+     "w": 328,
+     "h": 459,
+     "mouth": null,
+     "eye": [
+      239.6,
+      87.7
+     ]
+    },
+    {
+     "src": "anims/idle_7.png",
+     "pivot": [
+      159.2,
+      452.0
+     ],
+     "w": 325,
+     "h": 459,
+     "mouth": null,
+     "eye": [
+      239.2,
+      87.4
+     ]
+    }
+   ],
+   "size": 0.08686,
+   "fps": 6
+  },
+  "run": {
+   "frames": [
+    {
+     "src": "anims/run_0.png",
+     "pivot": [
+      171.7,
+      356.0
+     ],
+     "w": 417,
+     "h": 364,
+     "mouth": null,
+     "eye": [
+      337.1,
+      76.7
+     ]
+    },
+    {
+     "src": "anims/run_1.png",
+     "pivot": [
+      163.7,
+      362.0
+     ],
+     "w": 361,
+     "h": 370,
+     "mouth": null,
+     "eye": [
+      335.1,
+      95.7
+     ]
+    },
+    {
+     "src": "anims/run_2.png",
+     "pivot": [
+      173.7,
+      359.0
+     ],
+     "w": 355,
+     "h": 367,
+     "mouth": null,
+     "eye": [
+      329.4,
+      86.0
+     ]
+    },
+    {
+     "src": "anims/run_3.png",
+     "pivot": [
+      185.7,
+      362.0
+     ],
+     "w": 369,
+     "h": 345,
+     "mouth": null,
+     "eye": [
+      343.7,
+      88.4
+     ]
+    },
+    {
+     "src": "anims/run_4.png",
+     "pivot": [
+      171.7,
+      400.0
+     ],
+     "w": 409,
+     "h": 361,
+     "mouth": null,
+     "eye": [
+      336.1,
+      82.7
+     ]
+    },
+    {
+     "src": "anims/run_5.png",
+     "pivot": [
+      166.7,
+      409.0
+     ],
+     "w": 364,
+     "h": 379,
+     "mouth": null,
+     "eye": [
+      338.4,
+      96.1
+     ]
+    },
+    {
+     "src": "anims/run_6.png",
+     "pivot": [
+      172.7,
+      404.0
+     ],
+     "w": 362,
+     "h": 372,
+     "mouth": null,
+     "eye": [
+      336.1,
+      86.7
+     ]
+    },
+    {
+     "src": "anims/run_7.png",
+     "pivot": [
+      185.7,
+      409.0
+     ],
+     "w": 373,
+     "h": 352,
+     "mouth": null,
+     "eye": [
+      348.1,
+      87.7
+     ]
+    }
+   ],
+   "size": 0.08686,
+   "fps": 12
+  }
+ },
+ "ref": {
+  "src": "full_side_key.png",
+  "foot": [
+   543.4,
+   1481.0
+  ],
+  "k": 1.0
+ }
+}

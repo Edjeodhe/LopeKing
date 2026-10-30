@@ -22,6 +22,7 @@ PARTS_GRID = (4, 2, ['head', 'torso', 'hips', 'cape', 'upperArm', 'foreArm', 'th
 DEATH_GRID = (2, 2, ['death_0', 'death_1', 'death_2', 'death_3'])
 TARGET_H = 44          # 서 있는 키(게임 px) — 480×270 화면 기준 SD 캐릭터 (카타나 제로 주인공 비율쯤)
 SIZE = {'head': 1.0}   # SD 비율 미세조정 (프로토 은둔자: 머리 1.18 · 다리 0.9). 편집기에서 바꿈
+EYE_FILL = {'dokkaebi_moon': (190, 90, 255)}   # 눈빛이 마젠타로 그려져 배경으로 뚫리는 폼 → 이 색으로 메움 (key_magenta)
 
 
 def key_magenta(path):
@@ -38,6 +39,19 @@ def key_magenta(path):
         violet = [i + 1 for i in range(n) if i + 1 not in edge_ids and lean[i] > 20]
         if violet:
             bg = bg & ~np.isin(lab, violet)
+        # 눈빛을 배경과 같은 마젠타로 그린 폼(31차 다시 뽑은 달 도깨비): 갇힌 조각 중 그림 위쪽 1/3 안(머리카락 틈은 더 아래·뒤)이면 눈 → 눈빛 색으로 메움
+        fill = EYE_FILL.get(os.path.basename(os.path.dirname(os.path.abspath(path))))
+        if fill:
+            fl, _ = ndimage.label(~np.isin(lab, list(edge_ids)))   # 그림 덩어리 (갇힌 조각 포함)
+            for i in range(1, n + 1):
+                m = lab == i
+                if i in edge_ids or not bg[m].any() or not 30 <= m.sum() <= 400:
+                    continue
+                ys, xs = np.nonzero(m)
+                fy = np.nonzero(fl == fl[ys[0], xs[0]])[0]
+                if (ys.mean() - fy.min()) / max(1, fy.max() - fy.min()) < 0.35:
+                    bg &= ~m
+                    a[m] = fill
     keep = bg
     # 가장자리: 반쯤 섞인 마젠타 테두리까지 지움 (빨강·파랑이 초록보다 많이 높은 픽셀)
     fringe = ndimage.binary_dilation(keep, iterations=2) & ~keep & (r > g + 70) & (b > g + 70)
@@ -222,7 +236,7 @@ def slice_death(root, rig, old, keep, full_h):
 ANIM_SHEETS = {'idle': ('pose_idle.png', 8, 6), 'run': ('pose_run.png', 8, 12), 'walk': ('pose_walk.png', 8, 8)}   # 이름: (시트, 장수, 초당 장수) — 4×2 칸. walk = 보스
 # 프레임 축척 보정 (캐릭터별 곱): 대기 첫 장 키로 맞추면 웅크린 대기(물)·벌린 다리(불)는 머리가 통 이미지보다 커 보여 줄임.
 # 기준 = 기본 도깨비의 '머리 맞춤 축척 × 1.1' 쯤 (몸 키가 리그와 너무 벌어지지 않게 그 사이)
-ANIM_FIT = {'dokkaebi_fire': 0.95, 'dokkaebi_water': 0.88}
+ANIM_FIT = {'dokkaebi_fire': 0.87}   # 31차 다시 뽑기: 불 대기(넓게 벌린 다리·어깨 방망이)는 머리가 리그보다 커 보여 줄임. 물·달은 그대로
 # 가면 눈빛 색 (캐릭터별): 머리 부위의 눈 자리(eye — main.js drawEye·eyefire.js)를 이 색 덩어리로 잼. 없으면 안 잼 (손으로 적은 값을 --keep-joints 로 지킴)
 # 프레임마다 눈은 색이 아니라 머리 부위 눈 둘레를 본으로 찾음(match_eye) — 프레임엔 눈빛이 없기도 하고(달) 뿔·머리끝이 같은 색이라
 EYE_COLOR = {
@@ -281,9 +295,13 @@ def match_eye(frame, head, eye, region, box=(80, 70, 50, 60), scales=None):
     return [round(float(x0 + mx + (ex - px0) * s), 1), round(float(y0 + my + (ey - py0) * s), 1)], s
 
 
-def frame_eye(c, head, eye, ax):
-    """프레임 한 장의 눈: 머리 둘레로 크게 찾고(위 40%, 몸통 가운데 조금 뒤부터 앞) → 그 둘레에서 눈만 좁게 다시"""
-    e, s = match_eye(c, head, eye, (max(0, int(ax) - 40), 0, c.shape[1], int(c.shape[0] * 0.4)))
+# 프레임 눈 찾는 높이 (위에서 몇 %까지, 기본 40%): 물 도깨비 대기는 40% 면 어깨 물결 무늬에 걸림 (달리기는 머리카락이 위로 날려 28% 면 머리가 빠짐)
+EYE_TOP = {('dokkaebi_water', 'idle'): 0.28}
+
+
+def frame_eye(c, head, eye, ax, top=0.4):
+    """프레임 한 장의 눈: 머리 둘레로 크게 찾고(위 top 비율, 몸통 가운데 조금 뒤부터 앞) → 그 둘레에서 눈만 좁게 다시"""
+    e, s = match_eye(c, head, eye, (max(0, int(ax) - 40), 0, c.shape[1], int(c.shape[0] * top)))
     if e is None:
         return None
     rg = (max(0, int(e[0] - 40)), max(0, int(e[1] - 40)), min(c.shape[1], int(e[0] + 40)), min(c.shape[0], int(e[1] + 40)))
@@ -330,7 +348,7 @@ def slice_anims(root, rig, full_h):
             ys, xs = np.nonzero((a > 128) & (r > 140) & (g < 90) & (b < 90))
             mouth = [round(float(xs.max()) + x0 - cx0 - 1, 1), round(float(np.median(ys)) + y0 + 3 - cy0, 1)] if len(xs) else None
             fr = {'src': f'anims/{name}_{i}.png', 'pivot': [round(ax - cx0, 1), float(ground - cy0)], 'w': c.shape[1], 'h': c.shape[0], 'mouth': mouth}
-            e = frame_eye(c, head, eye, ax - cx0) if eye else None
+            e = frame_eye(c, head, eye, ax - cx0, EYE_TOP.get((cid, name), 0.4)) if eye else None
             if e:
                 fr['eye'] = e
             frames.append(fr)

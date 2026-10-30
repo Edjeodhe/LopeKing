@@ -1,0 +1,18 @@
+Use your built-in image generation tool to create ONE image and save it as PNG to: pose_run.png (in the current working directory). Do not write code to draw it; it must be a generated illustration. After saving, reply only with the file name.
+
+Image spec:
+- 1536x1024, an exact grid of 4 columns x 2 rows (each cell 384x512).
+- Solid flat MAGENTA background (#FF00FF) everywhere behind the drawings. No text, no letters, no numbers, no labels, no grid lines, no frames, no cast shadows, no ground.
+- The attached reference images show THIS EXACT CHARACTER and his weapon. Keep the identical design, colors, proportions and scale.
+- CHARACTER: an original masked hero in his "MOON DOKKAEBI" spirit form, a dokkaebi shaman (original design, do NOT copy any existing character). Slender. His whole face is hidden behind a serene but eerie Korean DOKKAEBI MASK of pale MOON-WHITE porcelain with a small crescent-moon mark on the brow, two small curled horns of silver, a thin closed smiling mouth with tiny fangs, eye slits glowing soft VIOLET. Long straight SILVER-WHITE hair tied low, flowing back. Shaman outfit: a long layered robe of deep VIOLET and ink-black with silver trim, wide sleeves, paper talisman strips (blank, no writing) hanging from a silver cord belt, dark trousers and soft black shoes, a ragged pale silver-gray hooded half-cloak hanging from the shoulders to about the knees.
+- PROPORTIONS: REALISTIC adult human proportions like the heroes of the pixel action games Sanabi or Katana Zero (NOT chibi, NOT SD): about 6.5 heads tall, a normal-size head, slim athletic body, long legs (legs about half of the full height), normal-length arms.
+- RENDERING: authentic PIXEL ART sprite, like the hero sprites of Katana Zero or Sanabi. Drawn at LOW RESOLUTION: the standing character is only about 48 pixels tall in sprite pixels, and every sprite pixel is shown as a crisp SOLID SQUARE block (nearest-neighbor upscale, all blocks the same size, aligned to one grid). NO anti-aliasing, NO gradients, NO soft edges, NO blur, NO thin lines thinner than one block. A limited palette of about 16 colors, 2-3 flat tones per material, a 1-block dark outline around the silhouette. Simple readable shapes; details like gold trim are single blocks or omitted.
+- PALETTE: moon white porcelain, deep violet, ink black, silver, pale paper beige, and ONE glow accent: soft violet (mask eyes).
+- He holds his half-open shaman FAN (the attached weapon image) in the NEAR (right) hand.
+- Every figure is a pure SIDE VIEW, FACING RIGHT, at the SAME pixel scale in every cell (standing height about 48 sprite pixels, about 440 image px), feet on the same ground line near the bottom of its cell. Same pixel block size in every cell.
+- Each drawing sits centered in its own cell with a clear magenta margin; drawings must NOT touch or cross cell borders.
+- These are ANIMATION FRAMES for a fast 2D pixel action game in the spirit of Katana Zero (original character, do NOT copy any existing character).
+- An 8-frame RUN CYCLE, left to right then top to bottom, like the Katana Zero hero sprinting: a light gliding run, body leaning slightly forward, the fan held back in the near hand, wide sleeves and robe streaming back, long strides, the cape and hair streaming back to the LEFT.
+ 1. CONTACT (near foot forward)  2. DOWN  3. PASS (back leg swinging through, knee high)  4. UP / FLIGHT (both feet off the ground)
+ 5. CONTACT (far foot forward)  6. DOWN  7. PASS  8. UP / FLIGHT
+- The frames must loop seamlessly from frame 8 back to frame 1.

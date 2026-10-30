@@ -233,23 +233,34 @@ CHARS = {
 
 # 가면 폼 (31차, 로그라이크 가면 스테이지에서 얻음). 사용자: 전부 도깨비 컨셉, 혼령이 통째로 다름(몸·옷·무기·색·기술)
 # 비율·도트 결은 기본 폼 그림(ref_style.png = dokkaebi/full_side.png)을 따르고 디자인은 새로
-def mask_form(who, palette, parts, weapon, hold, idle, run):
+# 31차 다시 뽑기: 부위 시트는 기본 폼 부위 시트(ref_parts.png = dokkaebi/parts_side.png)와 같은 칸·크기로 (물 부위가 작게 그려졌음),
+# 몸통 칸에 팔 그리지 말 것을 세게 (불 몸통에 위팔이 붙었음), 프레임마다 가면 눈빛 (달 프레임에 없었음), 폼마다 체격(build)을 확실히 다르게
+def mask_form(who, build, eye, palette, parts, weapon, hold, idle, run):
+    parts = dict(parts)
+    parts['TORSO'] += (' IMPORTANT: draw ONLY the trunk - NO upper arm, NO biceps, NO shoulder muscle or sleeve hanging down from it; '
+                       'the arm sockets are covered flat by the clothing edge. The arms are SEPARATE parts in cells 5 and 6.')
     return {
-        'who': who, 'palette': palette, 'parts': parts, 'weapon': weapon, 'hold': hold,
+        'who': who + ' BUILD: ' + build, 'build': True, 'palette': palette, 'parts': parts, 'weapon': weapon, 'hold': hold,
         'death': True, 'real': True, 'pixel': True,
         'death_head': CHARS['dokkaebi']['death_head'],
-        'refs': ('- ATTACHED REFERENCE: the game\'s BASE HERO sprite. Copy EXACTLY its body proportions, size on the canvas, pixel block '
-                 'size, outline and number of tones. Everything else (mask, hair, outfit, colors, silhouette details) is a completely '
-                 'NEW design as described below - a different spirit form of the same masked hero.\n'),
+        'refs': ('- ATTACHED REFERENCE: the game\'s BASE HERO sprite. Copy EXACTLY its height on the canvas, its head-to-body ratio '
+                 '(about 6.5 heads tall), pixel block size, outline and number of tones. Everything else (mask, hair, outfit, colors, body '
+                 'build, silhouette) is a completely NEW design as described below - a different spirit form of the same masked hero, and it '
+                 'must NOT look like a recolor of the reference.\n'),
+        'parts_ref': ('- The second attached image is the BASE HERO\'s part sheet: draw every part of THIS form in the SAME cell, at the SAME '
+                      'large size (filling most of the cell height, never smaller), with the SAME pixel block size and the SAME joint '
+                      'positions as the matching base part - only the design, colors and build change (from the first attached image).\n'),
         'anims': {
             'idle': ('An 8-frame IDLE loop, left to right then top to bottom, like the Katana Zero hero standing ready: ' + idle +
                      ' Frames 1-4 breathe in (shoulders and chest rise one pixel at a time, the cape and hair drift back), frames 5-8 breathe '
-                     'out (shoulders sink back, cape and hair settle). The changes between neighbouring frames are SMALL so it loops smoothly.'),
+                     'out (shoulders sink back, cape and hair settle). The changes between neighbouring frames are SMALL so it loops smoothly.\n'
+                     f'- The mask EYE glows bright {eye} in EVERY frame (a clear 2-3 block bright spot on the mask).'),
             'run': ('An 8-frame RUN CYCLE, left to right then top to bottom, like the Katana Zero hero sprinting: ' + run +
                     ', long strides, the cape and hair streaming back to the LEFT.\n'
                     ' 1. CONTACT (near foot forward)  2. DOWN  3. PASS (back leg swinging through, knee high)  4. UP / FLIGHT (both feet off the ground)\n'
                     ' 5. CONTACT (far foot forward)  6. DOWN  7. PASS  8. UP / FLIGHT\n'
-                    '- The frames must loop seamlessly from frame 8 back to frame 1.'),
+                    '- The frames must loop seamlessly from frame 8 back to frame 1.\n'
+                    f'- The mask EYE glows bright {eye} in EVERY frame (a clear 2-3 block bright spot on the mask).'),
         },
     }
 
@@ -258,17 +269,24 @@ CHARS.update({
     # ① 불 도깨비 = 힘: 거대 방망이, 느린 3타, 내리찍기 불기둥
     'dokkaebi_fire': mask_form(
         'an original masked warrior hero in his "FIRE DOKKAEBI" spirit form (original design, do NOT copy any existing character). '
-        'Broad-shouldered and heavy-set but still realistic human proportions. His whole face is hidden behind a fierce Korean DOKKAEBI '
+        'His whole face is hidden behind a fierce Korean DOKKAEBI '
         'MASK carved like CHARRED BLACK WOOD with glowing EMBER-ORANGE cracks, one thick single horn curving up from the forehead, a '
         'wide grinning mouth with big blunt teeth, eye holes glowing ember-orange. Wild short spiky hair the color of ash with smoldering '
         'orange tips. Heavy blacksmith-warrior outfit: a sleeveless dark soot-gray padded vest over a bare muscular chest with old burn '
         'scars, thick blackened IRON bracers and a wide iron-studded leather belt, baggy charcoal trousers tucked into heavy iron-capped '
         'boots, a short tattered ASH-GRAY cloak with a burnt, glowing ember-orange torn hem hanging from the shoulders to about the knees.',
+        'the HEAVIEST, widest form - a huge powerful brawler: very broad shoulders, thick neck, thick muscular arms, a deep barrel chest, '
+        'thick legs in a wide planted stance, heavy boots. Same height and head size as the reference, but clearly about 1.4x wider and bulkier.',
+        'ember orange',
         'charred black, soot and ash grays, blackened iron, dark leather, and ONE glow accent: ember orange (mask cracks, eyes, cloak hem).',
         {
             'HEAD': 'head in side view wearing the charred black-wood dokkaebi mask with glowing ember cracks and ONE thick horn, ember-orange '
                     'eye hole, big blunt teeth, short spiky ash-gray hair with smoldering orange tips, short neck with a flat cut at the bottom.',
-            'TORSO': 'bare scarred muscular chest under the open sleeveless soot-gray padded vest, NO cloak, NO arms. Flat cut at neck and waist.',
+            # 31차 다시 뽑기: 이 칸에 위팔이 자꾸 붙어 그려져서 (통 이미지를 따라 그림) — 팔을 떼어 낸 몸통, 어깨는 쇠 어깨받이로 덮어 평평하게
+            'TORSO': 'ONLY the trunk as if the arms were removed: bare scarred muscular chest and back under the open sleeveless soot-gray '
+                     'padded vest, the shoulder joint covered by a small rounded blackened-iron shoulder guard that ends in a flat cut. The '
+                     'muscular bare upper arm you see in the first attached image is NOT part of this cell (it is cell 5) - leave it out '
+                     'completely, the side of the trunk below the shoulder guard shows the vest and ribs. NO cloak. Flat cut at neck and waist.',
             'HIPS': 'wide iron-studded leather belt with a heavy iron buckle, top of baggy charcoal trousers. Flat cut on top.',
             'CAPE': 'ONLY the short tattered ash-gray cloak with a burnt ember-orange glowing torn hem, seen from the side, hanging straight '
                     'DOWN from a narrow fastened top (the shoulder mount point at the top center). About 440 px long. No body inside it.',
@@ -285,16 +303,19 @@ CHARS.update({
         'a heavy powerful charge, body leaning FORWARD, head up, the free arm pumping, the huge club held back low behind him in the near hand'),
     # ② 물 도깨비 = 속도: 쌍낫, 빠른 5타·대시 2번, 물안개 연속 베기
     'dokkaebi_water': mask_form(
-        'an original masked hero in his "WATER DOKKAEBI" spirit form (original design, do NOT copy any existing character). Lean and '
-        'agile. His whole face is hidden behind a sleek Korean DOKKAEBI MASK of polished TEAL-JADE with flowing wave-shaped engravings, '
-        'two thin swept-back horns like fins, a narrow fanged mouth, eye slits glowing pale AQUA. Long dark-navy hair loose and wavy, '
-        'flowing back like water. Light fast outfit: a fitted deep-NAVY wrap jacket with teal inner lining and wave patterns, a teal sash '
+        'an original masked hero in his "WATER DOKKAEBI" spirit form (original design, do NOT copy any existing character). His whole '
+        'face is hidden behind a sleek Korean DOKKAEBI MASK of polished TEAL-JADE with flowing wave-shaped engravings, '
+        'two thin swept-back horns like fins, a narrow fanged mouth, eye slits glowing pale AQUA. Long dark-navy wavy hair tied back '
+        'into ONE long flowing tail like a stream of water (NOT a big loose mane). Light fast outfit: a fitted deep-NAVY wrap jacket with teal inner lining and wave patterns, a teal sash '
         'with hanging cords, light dark trousers with wrapped shins and soft split-toe boots, a long flowing tattered TEAL-and-navy scarf-'
         'cloak hanging from the shoulders to about the knees with a mist-like frayed hem.',
+        'the LEANEST, narrowest form - a fast assassin: narrow shoulders, slim wiry arms and long slim legs, tight-fitting clothes, a small '
+        'compact head. Same height as the reference, but clearly slimmer than it.',
+        'pale aqua',
         'deep navy, teal jade, dark slate, silver-white, and ONE glow accent: pale aqua (mask eyes).',
         {
             'HEAD': 'head in side view wearing the polished teal-jade dokkaebi mask with wave engravings, two thin swept-back fin-like horns, '
-                    'aqua eye slit, narrow fanged mouth, long wavy dark-navy hair flowing back to the LEFT, short neck with a flat cut at the bottom.',
+                    'aqua eye slit, narrow fanged mouth, long wavy dark-navy hair tied into one tail flowing back to the LEFT, short neck with a flat cut at the bottom.',
             'TORSO': 'chest and back of the fitted deep-navy wrap jacket with teal inner lining and wave pattern, NO cloak, NO arms. Flat cut '
                      'at the neck and at the waist.',
             'HIPS': 'teal sash with short hanging cords, short navy jacket skirt, top of dark trousers. Flat cut on top.',
@@ -308,16 +329,19 @@ CHARS.update({
         'a short curved SICKLE-BLADE (Korean "nat" kama) with a silver-teal crescent blade and a thin glowing aqua edge line, a short dark '
         'wooden handle wrapped in teal cord with a small trailing cord. Total length about 420 px. Seen from the side, blade at the TOP.',
         'He holds a curved silver-teal SICKLE (the attached weapon image) in EACH hand (dual wielding).',
-        'light on the balls of the feet, low crouched ready stance, both sickles held low and reversed along the forearms.',
+        'light on the balls of the feet, a slightly crouched ready stance (knees only a little bent, head about as high as standing), both sickles held low and reversed along the forearms.',
         'a very fast low sprint, body leaning FAR FORWARD like a ninja run, both arms swept back with the sickles trailing behind'),
     # ③ 달 도깨비 = 주술: 부적 부채, 도깨비불 투척 원거리 평타, 도깨비불 여러 개 유도
     'dokkaebi_moon': mask_form(
         'an original masked hero in his "MOON DOKKAEBI" spirit form, a dokkaebi shaman (original design, do NOT copy any existing '
-        'character). Slender. His whole face is hidden behind a serene but eerie Korean DOKKAEBI MASK of pale MOON-WHITE porcelain with a '
+        'character). His whole face is hidden behind a serene but eerie Korean DOKKAEBI MASK of pale MOON-WHITE porcelain with a '
         'small crescent-moon mark on the brow, two small curled horns of silver, a thin closed smiling mouth with tiny fangs, eye slits '
         'glowing soft VIOLET. Long straight SILVER-WHITE hair tied low, flowing back. Shaman outfit: a long layered robe of deep VIOLET and '
         'ink-black with silver trim, wide sleeves, paper talisman strips (blank, no writing) hanging from a silver cord belt, dark trousers '
         'and soft black shoes, a ragged pale silver-gray hooded half-cloak hanging from the shoulders to about the knees.',
+        'a slender, tall, ROBED mystic: average-width shoulders hidden under the robe, WIDE hanging sleeves, long robe panels flaring a little '
+        'below the waist (an A-shaped silhouette), an upright elegant posture. Same height as the reference.',
+        'soft violet',
         'moon white porcelain, deep violet, ink black, silver, pale paper beige, and ONE glow accent: soft violet (mask eyes).',
         {
             'HEAD': 'head in side view wearing the pale moon-white porcelain dokkaebi mask with a crescent mark, two small curled silver '
@@ -377,6 +401,8 @@ PIXEL_RENDER = (
 def style(c, full=False):
     note = f'- BODY: {c["scale_note"]}\n' if c.get('scale_note') else ''
     base = REAL_STYLE if c.get('real') else COMMON_STYLE
+    if c.get('build'):   # 가면 폼: 체격은 BUILD 문구대로 (불 = 우람, 물 = 날렵) — 공통 문구의 'slim athletic' 과 부딪히지 않게
+        base = base.replace('slim athletic body', 'body build exactly as described in BUILD')
     if c.get('props'):   # 비율을 참고 그림대로 (보스 도깨비 판 = 망나니 비율)
         base = (c['props'] if full else '- PROPORTIONS: EXACTLY the proportions of the attached character reference.\n') + base[base.index('- RENDERING'):]
     if c.get('pixel'):
