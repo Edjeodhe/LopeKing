@@ -93,7 +93,8 @@ let sheet = null;
 export async function loadSlashFx() {
   sheet = await loadSheet('art/fx/fx_slash.png', 4, 4);
   // 혼불 그림 (없으면 불티·줄기만): gwibo = 귀보·처형 · flurry = 검무 연속 베기
-  for (const n of ['gwibo', 'flurry']) { try { soft[n] = await loadSheet(`art/fx/fx_${n}.png`, 4, 4); } catch { delete soft[n]; } }
+  // atk_fire · atk_water · atk_moon = 가면별 평타 (src/maskfx.js)
+  for (const n of ['gwibo', 'flurry', 'atk_fire', 'atk_water', 'atk_moon']) { try { soft[n] = await loadSheet(`art/fx/fx_${n}.png`, 4, 4); } catch { delete soft[n]; } }
 }
 export function slashFx(o) { fx.sprites.push({ t: 0, life: 0.2, w: 80, ang: 0, layer: 'front', ramp: [...SMEAR.cols].reverse(), ...o }); }
 function drawSprite(ctx, s, back) {
