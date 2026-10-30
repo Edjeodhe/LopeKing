@@ -226,7 +226,7 @@ function drawCuts(ctx) {
       if (sAlong < 0 || sAlong > L) continue;
       const w = Math.max(0.5, (1 - Math.abs(sAlong / L - 0.5) * 2) * 3 * (1 - k));
       if (o > w) continue;
-      ctx.fillStyle = o < w * 0.4 ? '#ffffff' : o < w * 0.8 ? '#6affa8' : '#1a7a48';
+      ctx.fillStyle = o < w * 0.4 ? THEME.cut[0] : o < w * 0.8 ? THEME.cut[1] : THEME.cut[2];
       ctx.fillRect(X, Y, 1, 1);
     }
   }
@@ -324,6 +324,49 @@ function drawTrail(ctx) {
   }
 }
 
+// ---------- 가면 색 (로그라이크: 쓴 가면마다 주인공 이펙트 색이 바뀜. 모양은 그대로, 색만) ----------
+// 기본 도깨비 = 초록 혼불 · 불 = 주황·숯불 · 물 = 청록 · 달 = 보라. 피·적 이펙트·로프 붉은 실은 그대로.
+// SMEAR.cols · SPIRIT · SPIRIT_COLS · FX_LIGHT 는 다른 파일이 들고 있으니 새로 만들지 않고 안의 값만 바꿈
+const THEMES = {
+  dokkaebi: {
+    smear: ['#ffffff', '#d0ffe0', '#3ee08a', '#126a40'],
+    spirit: { dark: [20, 120, 70], mid: [60, 230, 130], hi: [190, 255, 210] }, spiritCols: ['#ffffff', '#c8ffdc', '#4ef0a0', '#2aa870'],
+    trail: { zip: [['#106a3a', 1], ['#3ef08a', 0.72], ['#ffffff', 0.34]], dash: [['#0c5a44', 1], ['#2ad89a', 0.72], ['#d0ffe8', 0.34]], jump: [['#1a6a30', 1], ['#6ae070', 0.72], ['#e8ffe0', 0.34]] },
+    cut: ['#ffffff', '#6affa8', '#1a7a48'], line: ['#dcffe8', '#4a8a6a'], light: [150, 255, 190], softLight: [120, 255, 170],
+  },
+  fire: {   // 흰 심 → 노을 주황 → 숯불 붉은 갈색
+    smear: ['#ffffff', '#ffe2b8', '#ff8a3a', '#8a2a10'],
+    spirit: { dark: [150, 40, 12], mid: [255, 128, 40], hi: [255, 226, 170] }, spiritCols: ['#ffffff', '#ffe0b8', '#ff9a48', '#c8501c'],
+    trail: { zip: [['#7a2410', 1], ['#ff8a3a', 0.72], ['#ffffff', 0.34]], dash: [['#6a1c0c', 1], ['#ff6a2a', 0.72], ['#ffe8c8', 0.34]], jump: [['#7a3a10', 1], ['#ffb040', 0.72], ['#fff0d0', 0.34]] },
+    cut: ['#ffffff', '#ffb070', '#a03a14'], line: ['#ffe8cc', '#8a5a3a'], light: [255, 170, 100], softLight: [255, 150, 80],
+  },
+  water: {   // 흰 심 → 물빛 → 청록 → 깊은 바다
+    smear: ['#ffffff', '#d0fcff', '#5af0ff', '#0e6a7a'],
+    spirit: { dark: [10, 100, 125], mid: [70, 220, 240], hi: [205, 250, 255] }, spiritCols: ['#ffffff', '#c8f8ff', '#5ae8ff', '#2a9ab8'],
+    trail: { zip: [['#0c5a6a', 1], ['#4ae8ff', 0.72], ['#ffffff', 0.34]], dash: [['#0c4a6a', 1], ['#3ac0ff', 0.72], ['#d8f4ff', 0.34]], jump: [['#0c6a6a', 1], ['#6af0e0', 0.72], ['#e0fff8', 0.34]] },
+    cut: ['#ffffff', '#8af4ff', '#167a8a'], line: ['#dcfaff', '#4a7a8a'], light: [150, 235, 255], softLight: [120, 230, 255],
+  },
+  moon: {   // 흰 심 → 달빛 연보라 → 보라 → 짙은 남보라
+    smear: ['#ffffff', '#ece0ff', '#c79bff', '#4a2a8a'],
+    spirit: { dark: [70, 40, 145], mid: [180, 130, 255], hi: [236, 222, 255] }, spiritCols: ['#ffffff', '#eadcff', '#c79bff', '#8a5ad0'],
+    trail: { zip: [['#3a1e7a', 1], ['#b080ff', 0.72], ['#ffffff', 0.34]], dash: [['#2e2070', 1], ['#8a7aff', 0.72], ['#e4e0ff', 0.34]], jump: [['#4a2a7a', 1], ['#d09aff', 0.72], ['#f4e8ff', 0.34]] },
+    cut: ['#ffffff', '#d4b4ff', '#5a3a9a'], line: ['#eee4ff', '#6a5a8a'], light: [200, 170, 255], softLight: [190, 150, 255],
+  },
+};
+let THEME = THEMES.dokkaebi;
+export let fxTheme = 'dokkaebi';
+export function setFxTheme(id) {
+  const T = THEMES[id] || THEMES.dokkaebi;
+  if (T === THEME) return;
+  THEME = T; fxTheme = THEMES[id] ? id : 'dokkaebi';
+  SMEAR.cols.splice(0, 4, ...T.smear);
+  Object.assign(SPIRIT, T.spirit);
+  SPIRIT_COLS.splice(0, 4, ...T.spiritCols);
+  Object.assign(TRAIL_COLS, T.trail);
+  FX_LIGHT.splice(0, 3, ...T.light);
+  tinted.clear();   // 혼불 그림은 색을 구워 두므로 다시 굽게
+}
+
 // 화면 번쩍 (처형·피격): { col, life }
 export function flash(col, life = 0.06) { fx.flashes.push({ col, t: 0, life }); }
 
@@ -373,7 +416,7 @@ export function updateFlash(real) {
 export function drawFxBack(ctx, time) {
   for (const l of fx.lines) {
     const k = l.t / l.life, L = l.len * (1 - k);
-    ctx.fillStyle = k > 0.5 ? '#4a8a6a' : '#dcffe8';
+    ctx.fillStyle = k > 0.5 ? THEME.line[1] : THEME.line[0];
     for (let s = 0; s < L; s++) ctx.fillRect(Math.round(l.x + l.dx * (s + k * 14)), Math.round(l.y + l.dy * (s + k * 14)), 1, 1);
   }
 }
@@ -411,7 +454,7 @@ export function drawFxGlow(ctx, time, cam, W, H, occ) {
   ctx.restore();
 }
 // 이펙트가 내는 빛: 베기 그림·고리·궤적·관통 자국 둘레를 비춤 (조명 패스에 넣음). 막 생겼을 때 가장 밝고 사라지며 약해짐
-const FX_LIGHT = [150, 255, 190];
+export const FX_LIGHT = [150, 255, 190];   // setFxTheme 이 가면 색으로 바꿈 (main.js 의 flares 빛도 이걸 쓰면 같이 바뀜)
 export function fxLights(out, time) {
   const add = (x, y, r, k) => { if (k > 0.05) out.push({ x, y, r, col: FX_LIGHT, k, glow: 0.25 * k }); };
   for (const S of fx.sprites) {
@@ -422,7 +465,7 @@ export function fxLights(out, time) {
   for (const S of fx.soft) {   // 혼불은 초록 빛
     if (S.t < 0) continue;
     const k = 1 - S.t / S.life, x = S.streak ? S.streak[2] : (S.follow?.x ?? 0) + S.x, y = S.streak ? S.streak[3] : (S.follow?.y ?? 0) + S.y;
-    if (k > 0.05) out.push({ x, y, r: S.streak ? 40 : S.w * 0.6, col: [120, 255, 170], k: k * 0.5, glow: 0.12 * k });
+    if (k > 0.05) out.push({ x, y, r: S.streak ? 40 : S.w * 0.6, col: THEME.softLight, k: k * 0.5, glow: 0.12 * k });
   }
   for (const A of fx.arcs) add((A.follow?.x ?? 0) + A.x, (A.follow?.y ?? 0) + A.y, A.rx * 1.3, 1 - A.t / A.life);
   for (const c of fx.cuts) add((c.x0 + c.x1) / 2, (c.y0 + c.y1) / 2, 40, 1 - c.t / c.life);

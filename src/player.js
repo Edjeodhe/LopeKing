@@ -40,7 +40,7 @@ export class Player {
   constructor(x, y) {
     Object.assign(this, { x, y, w: 10, h: 26, vx: 0, vy: 0, facing: 1, onGround: false, wall: 0, drop: false });
     this.hp = TUNE.hp; this.inv = 0; this.dead = false; this.deadT = 0;
-    this.coyote = 0; this.buf = 0; this.airDash = true; this.airAtk = true; this.dashT = 0; this.dashCd = 0;
+    this.coyote = 0; this.buf = 0; this.airDash = this.airDashMax; this.airAtk = true; this.dashT = 0; this.dashCd = 0;
     this.atkT = -1; this.atkCd = 0; this.atkDir = 1; this.atkId = 0; this.aim = 90; this.aimRad = 0;
     this.combo = 0; this.comboT = 0; this.move = A.COMBO[0];   // 콤보: 지금 타(0~3) · 다음 타를 받는 남은 시간 · 지금 동작 타이밍
     // 쿠나이: { state: 'fly' | 'stuck' | 'back' | 'zip', x, y(쿠나이 자리), dx, dy, tether(팽팽한 실), len, target(꽂힌 적), nx, ny(꽂힌 면) }
@@ -55,7 +55,15 @@ export class Player {
     this.mouse = [x + 50, y - 20];
     // 가면 폼: 가면마다 평타·기술이 달라지는 컨셉 (지금은 기본 폼 도깨비 하나). 도깨비 = 가면 눈에서 초록 혼불이 늘 새어 나옴 (eyefire.js)
     this.mask = 'dokkaebi'; this.idleT = 0;
+    // 로그라이크 (main.js applyMask): spec = { m: 가면 (run.js MASKS), st: 능력치 (가면 등급 + 아이템 + 각인) } · 없으면 기본 도깨비 그대로
+    this.spec = null; this.maxHp = TUNE.hp; this.comboStep = 0;
   }
+  // 가면 콤보: 타수마다 쓰는 동작 (anim.js COMBO 번호 — 0·1 가로 베기 · 2 올려 베기 · 3 회전 마무리)
+  get seq() { return { 3: [0, 2, 3], 5: [0, 1, 0, 1, 3] }[this.spec?.m.atk.hits] || [0, 1, 2, 3]; }
+  get atkSpd() { return this.spec ? this.spec.m.atk.speed * Math.max(0.5, 1 + this.spec.st.atkSpeed) : 1; }
+  get runMul() { return 1 + (this.spec?.st.move || 0); }
+  get airDashMax() { return (this.spec?.m.airDash || 1) + (this.spec?.st.airDash || 0); }
+  get skillCdMax() { return this.spec ? this.spec.m.skillCd * (1 - this.spec.st.skillCd) : TUNE.flashCd; }
   get cx() { return this.x; }
   get cy() { return this.y - 18; }    // 가슴 (로프·조준 기준)
 
@@ -83,7 +91,7 @@ export class Player {
     this.zipCd = Math.max(0, this.zipCd - dt);
     this.zipBuf = Math.max(0, (this.zipBuf || 0) - dt);
     if (this.zipBuf > 0 && this.zipCd <= 0 && this.rope?.state === 'stuck') { this.zipBuf = 0; this.startZip(G); }
-    this.atkCd = Math.max(0, this.atkCd - dt);
+    this.atkCd = Math.max(0, this.atkCd - dt * this.atkSpd);
     if (this.atkT < 0) this.comboT = Math.max(0, this.comboT - dt);
     this.buf = Math.max(0, this.buf - dt);
     if (this.atkReq) this.atkReq = Math.max(0, this.atkReq - dt);
@@ -148,10 +156,10 @@ export class Player {
         if (this.rope?.tether) this.cutRope();   // 스윙 중 대시 = 실을 끊고 튀어 나감
         if (this.flash) this.endFlash();
         this.cling = 0; this.ceil = 0; this.pole = null; this.atkT = -1;
-        this.dashT = TUNE.dashT; this.dashCd = TUNE.dashCd; this.inv = Math.max(this.inv, TUNE.dashT + 0.05);
+        this.dashT = TUNE.dashT; this.dashCd = TUNE.dashCd * (1 - (this.spec?.st.dashCd || 0)); this.inv = Math.max(this.inv, TUNE.dashT + 0.05);
         this.vx = this.dashDir[0] * TUNE.dash; this.vy = this.dashDir[1] * TUNE.dash;
         if (dx) this.facing = Math.sign(dx);
-        if (!this.onGround) this.airDash = false;
+        if (!this.onGround) this.airDash = Math.max(0, +this.airDash - 1);   // 공중 대시 횟수 (물 도깨비·바람 깃 = 2번)
         G.onDash?.(this);
         dust(this.x, this.y, -Math.sign(dx || this.facing), 5); G.sfx?.('dash');
       }
@@ -193,7 +201,7 @@ export class Player {
       // 가로 이동
       const acc = this.onGround ? TUNE.accG : hooked ? 0 : TUNE.accA;
       const atkSlow = this.atkT >= 0 && this.onGround ? 0.35 : 1;
-      const target = dir * TUNE.run * atkSlow;
+      const target = dir * TUNE.run * this.runMul * atkSlow;
       if (dir && acc) {
         if (Math.abs(this.vx) > TUNE.run && Math.sign(this.vx) === dir && !this.onGround) { /* 스윙·돌진 탄력은 유지 */ }
         else this.vx += Math.max(-acc * dt, Math.min(acc * dt, target - this.vx));
@@ -210,7 +218,7 @@ export class Player {
     }
 
     // ---- 점프 ----
-    if (this.onGround || this.cling > 0 || this.ceil > 0) { this.airJump = TUNE.airJumps; this.airDash = true; }
+    if (this.onGround || this.cling > 0 || this.ceil > 0) { this.airJump = TUNE.airJumps; this.airDash = this.airDashMax; }
     if (this.onGround) { this.coyote = TUNE.coyote; this.airAtk = true; } else this.coyote -= dt;
     if (this.buf > 0 && this.flash && !hopping) this.endFlash();   // 점프로 귀보 연쇄를 끊음 (긋는 중엔 그 한 줄은 마저)
     if (this.buf > 0 && !zipping) {
@@ -273,7 +281,7 @@ export class Player {
 
     // ---- 공격 진행 ----
     if (this.atkT >= 0) {
-      this.atkT += dt;
+      this.atkT += dt * this.atkSpd;
       if (this.atkT >= A.moveLen(this.move)) this.atkT = -1;
     }
 
@@ -288,18 +296,20 @@ export class Player {
   // 콤보: 공격이 끝나기 전(cd 가 풀린 뒤)이나 끝난 뒤 COMBO_WINDOW 안에 다시 누르면 다음 타, 놓치면 1타부터.
   // 처형(exec)은 올려 베기 자세로 하고 콤보는 처음으로
   startAttack(G, exec) {
-    const n = A.COMBO.length;
-    this.combo = exec ? 2 : this.atkT >= 0 || this.comboT > 0 ? (this.combo + 1) % n : 0;
+    // 가면마다 타수·순서가 다름 (seq: 불 3타 · 물 5타 · 기본 4타). 끝 타 = 회전 마무리
+    const seq = this.seq, n = seq.length;
+    this.comboStep = exec ? 0 : this.atkT >= 0 || this.comboT > 0 ? (this.comboStep + 1) % n : 0;
+    this.combo = exec ? 2 : seq[this.comboStep];
     this.move = A.COMBO[this.combo];
     this.atkT = 0; this.atkCd = A.moveCd(this.move, this.combo); this.atkId++; this.atkDir = this.combo === 2 ? -1 : 1;
-    this.comboT = exec || this.combo === n - 1 ? 0 : A.COMBO_WINDOW;
+    this.comboT = exec || this.comboStep === n - 1 ? 0 : A.COMBO_WINDOW;
     const a = this.aimRad, dx = Math.cos(a), dy = Math.sin(a);
     if (Math.abs(dx) > 0.15) this.facing = dx > 0 ? 1 : -1;
     // 뼈 기준 조준각: 90 = 정면, 180 = 위, 0 = 아래
     this.aim = 90 - Math.atan2(dy, Math.abs(dx)) * 180 / Math.PI;
     // 앞으로 내딛는 베기 (공중에선 마우스 방향 그대로 — 카타나 제로식). 회전 마무리는 보는 쪽으로 크게 내디딤
     // 땅: 타마다 내딛는 세기가 다름 (1타 가장 크게) · 올려 베기는 살짝 뜀
-    if (this.combo === n - 1 && !exec) this.vx = this.facing * TUNE.atkLunge * (this.onGround ? 1.3 : 1);
+    if (this.combo === 3 && !exec) this.vx = this.facing * TUNE.atkLunge * (this.onGround ? 1.3 : 1);
     else if (this.onGround) { this.vx = dx * TUNE.atkLunge * [1.05, 0.85, 0.6][this.combo]; if (this.combo === 2 && !exec) this.vy = -TUNE.riseHop; }
     else if (this.airAtk) { this.vx = dx * TUNE.atkLunge; this.vy = Math.min(this.vy, dy * TUNE.atkLunge * 0.8); if (dy < 0) this.airAtk = false; }
     // 처형은 칼이 지나가는 순간부터 시작 → 타격 멈춤 화면에 칼질·궤적이 찍혀 있게
@@ -333,7 +343,12 @@ export class Player {
     if (r?.state === 'fly') { this.zipBuf = 0.35; return; }
     if (r && r.state !== 'back') return;
     const pick = this.kbPick(G, dir);
-    if (pick.first) { if (this.flashCd <= 0) this.throwSeals(G, pick); }
+    // 둘레에 적: 기본 도깨비 = 귀보 표식 · 다른 가면 = 가면 기술 (main.js G.maskSkill)
+    if (pick.first) {
+      if (this.flashCd > 0) return;
+      if (this.spec && this.spec.m.skill !== 'gwibo') { G.maskSkill(this, pick.pool); this.flashCd = this.skillCdMax; }
+      else this.throwSeals(G, pick);
+    }
     else this.throwKunai(G, pick.anchor ? { point: pick.anchor } : { dir: pick.dir });
   }
   // ---- 귀보 (표식 쿠나이 → 순간이동 처형) ----
@@ -363,7 +378,7 @@ export class Player {
     }
     const had = this.seals.length;
     this.seals = this.seals.filter(s => !s.gone);
-    if (had && !this.seals.length && !this.flash && !this.cutWait && !this.sheath) this.flashCd = TUNE.flashCd;   // 표식을 안 쓰고 다 풀렸어도 쿨타임
+    if (had && !this.seals.length && !this.flash && !this.cutWait && !this.sheath) this.flashCd = this.skillCdMax;   // 표식을 안 쓰고 다 풀렸어도 쿨타임
     if (this.flashBuf > 0 && !this.flash && this.seals.some(s => s.state === 'stuck')) { this.flashBuf = 0; this.startFlash(G); }
   }
   // 다음 순간이동할 표식: first = 겨눈 쪽(±70°)에 가까운 것 먼저, 아니면 지금 자리에서 가장 가까운 것 (사거리 leash 안)
@@ -414,7 +429,7 @@ export class Player {
     this.slashPose = { k: 'follow', t: 0 };
     G.slow = Math.max(G.slow, 0.1); G.slowScale = Math.min(G.slowScale, 0.35);   // 벤 직후 잠깐 느리게 → 지나간 자세가 보임
     this.vx = h.ux * 160; this.vy = Math.min(h.uy * 160, -40);
-    this.airDash = true; this.airAtk = true; this.airJump = TUNE.airJumps;
+    this.airDash = this.airDashMax; this.airAtk = true; this.airJump = TUNE.airJumps;
     this.flash.t = TUNE.flashGap;
   }
   // 연쇄 끝 (다 그었거나 Space·Shift·맞아서 끊김): 그은 적은 hopFinish 초 뒤 한꺼번에 베임
@@ -425,7 +440,7 @@ export class Player {
       const dur = cut.length >= TUNE.sheathMin ? TUNE.sheathT : TUNE.sheathQuick;
       this.sheath = { t: 0, dur }; this.slashPose = null; this.cutWait = { t: dur * TUNE.sheathClick, list: cut };
     } else if (cut.length) this.cutWait = { t: TUNE.hopFinish, list: cut };
-    this.flash = null; this.flashCd = TUNE.flashCd;
+    this.flash = null; this.flashCd = this.skillCdMax;
   }
   // 지금 F 를 누르면 갈 곳 (미리보기도 같은 것 — main.js): 표식 적이 있으면 { pool, first }, 없으면 { anchor | null, dir }
   kbPick(G, dir = (held('right') ? 1 : 0) - (held('left') ? 1 : 0)) {
@@ -594,7 +609,7 @@ export class Player {
   endZip(G, arrived) {
     const r = this.rope, sp = Math.hypot(this.vx, this.vy) || 1;
     const ux = this.vx / sp, uy = this.vy / sp;
-    this.rope = null; this.zipCd = TUNE.zipCd; this.airDash = true; this.airAtk = true; this.airJump = TUNE.airJumps;
+    this.rope = null; this.zipCd = TUNE.zipCd; this.airDash = this.airDashMax; this.airAtk = true; this.airJump = TUNE.airJumps;
     if (r.target && !r.target.dead && arrived) {
       // 적에 꽂힌 쿠나이: 닿는 순간 처형
       this.aimRad = Math.atan2(uy, ux); this.vx = ux * 120; this.vy = -140;
@@ -624,7 +639,8 @@ export class Player {
 
   hurt(G, dmg, from) {
     if (this.dead || this.inv > 0) return false;
-    this.hp -= dmg; this.inv = TUNE.iframes; this.hurtInv = TUNE.iframes; this.hurtT = 0.25; this.shudder = 0.22;
+    const ifr = TUNE.iframes + (this.spec?.st.iframes || 0);
+    this.hp -= dmg; this.inv = ifr; this.hurtInv = ifr; this.hurtT = 0.25; this.shudder = 0.22;
     const k = this.x < from.x ? -1 : 1;
     this.vx = k * 170; this.vy = -170;
     if (this.rope?.state === 'zip' || this.rope?.state === 'fly') this.rope = null;

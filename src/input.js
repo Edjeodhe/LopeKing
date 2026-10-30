@@ -7,7 +7,8 @@ export const input = {
 
 // 키 배치: 둘이 같이 쓰는 키 + 조작 방식마다 다른 키 (setKeyLayout, Tab 으로 바꿈)
 const COMMON = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down',
-  Space: 'jump', ShiftLeft: 'dash', ShiftRight: 'dash', KeyR: 'restart', Backquote: 'debug', KeyP: 'pause', Escape: 'pause', KeyM: 'mute', Tab: 'ctrl' };
+  Space: 'jump', ShiftLeft: 'dash', ShiftRight: 'dash', KeyR: 'restart', Backquote: 'debug', KeyP: 'pause', Escape: 'pause', KeyM: 'mute', Tab: 'ctrl',
+  KeyX: 'scrap', KeyI: 'bag' };   // 로그라이크: X 꾹 = 바닥의 가면·아이템 분해 · I = 가방
 // 마우스 조작: WASD 이동 · E 쿠나이 · F 전체 화면 (베기·조준은 마우스)
 const MOUSE_KEYS = { ...COMMON, KeyA: 'left', KeyD: 'right', KeyW: 'up', KeyS: 'down', KeyE: 'rope', KeyF: 'full' };
 // 키보드만 조작 (흔한 배치): 방향키 이동 · Ctrl 베기 · F 쿠나이. WASD 는 뺌 (Ctrl 누른 채 W = 브라우저 탭 닫기라 막을 수 없음)

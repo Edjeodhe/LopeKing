@@ -230,6 +230,119 @@ CHARS = {
     },
 }
 
+
+# 가면 폼 (31차, 로그라이크 가면 스테이지에서 얻음). 사용자: 전부 도깨비 컨셉, 혼령이 통째로 다름(몸·옷·무기·색·기술)
+# 비율·도트 결은 기본 폼 그림(ref_style.png = dokkaebi/full_side.png)을 따르고 디자인은 새로
+def mask_form(who, palette, parts, weapon, hold, idle, run):
+    return {
+        'who': who, 'palette': palette, 'parts': parts, 'weapon': weapon, 'hold': hold,
+        'death': True, 'real': True, 'pixel': True,
+        'death_head': CHARS['dokkaebi']['death_head'],
+        'refs': ('- ATTACHED REFERENCE: the game\'s BASE HERO sprite. Copy EXACTLY its body proportions, size on the canvas, pixel block '
+                 'size, outline and number of tones. Everything else (mask, hair, outfit, colors, silhouette details) is a completely '
+                 'NEW design as described below - a different spirit form of the same masked hero.\n'),
+        'anims': {
+            'idle': ('An 8-frame IDLE loop, left to right then top to bottom, like the Katana Zero hero standing ready: ' + idle +
+                     ' Frames 1-4 breathe in (shoulders and chest rise one pixel at a time, the cape and hair drift back), frames 5-8 breathe '
+                     'out (shoulders sink back, cape and hair settle). The changes between neighbouring frames are SMALL so it loops smoothly.'),
+            'run': ('An 8-frame RUN CYCLE, left to right then top to bottom, like the Katana Zero hero sprinting: ' + run +
+                    ', long strides, the cape and hair streaming back to the LEFT.\n'
+                    ' 1. CONTACT (near foot forward)  2. DOWN  3. PASS (back leg swinging through, knee high)  4. UP / FLIGHT (both feet off the ground)\n'
+                    ' 5. CONTACT (far foot forward)  6. DOWN  7. PASS  8. UP / FLIGHT\n'
+                    '- The frames must loop seamlessly from frame 8 back to frame 1.'),
+        },
+    }
+
+
+CHARS.update({
+    # ① 불 도깨비 = 힘: 거대 방망이, 느린 3타, 내리찍기 불기둥
+    'dokkaebi_fire': mask_form(
+        'an original masked warrior hero in his "FIRE DOKKAEBI" spirit form (original design, do NOT copy any existing character). '
+        'Broad-shouldered and heavy-set but still realistic human proportions. His whole face is hidden behind a fierce Korean DOKKAEBI '
+        'MASK carved like CHARRED BLACK WOOD with glowing EMBER-ORANGE cracks, one thick single horn curving up from the forehead, a '
+        'wide grinning mouth with big blunt teeth, eye holes glowing ember-orange. Wild short spiky hair the color of ash with smoldering '
+        'orange tips. Heavy blacksmith-warrior outfit: a sleeveless dark soot-gray padded vest over a bare muscular chest with old burn '
+        'scars, thick blackened IRON bracers and a wide iron-studded leather belt, baggy charcoal trousers tucked into heavy iron-capped '
+        'boots, a short tattered ASH-GRAY cloak with a burnt, glowing ember-orange torn hem hanging from the shoulders to about the knees.',
+        'charred black, soot and ash grays, blackened iron, dark leather, and ONE glow accent: ember orange (mask cracks, eyes, cloak hem).',
+        {
+            'HEAD': 'head in side view wearing the charred black-wood dokkaebi mask with glowing ember cracks and ONE thick horn, ember-orange '
+                    'eye hole, big blunt teeth, short spiky ash-gray hair with smoldering orange tips, short neck with a flat cut at the bottom.',
+            'TORSO': 'bare scarred muscular chest under the open sleeveless soot-gray padded vest, NO cloak, NO arms. Flat cut at neck and waist.',
+            'HIPS': 'wide iron-studded leather belt with a heavy iron buckle, top of baggy charcoal trousers. Flat cut on top.',
+            'CAPE': 'ONLY the short tattered ash-gray cloak with a burnt ember-orange glowing torn hem, seen from the side, hanging straight '
+                    'DOWN from a narrow fastened top (the shoulder mount point at the top center). About 440 px long. No body inside it.',
+            'UPPER ARM': 'bare muscular upper arm with burn scars and a rounded shoulder at the top, flat cut at the elbow.',
+            'FOREARM + HAND': 'forearm in a thick blackened iron bracer, closed fist in a dark leather glove.',
+            'THIGH': 'baggy charcoal trousers, rounded hip cap on top, flat cut at the knee.',
+            'SHIN + BOOT': 'trousers tucked into a heavy black boot with an iron toe cap, toe pointing RIGHT, flat sole at the bottom.',
+        },
+        'a HUGE DOKKAEBI CLUB ("bangmangi"): a long heavy charred-black wooden club that thickens toward the end, studded with blunt iron '
+        'knobs, with glowing ember-orange cracks running through the wood, iron bands, a rope-wrapped grip. Total length about 820 px, about '
+        '150 px wide at the thick end. Seen from the side.',
+        'He holds his HUGE charred DOKKAEBI CLUB (the attached weapon image) in the NEAR (right) hand.',
+        'feet planted wide, knees bent, heavy and grounded, the huge club resting on his near shoulder, the free fist clenched.',
+        'a heavy powerful charge, body leaning FORWARD, head up, the free arm pumping, the huge club held back low behind him in the near hand'),
+    # ② 물 도깨비 = 속도: 쌍낫, 빠른 5타·대시 2번, 물안개 연속 베기
+    'dokkaebi_water': mask_form(
+        'an original masked hero in his "WATER DOKKAEBI" spirit form (original design, do NOT copy any existing character). Lean and '
+        'agile. His whole face is hidden behind a sleek Korean DOKKAEBI MASK of polished TEAL-JADE with flowing wave-shaped engravings, '
+        'two thin swept-back horns like fins, a narrow fanged mouth, eye slits glowing pale AQUA. Long dark-navy hair loose and wavy, '
+        'flowing back like water. Light fast outfit: a fitted deep-NAVY wrap jacket with teal inner lining and wave patterns, a teal sash '
+        'with hanging cords, light dark trousers with wrapped shins and soft split-toe boots, a long flowing tattered TEAL-and-navy scarf-'
+        'cloak hanging from the shoulders to about the knees with a mist-like frayed hem.',
+        'deep navy, teal jade, dark slate, silver-white, and ONE glow accent: pale aqua (mask eyes).',
+        {
+            'HEAD': 'head in side view wearing the polished teal-jade dokkaebi mask with wave engravings, two thin swept-back fin-like horns, '
+                    'aqua eye slit, narrow fanged mouth, long wavy dark-navy hair flowing back to the LEFT, short neck with a flat cut at the bottom.',
+            'TORSO': 'chest and back of the fitted deep-navy wrap jacket with teal inner lining and wave pattern, NO cloak, NO arms. Flat cut '
+                     'at the neck and at the waist.',
+            'HIPS': 'teal sash with short hanging cords, short navy jacket skirt, top of dark trousers. Flat cut on top.',
+            'CAPE': 'ONLY the long flowing tattered teal-and-navy scarf-cloak, seen from the side, hanging straight DOWN from a narrow '
+                    'fastened top (the shoulder mount point at the top center), frayed mist-like hem. About 440 px long. No body inside it.',
+            'UPPER ARM': 'navy sleeve with a rounded shoulder at the top, flat cut at the elbow.',
+            'FOREARM + HAND': 'forearm wrapped in teal cloth with a slim silver bracer, closed fist in a dark glove.',
+            'THIGH': 'dark slate trousers, rounded hip cap on top, flat cut at the knee.',
+            'SHIN + BOOT': 'shin wrapped in navy cloth, soft dark split-toe boot, toe pointing RIGHT, flat sole at the bottom.',
+        },
+        'a short curved SICKLE-BLADE (Korean "nat" kama) with a silver-teal crescent blade and a thin glowing aqua edge line, a short dark '
+        'wooden handle wrapped in teal cord with a small trailing cord. Total length about 420 px. Seen from the side, blade at the TOP.',
+        'He holds a curved silver-teal SICKLE (the attached weapon image) in EACH hand (dual wielding).',
+        'light on the balls of the feet, low crouched ready stance, both sickles held low and reversed along the forearms.',
+        'a very fast low sprint, body leaning FAR FORWARD like a ninja run, both arms swept back with the sickles trailing behind'),
+    # ③ 달 도깨비 = 주술: 부적 부채, 도깨비불 투척 원거리 평타, 도깨비불 여러 개 유도
+    'dokkaebi_moon': mask_form(
+        'an original masked hero in his "MOON DOKKAEBI" spirit form, a dokkaebi shaman (original design, do NOT copy any existing '
+        'character). Slender. His whole face is hidden behind a serene but eerie Korean DOKKAEBI MASK of pale MOON-WHITE porcelain with a '
+        'small crescent-moon mark on the brow, two small curled horns of silver, a thin closed smiling mouth with tiny fangs, eye slits '
+        'glowing soft VIOLET. Long straight SILVER-WHITE hair tied low, flowing back. Shaman outfit: a long layered robe of deep VIOLET and '
+        'ink-black with silver trim, wide sleeves, paper talisman strips (blank, no writing) hanging from a silver cord belt, dark trousers '
+        'and soft black shoes, a ragged pale silver-gray hooded half-cloak hanging from the shoulders to about the knees.',
+        'moon white porcelain, deep violet, ink black, silver, pale paper beige, and ONE glow accent: soft violet (mask eyes).',
+        {
+            'HEAD': 'head in side view wearing the pale moon-white porcelain dokkaebi mask with a crescent mark, two small curled silver '
+                    'horns, violet eye slit, thin smiling mouth with tiny fangs, long silver-white hair tied low flowing back to the LEFT, '
+                    'short neck with a flat cut at the bottom.',
+            'TORSO': 'chest and back of the layered deep-violet and ink-black shaman robe with silver trim, NO cloak, NO arms. Flat cut at '
+                     'the neck and at the waist.',
+            'HIPS': 'silver cord belt with blank paper talisman strips hanging down, long robe skirt panels to mid-thigh, top of dark '
+                    'trousers. Flat cut on top.',
+            'CAPE': 'ONLY the ragged pale silver-gray hooded half-cloak (hood down), seen from the side, hanging straight DOWN from a narrow '
+                    'fastened top (the shoulder mount point at the top center). About 440 px long. No body inside it.',
+            'UPPER ARM': 'deep-violet robe sleeve with a rounded shoulder at the top, flat cut at the elbow.',
+            'FOREARM + HAND': 'wide hanging violet sleeve cuff with silver trim, pale slender hand closed into a fist.',
+            'THIGH': 'dark trousers under the robe, rounded hip cap on top, flat cut at the knee.',
+            'SHIN + BOOT': 'dark trousers and a soft black cloth shoe, toe pointing RIGHT, flat sole at the bottom.',
+        },
+        'a large shaman FOLDING FAN, half open, ink-black ribs with a silver rim and a pale moon-white paper leaf painted with a single '
+        'violet crescent moon (no writing), a short violet tassel at the pivot. About 380 px across. Seen from the side.',
+        'He holds his half-open shaman FAN (the attached weapon image) in the NEAR (right) hand.',
+        'calm upright stance, weight on the back foot, the fan held up near the chest, the free hand raised with two fingers pointing in a '
+        'casting gesture, robe and hair drifting as if weightless.',
+        'a light gliding run, body leaning slightly forward, the fan held back in the near hand, wide sleeves and robe streaming back'),
+})
+
+
 HEAD = ('Use your built-in image generation tool to create ONE image and save it as PNG to: {name}.png '
         '(in the current working directory). Do not write code to draw it; it must be a generated illustration. '
         'After saving, reply only with the file name.\n\nImage spec:\n')

@@ -1,6 +1,6 @@
 // 로프킹 웹 프로토: 픽셀 횡스크롤 액션 (산나비·카타나 제로풍). 480×270 내부 해상도, 정수배 확대.
 // 흐름: 입력 → 고정 스텝(120Hz) 물리·AI·전투 → 자세 → 리그 굽기 → 그리기
-import { input, bindInput, endFrame, hit, setKeyLayout } from './input.js';
+import { input, bindInput, endFrame, hit, held, setKeyLayout } from './input.js';
 import { World } from './world.js';
 import { bakeTiles, makeBackground, drawBackground, loadBackdrops, drawLamp, drawRing, drawExit, drawCheck, drawGates, setTheme, PAL } from './scenery.js';
 import { loadActorType, newBakeCanvas, bakeActor, bakeDeath, bakeFrame, ACT, deathDone } from './actor.js';
@@ -15,6 +15,9 @@ import { sfx } from './sfx.js';
 import { applyLight } from './light.js';
 import { startMusic, setMood, toggleMute } from './music.js';
 import { loadFont, font } from './font.js';
+import * as FXM from './fx.js';
+import { MASKS, ITEMS, ROOMS, STAGE, newRun, nextRoom, doorChoices, depthHp, rollMask, rollItem, goldAmount, priceOf, scrapOf, statsOf, MAX_ITEMS, PLAN } from './run.js';
+import { drawChest, drawDoor, drawPickup, drawShop, drawCoins, drawPrompt, drawInfo, infoFor, drawRunHud, drawBag, drawResult, maskGlyph } from './runview.js';
 
 const W = 480, H = 270, STEP = 1 / 120;
 const AMBIENT = [142, 137, 125];   // 먹빛·회갈색 환경광. 주황 등불과 초록 혼불을 받쳐 준다.
@@ -39,8 +42,10 @@ bindInput(canvas, (cx, cy) => { const r = canvas.getBoundingClientRect(); return
 const G = {
   world: null, player: null, enemies: [], bullets: [], exits: [], flares: [], hazards: [], checks: [], boss: null,
   time: 0, stop: 0, slow: 0, slowScale: 1, debug: false, clear: false, msg: null,
-  mode: 'title',          // title · play · pause · fade(레벨 사이) · end
+  mode: 'title',          // title · play · pause · fade(레벨 사이) · end · result(한 판 결과) · bag(가방)
   level: 0, checkpoint: null, fade: 0, fadeTo: null,
+  // 로그라이크 한 판 (run.js). run 이 없으면 예전 레벨(?level=) 그대로
+  run: null, chest: null, doors: [], pickups: [], shops: [], coins: [], roomClear: false, near: null, scrapT: 0,
   sfx,
 };
 // 레벨 순서 (levels/*.json). 마지막 레벨을 깨면 끝 화면
@@ -69,7 +74,17 @@ async function boot() {
     loadActorType('art/boss_dokkaebi', { colors: 18, keep: [[190, 230, 40]], scale: 1.9, weapon: 'saber', placeholder: { cloth: '#5a2028', clothD: '#3a1018', clothL: '#8a3038', skin: '#7a6a80', skinD: '#4a3a50', accent: '#b8e040' }, tint: [62, 57, 44, 0.05] }),
   ]);
   TYPES.hero = hero; TYPES.grunt = ghoul; TYPES.gunner = gunner; TYPES.boss = boss;
-  if (new URLSearchParams(location.search).has('level')) { G.mode = 'play'; loadLevel(+new URLSearchParams(location.search).get('level') || 0); }
+  // 가면 폼: art/<폼>/rig.json 이 있으면 그 그림, 아직 없으면 기본 도깨비 그림을 가면 색으로 물들여 씀
+  TYPES.masks = { dokkaebi: hero };
+  await Promise.all(Object.entries(MASKS).filter(([id]) => id !== 'dokkaebi').map(async ([id, m]) => {
+    const has = globalThis.__ASSETS ? !!globalThis.__ASSETS[m.art + '/rig.json'] : (await fetch(m.art + '/rig.json', { method: 'HEAD', cache: 'no-store' }).catch(() => null))?.ok;
+    TYPES.masks[id] = has ? await loadActorType(m.art, { colors: 18 }) : await loadActorType('art/dokkaebi', { colors: 18, keep: [[200, 32, 40], [222, 172, 64], [70, 240, 130]], tint: m.tint });
+  }));
+  // 로그라이크 방 (levels/rooms)
+  await Promise.all([...ROOMS, 'r_start', 'r_rest', 'r_boss'].map(async n => { levelDefs[n] = await (await fetch(`levels/rooms/${n}.json`, { cache: 'no-store' })).json(); }));
+  const q = new URLSearchParams(location.search);
+  if (q.has('level')) { G.mode = 'play'; loadLevel(+q.get('level') || 0); }
+  else if (q.has('room')) { G.mode = 'play'; startRun(q.get('room'), q.get('stage') || 'gold'); }   // 확인용: ?room=r_yard&stage=mask
   else loadLevel(0);   // 타이틀 뒤에도 레벨 1 이 깔려 있음
   startMusic();
   requestAnimationFrame(frame);
@@ -77,7 +92,8 @@ async function boot() {
 
 // 레벨 읽기: 테마(팔레트·배경) → 타일 굽기 → 개체 배치. 체크포인트는 레벨마다 처음부터
 function loadLevel(i) {
-  G.level = i; levelDef = levelDefs[LEVELS[i]]; G.checkpoint = null;
+  G.level = i; levelDef = levelDefs[LEVELS[i]]; G.checkpoint = null; G.run = null;   // 예전 레벨 (로그라이크 아님)
+  if (TYPES.masks) { TYPES.hero = TYPES.masks.dokkaebi; FXM.setFxTheme?.('dokkaebi'); }
   setTheme(levelDef.theme); bg = makeBackground(W, H);
   startLevel();
 }
@@ -100,6 +116,7 @@ function startLevel() {
   }
   cam.x = G.player.x - W / 2; cam.y = G.player.y - H / 2;
   deathT = 0;
+  if (G.run) setupRoom();
 }
 // 쓰러지면 마지막 체크포인트에서 다시 (체력 가득, 죽인 적은 그대로). 보스전 중이었으면 보스도 처음 상태로
 function respawn() {
@@ -117,6 +134,146 @@ function respawn() {
   }
   deathT = 0;
   cam.x = c.x - W / 2; cam.y = c.y - H / 2;
+}
+
+// ---------- 로그라이크 한 판 (run.js) ----------
+// 방 = levels/rooms. 방의 적을 다 잡으면 끝자리(exit 점)에 상자(이 방 보상) + 다음 방 문. 문 위 표시 = 다음 방 종류(가면·골드·아이템·주막·보스)
+function startRun(room, stage) {
+  G.run = newRun(); G.run.cleared = 0; G.run.earned = 0; G.time = 0;
+  if (room) { G.run.step = PLAN.indexOf(room === 'r_rest' ? 'rest' : room === 'r_boss' ? 'boss' : 'fight'); G.run.stage = stage; }
+  enterRoom(room);
+}
+function enterRoom(name) {
+  const run = G.run;
+  levelDef = levelDefs[name || nextRoom(run)]; G.level = 0; G.checkpoint = null;
+  setTheme(levelDef.theme); bg = makeBackground(W, H);
+  startLevel();
+}
+// 가면 + 능력치를 주인공에 (그림도 그 가면 폼으로). 최대 체력이 늘면 지금 체력도 그만큼
+function applyMask(p) {
+  const run = G.run, st = statsOf(run), max0 = p.maxHp;
+  TYPES.hero = TYPES.masks[run.mask.id] || TYPES.masks.dokkaebi;
+  p.mask = run.mask.id; p.spec = { m: MASKS[run.mask.id], st };
+  FXM.setFxTheme?.(run.mask.id);   // 주인공 이펙트 색 = 가면 색 (fx.js, 다른 세션이 만드는 중)
+  p.maxHp = TUNE.hp + st.hp;
+  if (p.maxHp > max0) p.hp += p.maxHp - max0;
+  p.hp = Math.min(p.hp, p.maxHp);
+}
+function shopObj(slot) {
+  const run = G.run, taken = G.shops.map(s => s.obj.id);
+  if (slot === 'mask') return rollMask(run, taken);
+  if (slot === 'item') return rollItem(run, taken) || { type: 'heal', name: '국밥', desc: '체력 2 회복', price: 40, heal: 2 };
+  return { type: 'heal', name: '국밥 한 그릇', desc: '체력 2 회복', price: 40, heal: 2 };
+}
+function setupRoom() {
+  const run = G.run, p = G.player;
+  p.hp = run.hp ?? TUNE.hp;
+  applyMask(p);
+  const k = depthHp(run);
+  for (const e of G.enemies) { e.hp *= k; if (e.maxHp) e.maxHp *= k; }
+  G.chest = null; G.doors = []; G.pickups = []; G.shops = []; G.coins = []; G.roomClear = false; G.near = null; G.scrapT = 0;
+  const ex = G.exits[0]; G.exits = [];   // 끝자리는 상자·문 자리로만 (닿아도 레벨이 끝나지 않음)
+  if (ex) {
+    const kinds = doorChoices(run);
+    if (PLAN[run.step] === 'fight' && STAGE[run.stage]) G.chest = { x: ex.x - 30, y: ex.y, kind: run.stage, open: 0, appear: 0 };
+    const x0 = kinds.length === 2 ? ex.x : ex.x + 14;
+    G.doors = kinds.map((kind, i) => ({ x: x0 + i * 34, y: ex.y, kind }));
+  }
+  for (const s of G.world.spawns) if (s.kind === 'shop') G.shops.push({ x: s.x, y: s.y, obj: shopObj(s.slot), sold: false });
+}
+// 피해 배율: 가면 한 타 피해 × (1 + 등급·아이템·각인) × 치명타
+function powMul(p) {
+  if (!p.spec) return 1;
+  const crit = Math.random() < p.spec.st.crit;
+  return p.spec.m.atk.dmg * (1 + p.spec.st.dmg) * (crit ? 2 : 1);
+}
+// 골드 알갱이: 튀어나왔다가 주인공에게 빨려 듦 (닿으면 run.gold)
+function spawnCoins(x, y, total) {
+  const n = Math.max(1, Math.min(14, Math.round(total / 8)));
+  for (let i = 0; i < n; i++) {
+    const a = -Math.PI / 2 + (Math.random() - 0.5) * 1.6, v = 90 + Math.random() * 90;
+    G.coins.push({ x, y: y - 8, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0, gy: y, v: Math.round(total / n) + (i < total % n ? 1 : 0) });
+  }
+}
+function dropAt(x, y, obj) { G.pickups.push({ x, y, obj, scrap: 0 }); }
+// 손 닿는 것 고르기 → ↑ 로 쓰기 · X 꾹 분해. 실제 시간으로 (한 프레임에 한 번)
+function stepRun(real) {
+  const run = G.run, p = G.player;
+  run.hp = p.hp;
+  // 방 깨짐: 적이 다 쓰러지면 상자가 솟고 문이 열림
+  if (!G.roomClear && !G.enemies.length && !G.boss) { G.roomClear = true; if (G.chest || G.doors.length) { sfx('check'); if (PLAN[run.step] === 'fight') G.msg = { text: '정화', t: 0, sub: true }; } }
+  if (G.roomClear && G.chest && G.chest.appear < 1) G.chest.appear = Math.min(1, G.chest.appear + real * 3);
+  if (G.chest?.open > 0) G.chest.open += real;
+  for (const c of G.coins) {
+    c.t += real;
+    if (c.t < 0.5) { c.vy += 500 * real; c.x += c.vx * real; c.y += c.vy * real; if (c.y > c.gy - 3) { c.y = c.gy - 3; c.vy *= -0.4; c.vx *= 0.7; } }
+    else { const dx = p.x - c.x, dy = p.cy - c.y, d = Math.hypot(dx, dy) || 1, v = 160 + (c.t - 0.5) * 600; c.x += dx / d * Math.min(d, v * real); c.y += dy / d * Math.min(d, v * real); if (d < 8) { c.got = true; const g = Math.round(c.v * (1 + statsOf(run).gold)); run.gold += g; run.earned += g; sfx('coin'); } }
+  }
+  G.coins = G.coins.filter(c => !c.got);
+  // 손 닿는 것: 가까운 것 하나
+  G.near = null;
+  if (p.dead) return;
+  let best = 22;
+  const consider = (o, kind, dy = 30) => { const d = Math.abs(o.x - p.x); if (d < best && Math.abs(o.y - p.y) < dy) { best = d; G.near = { o, kind }; } };
+  for (const o of G.pickups) consider(o, 'pickup');
+  for (const s of G.shops) if (!s.sold) consider(s, 'shop');
+  if (G.chest && G.chest.appear >= 1 && !G.chest.open) consider(G.chest, 'chest');
+  if (G.roomClear) for (const d of G.doors) consider(d, 'door', 44);
+  const n = G.near;
+  // 분해: X 꾹 0.5초 (바닥의 가면·아이템)
+  if (n?.kind === 'pickup' && held('scrap')) {
+    G.scrapT += real; n.o.scrap = Math.min(1, G.scrapT / 0.5);
+    if (G.scrapT >= 0.5) {
+      const g = scrapOf(n.o.obj); run.gold += g; run.earned += g; G.scrapT = 0;
+      G.pickups.splice(G.pickups.indexOf(n.o), 1);
+      spark(n.o.x, n.o.y - 10, -Math.PI / 2, 14, { cols: ['#ffffff', '#f0c060', '#c08a3a'], v: 120, life: 0.4 });
+      G.popText(`+${g}`, n.o.x, n.o.y - 24); sfx('deflect');
+    }
+  } else { G.scrapT = 0; for (const o of G.pickups) o.scrap = 0; }
+  if (n && hit('up') && p.onGround && !p.rope) useNear(n);
+}
+function useNear({ o, kind }) {
+  const run = G.run, p = G.player;
+  if (kind === 'chest') {
+    o.open = 0.01; sfx('check'); shake(3);
+    spark(o.x, o.y - 12, -Math.PI / 2, 16, { cols: ['#ffffff', STAGE[o.kind].col], v: 160, g: 120, life: 0.5 });
+    if (o.kind === 'gold') spawnCoins(o.x, o.y, goldAmount(run));
+    else { const obj = o.kind === 'mask' ? rollMask(run) : rollItem(run); if (obj) dropAt(o.x + 2, o.y, obj); else spawnCoins(o.x, o.y, goldAmount(run)); }
+    return;
+  }
+  if (kind === 'door') {
+    run.step++; run.stage = o.kind; run.cleared++;
+    G.mode = 'fade'; G.fadeTo = 'room'; G.fade = 1.0; sfx('check');
+    return;
+  }
+  if (kind === 'shop') {
+    const price = priceOf(o.obj);
+    if (run.gold < price) { G.popText('골드가 모자람', o.x, o.y - 40); return; }
+    run.gold -= price; o.sold = true; sfx('coin');
+    if (o.obj.type === 'heal') { p.hp = Math.min(p.maxHp, p.hp + o.obj.heal); spark(p.x, p.cy, -Math.PI / 2, 10, { cols: ['#ffffff', '#ff9ab0'], v: 80, g: -40, life: 0.5 }); }
+    else takeObj(o.obj, o.x, o.y);
+    return;
+  }
+  // 바닥의 가면·아이템 줍기
+  if (takeObj(o.obj, o.x, o.y)) G.pickups.splice(G.pickups.indexOf(o), 1);
+}
+// 가면 = 바꿔 씀 (쓰던 가면은 그 자리에 떨어짐) · 아이템 = 가방에 (가득이면 못 주움)
+function takeObj(obj, x, y) {
+  const run = G.run, p = G.player;
+  if (obj.type === 'mask') {
+    const old = run.mask;
+    run.mask = { id: obj.id, g: obj.g };
+    dropAt(x - 10, y, { type: 'mask', id: old.id, g: old.g });
+    applyMask(p);
+    G.msg = { text: MASKS[obj.id].name, t: 0, sub: true };
+    spiritFx({ row: 2, x: p.x, y: p.y + 1, py: 0.7, w: 92, life: 0.5 }); flash('#ffffff', 0.05); shake(4); sfx('exec');
+    return true;
+  }
+  if (run.items.length >= MAX_ITEMS) { G.popText('가방이 가득 참', x, y - 40); if (!G.pickups.some(o => o.obj === obj)) dropAt(x, y, obj); return false; }
+  run.items.push(obj.id); applyMask(p);
+  G.msg = { text: ITEMS[obj.id].name, t: 0, sub: true }; sfx('check');
+  spark(p.x, p.cy, -Math.PI / 2, 12, { cols: ['#ffffff', '#5ab0ff'], v: 120, g: -30, life: 0.5 });
+  return true;
 }
 
 // ---------- 쿠나이 조준 보정 ----------
@@ -273,7 +430,7 @@ function hitBloom(x, y, ang, k = 1) {
   ring({ x, y, rx: 10 * k, ry: 10 * k, life: 0.2, th: 2, grow: 1.6, cols: SPIRIT_COLS });
   burstLines(x, y, ang, 6, 18 * k);
   spark(x, y, ang, Math.round(6 * k), { cols: SPIRIT_COLS.slice(0, 3), v: 260 * k, spread: 0.7, g: 200, life: 0.2, size: 2 });
-  G.flares.push({ x, y, r: 40 * k, col: [150, 255, 190], t: 0.14, glow: 0.12 });
+  G.flares.push({ x, y, r: 40 * k, col: [...FXM.FX_LIGHT], t: 0.14, glow: 0.12 });   // 가면 색 (fx.js setFxTheme)
 }
 // 콤보 이펙트: 칼이 휘둘리기 시작하는 순간에 띄움. 1·2타·회전 = 칼끝 타원을 따라 그어지는 두꺼운 띠(fx.js sweepArc, 겨눈 만큼 기울임 ±45°),
 // 4타 끝 = 큰 초승달 그림(fx_slash.png 줄 2)
@@ -310,9 +467,15 @@ function stepCombat(dt) {
   const p = G.player, at = G.atk;
   if (!at || p.atkT < 0 || at.id !== p.atkId) return;
   const t = p.atkT, m = at.move;
+  // 달 도깨비: 평타 = 휘두르는 순간 도깨비불 하나 던짐 (근접 판정 없음, src/skills.js)
+  if (p.spec?.m.atk.ranged && !at.exec) {
+    if (!at.thrown && t >= m.wind) { at.thrown = true; SK?.spawnOrb(G, p, at.ang, powMul(p)); sfx('sweep'); }
+    return;
+  }
   if (!at.exec) comboFx(p, at, t);
   if (t < m.wind - 0.01 || t > m.wind + m.act + 0.03) return;
   const ox = p.x, oy = p.cy, ca = Math.cos(at.ang), sa = Math.sin(at.ang);
+  const rk = p.spec?.m.atk.reach || 1;   // 가면 범위 배율 (불 1.3 · 물 0.9)
   const fan = (dx, dy, R, half, pad) => {
     const d = Math.hypot(dx, dy);
     if (d > R + pad) return false;
@@ -322,7 +485,7 @@ function stepCombat(dt) {
   };
   const oval = (u, v, rx, ry, pad) => (u / (rx + pad)) ** 2 + (v / (ry + pad)) ** 2 < 1;
   const inside = (x, y, pad = 0) => {
-    const dx = x - ox, dy = y - oy;
+    const dx = (x - ox) / rk, dy = (y - oy) / rk;
     if (at.exec || at.combo === 2) return fan(dx, dy, at.exec ? 52 : 50, 1.4, pad);
     if (at.combo < 2) return oval(dx * ca + dy * sa - 12, -dx * sa + dy * ca, 54, 22, pad);   // 겨눈 쪽으로 납작한 타원
     return oval(dx, dy + 4, 60, 26, pad) || (t > m.wind + m.act * 0.6 && fan(dx, dy, 68, 0.6, pad));
@@ -335,11 +498,11 @@ function stepCombat(dt) {
       const ang = at.combo === 3 ? Math.atan2(e.cy - oy, e.x - ox) : at.ang;   // 회전은 몸 바깥쪽으로 튕김
       const hitInfo = { kind: 'slash', ang, power: fin ? 1.4 : 1, kb: at.exec ? 1 : fin ? 1.4 : 0.3 };
       const contact = [(ox + e.x) / 2, (oy + e.cy) / 2];
-      spark(contact[0], contact[1], ang, fin ? 12 : 8, { cols: ['#ffffff', '#d0ffe0', '#3ee08a'], v: fin ? 280 : 220, life: 0.14 });
+      spark(contact[0], contact[1], ang, fin ? 12 : 8, { cols: FXM.SMEAR.cols, v: fin ? 280 : 220, life: 0.14 });
       popSlashFx();
       if (!at.exec) slashFx({ row: 3, x: contact[0], y: contact[1], w: fin ? 56 : 40, life: 0.16 });   // 처형은 혼불 초승달만 (도트 섬광 없이)
       hitBloom(e.x, e.cy, ang, fin ? 1.4 : 1);
-      e.damage(G, at.exec ? 1 : m.dmg, hitInfo);
+      e.damage(G, (at.exec ? 1 : m.dmg) * powMul(p), hitInfo);
       if (!e.dead) { sfx('hit'); G.stop = Math.max(G.stop, fin ? 0.11 : 0.07); shake(fin ? 6 : 3.5, Math.cos(ang) * (fin ? 6 : 4), Math.sin(ang) * (fin ? 6 : 4)); }
     }
   }
@@ -348,7 +511,7 @@ function stepCombat(dt) {
     if (b.owner !== 'enemy' || !inside(b.x, b.y, 8)) continue;
     const sp = 460;
     b.owner = 'player'; b.vx = Math.cos(at.ang) * sp; b.vy = Math.sin(at.ang) * sp; b.t = 0;
-    spark(b.x, b.y, at.ang, 10, { cols: ['#ffffff', '#d0ffe0', '#3ee08a'], v: 200, life: 0.15 });
+    spark(b.x, b.y, at.ang, 10, { cols: FXM.SMEAR.cols, v: 200, life: 0.15 });
     G.stop = Math.max(G.stop, 0.08); shake(2); sfx('deflect');
   }
 }
@@ -364,7 +527,18 @@ G.killEnemy = (e, hit) => {
   shake(hit.kind === 'exec' ? 5 : 3.5, Math.cos(hit.ang || 0) * 3, Math.sin(hit.ang || 0) * 3);
   sfx('gore');
   if (kind === 'bisect' || kind === 'burst') { G.slow = Math.max(G.slow, 0.18); G.slowScale = 0.35; }
+  // 로그라이크: 처치마다 골드 몇 닢 + 피 각인·부적이면 확률로 체력 1
+  if (G.run) {
+    const st = statsOf(G.run), p = G.player;
+    G.run.kills++;
+    spawnCoins(e.x, e.y, 2 + Math.floor(Math.random() * 3) + st.killGold);
+    if (st.heal && !p.dead && p.hp < p.maxHp && Math.random() < st.heal) { p.hp++; G.popText('+1', p.x, p.y - 34); }
+  }
 };
+// 가면 기술 · 달 도깨비 도깨비불 (src/skills.js — 없으면 조용히 안 됨) · 가면별 이펙트 색 (fx.js setFxTheme)
+let SK = null;
+import('./skills.js').then(m => { SK = m; }).catch(() => {});
+G.maskSkill = (p, pool) => SK?.maskSkill(G, p, pool, powMul(p));
 // 쿠나이 돌진이 지나간 구간(x0,y0 → x1,y1, 가슴 높이)의 적을 벰 — 몸을 던져 관통하며 베는 느낌. 꽂힌 적(target)은 도착해서 처형
 G.zipCut = (p, x0, y0, x1, y1, target) => {
   const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy);
@@ -376,7 +550,7 @@ G.zipCut = (p, x0, y0, x1, y1, target) => {
     const t = segBox(x0, y0, dx / L, dy / L, e.x - hw, top, e.x + hw, e.y + 2);
     if (t === null || t > L) continue;
     e.zipHit = p.zipId;
-    spark(e.x, e.cy, ang, 10, { cols: ['#ffffff', '#d0ffe0', '#3ee08a'], v: 240, life: 0.14 });
+    spark(e.x, e.cy, ang, 10, { cols: FXM.SMEAR.cols, v: 240, life: 0.14 });
     cutLine(e.x - Math.cos(ang) * 30, e.cy - Math.sin(ang) * 30, e.x + Math.cos(ang) * 30, e.cy + Math.sin(ang) * 30);
     e.damage(G, e.kind === 'boss' ? 2 : 99, { kind: 'slash', ang, power: 1.2 });
     G.stop = Math.max(G.stop, 0.05);
@@ -413,6 +587,7 @@ function stepBullets(dt) {
   const w = G.world, p = G.player;
   for (const b of G.bullets) {
     b.t += dt;
+    if (b.orb) { SK?.stepOrb(G, b, dt); if (b.dead) continue; }   // 도깨비불: 적 쪽으로 휘어 감 (skills.js)
     const nx = b.x + b.vx * dt, ny = b.y + b.vy * dt;
     if (w.solidPx(nx, ny) || b.t > 3) { b.dead = true; spark(b.x, b.y, Math.atan2(-b.vy, -b.vx), 4, { cols: ['#ffd080', '#8a8fa0'], v: 80 }); continue; }
     b.x = nx; b.y = ny;
@@ -421,8 +596,9 @@ function stepBullets(dt) {
     }
     if (b.owner === 'player') for (const e of G.enemies) {
       if (e.dead || Math.abs(b.x - e.x) > e.w / 2 + 2 || b.y < e.y - e.h || b.y > e.y) continue;
-      const hit = { kind: 'bullet', ang: Math.atan2(b.vy, b.vx), power: 1.2 };
-      if (e.kind === 'boss') e.damage(G, 2, hit); else G.killEnemy(e, hit);
+      const hit = { kind: b.orb ? 'slash' : 'bullet', ang: Math.atan2(b.vy, b.vx), power: 1.2, kb: 0.4 };
+      if (b.dmg !== undefined) { e.damage(G, b.dmg, hit); spark(b.x, b.y, hit.ang, 8, { cols: ['#ffffff', b.orb || '#ffd080'], v: 160, life: 0.2 }); if (!e.dead) sfx('hit'); }   // 도깨비불 = 피해
+      else if (e.kind === 'boss') e.damage(G, 2, hit); else G.killEnemy(e, hit);   // 되받아친 총알 = 즉사
       b.dead = true; break;
     }
   }
@@ -467,6 +643,7 @@ function step(dt) {
 }
 function levelClear() {
   G.clear = true; G.bossDownT = undefined;
+  if (G.run) { G.run.cleared++; G.fadeTo = 'result'; G.fade = 0; G.mode = 'fade'; return; }   // 보스를 깸 = 한 판 끝
   G.msg = { text: G.level + 1 < LEVELS.length ? '돌파' : '끝 — 플레이해 주셔서 고맙습니다', t: 0 };
   G.fadeTo = G.level + 1 < LEVELS.length ? G.level + 1 : 'end'; G.fade = 0;
   G.mode = 'fade';
@@ -504,19 +681,37 @@ function tick(real) {
   }
   if (G.mode === 'title') {
     if (hit('pause')) G.titleHelp = !G.titleHelp;   // 타이틀에서도 Esc = 조작법 창
-    if (input.mPressed[0] || hit('jump')) { G.titleHelp = false; G.mode = 'play'; loadLevel(0); G.time = 0; sfx('check'); }
+    if (input.mPressed[0] || hit('jump')) { G.titleHelp = false; G.mode = 'play'; startRun(); sfx('check'); }   // 시작 = 로그라이크 한 판
     drawTitle(real); endFrame(); return;
   }
   if (G.mode === 'end') { if (input.mPressed[0] || hit('jump')) { G.mode = 'title'; loadLevel(0); } drawEnd(real); endFrame(); return; }
-  if (hit('pause')) G.mode = G.mode === 'pause' ? 'play' : G.mode === 'play' ? 'pause' : G.mode;
-  if (hit('restart')) { G.mode = 'play'; G.checkpoint = null; startLevel(); }
+  // 한 판 결과 (죽음·보스 깸) → Space 로 새 판
+  if (G.mode === 'result') {
+    G.resultT = (G.resultT || 0) + real;
+    drawResult(ctx, W, H, G.run, G.resultWin, G.resultT);
+    if (G.resultT > 0.8 && (input.mPressed[0] || hit('jump'))) { G.mode = 'play'; startRun(); }
+    endFrame(); return;
+  }
+  if (hit('pause')) G.mode = G.mode === 'pause' || G.mode === 'bag' ? 'play' : G.mode === 'play' ? 'pause' : G.mode;
+  if (hit('bag') && G.run) G.mode = G.mode === 'bag' ? 'play' : G.mode === 'play' ? 'bag' : G.mode;
+  if (hit('restart')) { G.mode = 'play'; if (G.run) startRun(); else { G.checkpoint = null; startLevel(); } }
   if (G.mode === 'pause') { render(0); drawPause(); endFrame(); return; }
+  if (G.mode === 'bag') { render(0); drawBag(ctx, W, H, G.run); endFrame(); return; }
   if (G.mode === 'fade') {
     G.fade += real;
-    if (G.fade > 2.2) { if (G.fadeTo === 'end') G.mode = 'end'; else { loadLevel(G.fadeTo); G.mode = 'play'; } G.fade = 0; }
+    if (G.fade > 2.2) {
+      if (G.fadeTo === 'end') G.mode = 'end';
+      else if (G.fadeTo === 'result') { G.mode = 'result'; G.resultWin = true; G.resultT = 0; }
+      else if (G.fadeTo === 'room') { enterRoom(); G.mode = 'play'; }   // 문 → 다음 방
+      else { loadLevel(G.fadeTo); G.mode = 'play'; }
+      G.fade = 0;
+    }
   }
-  // 쓰러진 뒤 잠시 뒤 체크포인트에서 다시
-  if (G.player.dead && deathT > 1.8) respawn();
+  // 쓰러진 뒤: 로그라이크면 한 판 끝(결과), 예전 레벨이면 체크포인트에서 다시
+  if (G.player.dead && deathT > 1.8) {
+    if (G.run) { if (G.mode !== 'result') { G.mode = 'result'; G.resultWin = false; G.resultT = 0; } endFrame(); return; }
+    respawn();
+  }
   if (hit('full')) (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.());
 
   const p = G.player;
@@ -530,6 +725,7 @@ function tick(real) {
   updateCam(real);
   if (dt > 0) { p.animate(dt); for (const e of G.enemies) e.animate(dt); }
   stepEyeFire(real, p);   // 가면 눈 혼불 (실제 시간 — 타격 멈춤 중에도 흐름)
+  if (G.run && G.mode === 'play') stepRun(real);   // 상자·문·줍기·분해·골드
   if (G.msg) G.msg.t += real;
   updateFlash(real);
   render(real);
@@ -553,6 +749,12 @@ function render(real) {
   for (const x of G.exits) drawExit(ctx, x, G.time);
   for (const c of G.checks) drawCheck(ctx, c, G.time);
   drawGates(ctx, w, G.time);
+  if (G.run) {   // 로그라이크: 문 · 좌판 · 상자 · 바닥의 가면·아이템
+    for (const d of G.doors) drawDoor(ctx, d, G.time, G.roomClear);
+    for (const s of G.shops) drawShop(ctx, s, G.time);
+    if (G.chest) drawChest(ctx, G.chest, G.time);
+    for (const o of G.pickups) drawPickup(ctx, o, G.time);
+  }
   // 로프 겨냥 미리보기: 지금 쏘면 걸리는 고리 깜빡임. 키보드면 지금 F 를 누르면 갈 곳(표식 적·걸 곳)
   const kbPick = CTRL.kb && !p.dead && !p.flash && !p.sheath && !p.cutWait && !p.seals.length && (!p.rope || p.rope.state === 'back') ? p.kbPick(G) : null;
   const aimDir = !CTRL.kb && !p.dead && !p.rope ? G.ropeAssist(p.cx, p.cy, Math.cos(p.aimRad), Math.sin(p.aimRad)) || [Math.cos(p.aimRad), Math.sin(p.aimRad)] : null;
@@ -615,6 +817,10 @@ function render(real) {
   drawHazards(ctx, G, G.time);
   drawFxFront(ctx, G.time);
   for (const b of G.bullets) drawBullet(b);
+  if (G.run) {
+    drawCoins(ctx, G.coins);
+    if (G.near && !p.dead) { const o = G.near.o; drawPrompt(ctx, Math.round(o.x), Math.round(o.y) - (G.near.kind === 'door' ? 62 : 34), G.time); }
+  }
   ctx.font = font(16); ctx.textAlign = 'center'; ctx.textBaseline = 'top';
   for (const t of fx.texts) { const y = Math.round(t.y - t.t * 30); ctx.fillStyle = PAL.ink; ctx.fillText(t.text, Math.round(t.x) + 1, y + 1); ctx.fillStyle = '#ffe060'; ctx.fillText(t.text, Math.round(t.x), y); }
   if (G.debug) drawDebug();
@@ -625,11 +831,17 @@ function render(real) {
   for (const l of w.lamps) lights.push({ x: l.x, y: l.y + 4, r: 80 + Math.round(Math.sin(G.time * 9 + l.x)) * 2, col: [255, 200, 165], glow: 0.1 });
   for (const x of G.exits) lights.push({ x: x.x + 6, y: x.y - 20, r: 48, col: [255, 170, 150] });
   for (const b of G.bullets) lights.push({ x: b.x, y: b.y, r: 14, col: [255, 220, 150] });
+  if (G.run) {
+    if (G.chest?.appear > 0) lights.push({ x: G.chest.x, y: G.chest.y - 10, r: 46, col: [255, 220, 170], k: 0.7 });
+    for (const d of G.doors) lights.push({ x: d.x, y: d.y - 24, r: G.roomClear ? 56 : 30, col: [255, 200, 160], k: G.roomClear ? 0.8 : 0.4 });
+    for (const s of G.shops) lights.push({ x: s.x, y: s.y - 14, r: 40, col: [255, 200, 150], k: 0.7 });
+    for (const o of G.pickups) lights.push({ x: o.x, y: o.y - 10, r: 30, col: [230, 230, 255], k: 0.6 });
+  }
   for (const e of G.enemies) lights.push({ x: e.x, y: e.cy, r: e.kind === 'boss' ? 56 : 34, col: [224, 214, 191], k: 0.6 });
   for (const f of G.flares) lights.push(f);
   if (p.rope && p.rope.state !== 'back') lights.push({ x: p.rope.x, y: p.rope.y, r: 12, col: [255, 140, 140] });
   for (const s of p.seals) lights.push({ x: s.x, y: s.y, r: s.state === 'stuck' ? 22 : 12, col: [120, 255, 170], k: 0.7 });
-  if (p.sock?.eye && !p.dead) lights.push({ x: p.sock.eye[0], y: p.sock.eye[1], r: 14, col: [90, 255, 150], k: 0.45 });   // 가면 눈빛이 얼굴을 살짝 비춤
+  if (p.sock?.eye && !p.dead) lights.push({ x: p.sock.eye[0], y: p.sock.eye[1], r: 14, col: FXM.FX_LIGHT, k: 0.45 });   // 가면 눈빛이 얼굴을 살짝 비춤 (가면 색)
   fxLights(lights, G.time);
   if (!G.noLight) applyLight(ctx, W, H, { x: cx, y: cy }, G.world.def.ambient || AMBIENT, lights);
   // 배우/지형 조명의 알파를 보존해 뒤가 비치지 않게 합성하고, 화면 이펙트·HUD를 그린다.
@@ -645,6 +857,10 @@ function render(real) {
   if (CTRL.kb && !p.dead) drawKbMarks(p, kbPick, cx, cy);
   drawHud(p, prev);
   if (G.boss && !G.boss.dead && G.boss.state !== 'sleep') drawBossBar(G.boss);
+  if (G.run && !p.dead) {
+    drawRunHud(ctx, G.run, CTRL.kb ? 60 : 24);
+    if (G.near && G.mode === 'play') drawInfo(ctx, W, H, infoFor(G.near.o, G.run, G.near.kind));
+  }
   if (G.mode === 'fade' && G.fade > 1.2) {
     // 레벨 사이 암전: 가로 줄무늬로 덮음
     const k = Math.min(1, (G.fade - 1.2) / 0.6);
@@ -686,12 +902,12 @@ const CONTROLS = {
   kb: [
     [['방향키', '이동 · 겨누기 (베기·로프 방향)'], ['Space', '점프 · 공중 한 번 더 · 벽 차고 뛰기'], ['Shift', '대시 (8방향 · 무적)'], ['Ctrl', '베기 (4타 콤보 · 총알 되받아치기)']],
     [['F', '로프: 걸 곳에 꽂힘 → 위면 바로 스윙'], ['방향키', '매달려 위·아래 감기 · 좌우 흔들기'], ['F 다시', '꽂힌 자리로 돌진'], ['Space·Shift', '매달린 로프 끊기']],
-    [['F (적 근처)', '쿠나이: 둘레 적들에게 표식'], ['F 다시', '귀보 — 표식 적을 연달아 그어 벰'], ['', '쿨타임 5초 (왼쪽 위 칸)']],
+    [['F (적 근처)', '귀보 · 다른 가면은 가면 기술'], ['↑', '상자 열기 · 문 · 줍기 · 사기'], ['X 꾹 · I', '바닥 가면·아이템 분해 · 가방']],
   ],
   mouse: [
     [['A/D', '이동 (조준은 마우스)'], ['Space', '점프 · 공중 한 번 더 · 벽 차고 뛰기'], ['Shift', '대시 (방향키 8방향 · 무적)'], ['좌클릭', '베기 (마우스 쪽 · 4타 콤보)']],
     [['우클릭 톡', '로프 꽂기 (E 도 됨)'], ['우클릭 꾹', '꽂히면 스윙 · W/S 감기 · A/D 흔들기'], ['우클릭 다시', '꽂힌 자리로 돌진'], ['Space·Shift', '매달린 로프 끊기']],
-    [['', '쿠나이 귀보는 키보드 조작에서 (Tab)']],
+    [['', '쿠나이 귀보는 키보드 조작에서 (Tab)'], ['W', '상자 열기 · 문 · 줍기 · 사기'], ['X 꾹 · I', '바닥 가면·아이템 분해 · 가방']],
   ],
 };
 function drawControls(paused) {
@@ -883,7 +1099,7 @@ G.onZip = (p, ux, uy) => {
 G.onZipEnd = (p, ux, uy, r) => {
   G.stop = Math.max(G.stop, 0.05);
   shake(3, ux * 4, uy * 4);
-  spark(r.x, r.y, Math.atan2(-uy, -ux), 10, { cols: ['#ffffff', '#d0ffe0', '#3ee08a'], v: 200, g: 300, life: 0.22, drag: 4 });
+  spark(r.x, r.y, Math.atan2(-uy, -ux), 10, { cols: FXM.SMEAR.cols, v: 200, g: 300, life: 0.22, drag: 4 });
   for (let i = 0; i < 5; i++) { const a = Math.atan2(-uy, -ux) + (i - 2) * 0.45; speedLine(r.x, r.y, Math.cos(a), Math.sin(a), 6 + Math.random() * 6); }
 };
 // 더블 점프: 대시처럼 출발 순간 아주 짧게 멈췄다 튀어 오름 + 발밑에서 공기가 아래·옆으로 터짐 (짧은 속도선 + 먼지 + 남보라 불티)
@@ -896,6 +1112,7 @@ G.onDoubleJump = p => {
 };
 
 function drawBullet(b) {
+  if (b.orb) { SK?.drawOrb(ctx, b, G.time); return; }
   const a = Math.atan2(b.vy, b.vx), mine = b.owner === 'player';
   for (let k = 0; k < 6; k++) {
     ctx.fillStyle = k === 0 ? '#ffffff' : k < 3 ? (mine ? '#80e0ff' : '#ffd060') : (mine ? '#3080c0' : '#c06020');
@@ -968,13 +1185,18 @@ function drawKbMarks(p, pick, cx, cy) {
 function drawSkillSlot(p) {
   const x = 8, y = 22, S = 32, cd = p.flashCd || 0, armed = p.seals.some(s => s.state === 'stuck'), active = !!p.flash;
   ctx.fillStyle = PAL.ink; ctx.fillRect(x - 1, y - 1, S + 2, S + 2);
-  if (iconGwibo) ctx.drawImage(iconGwibo, x, y, S, S);
+  const m = p.spec?.m;
+  if (m && m.skill !== 'gwibo') {   // 다른 가면 기술: 가면 얼굴 2배 + 가면 색 바탕 (아이콘 그림은 아직 없음)
+    ctx.fillStyle = '#1a1420'; ctx.fillRect(x, y, S, S);
+    ctx.fillStyle = m.fx; ctx.globalAlpha = 0.25; ctx.fillRect(x + 2, y + 2, S - 4, S - 4); ctx.globalAlpha = 1;
+    ctx.save(); ctx.translate(x + S / 2, y + S / 2 + 2); ctx.scale(2, 2); maskGlyph(ctx, 0, 0, p.mask); ctx.restore();
+  } else if (iconGwibo) ctx.drawImage(iconGwibo, x, y, S, S);
   else {   // 아이콘이 없을 때: 쿠나이 한 자루
     ctx.fillStyle = '#1a1420'; ctx.fillRect(x, y, S, S);
     for (let k = 0; k < 18; k++) { ctx.fillStyle = k < 11 ? '#c8ccd8' : '#9a1a22'; ctx.fillRect(x + 7 + k, y + 24 - k, 2, 2); }
   }
   if (cd > 0) {
-    const fr = cd / TUNE.flashCd;
+    const fr = Math.min(1, cd / p.skillCdMax);
     ctx.save(); ctx.beginPath(); ctx.moveTo(x + S / 2, y + S / 2);
     ctx.arc(x + S / 2, y + S / 2, S, -Math.PI / 2, -Math.PI / 2 + fr * Math.PI * 2); ctx.closePath();
     ctx.clip(); ctx.fillStyle = 'rgba(8,6,16,0.72)'; ctx.fillRect(x, y, S, S); ctx.restore();
@@ -995,7 +1217,7 @@ function drawSkillSlot(p) {
 // ---------- HUD ----------
 function drawHud(p, prev) {
   // 체력: 붉은 마름모
-  for (let i = 0; i < TUNE.hp; i++) {
+  for (let i = 0; i < (p.maxHp || TUNE.hp); i++) {   // 최대 체력 (아이템·각인으로 늘어남)
     const x = 10 + i * 11, y = 10, on = i < p.hp;
     ctx.fillStyle = PAL.ink;
     for (let k = -4; k <= 4; k++) { const w = 5 - Math.abs(k); ctx.fillRect(x - w, y + k, w * 2 + 1, 1); }

@@ -57,7 +57,15 @@ const SFX = {
   bossSwing: t => { noise(t, 0.25, 1200, 200, 0.6, 0.6); },
   bossJump: t => { noise(t, 0.2, 300, 900, 0.4, 0.7, 'lowpass'); },
   crit: t => { tone(t, 0.1, 1800, 900, 0.25, 'square'); noise(t, 0.2, 1500, 200, 0.7, 0.6, 'lowpass'); },
+  coin: t => { tone(t, 0.05, 1900, 1900, 0.06, 'square'); tone(t + 0.04, 0.08, 2500, 2500, 0.05, 'square'); },
   check: t => { tone(t, 0.25, 660, 660, 0.12, 'triangle'); tone(t + 0.12, 0.35, 990, 990, 0.1, 'triangle'); },
+  // 가면 기술 (skills.js)
+  quake: t => { noise(t, 0.55, 600, 50, 1.0, 0.5, 'lowpass'); tone(t, 0.45, 75, 28, 0.6, 'sine'); noise(t + 0.04, 0.4, 2400, 300, 0.35, 0.6); },   // 내리찍기: 땅 울림 + 불 터지는 쉭
+  flame: t => { noise(t, 0.3, 700, 2600, 0.3, 0.6); },   // 불기둥 솟음
+  mist: t => { noise(t, 0.3, 6000, 1800, 0.35, 1.2); tone(t, 0.18, 900, 2200, 0.04, 'sine'); },   // 물안개: 젖은 바람 소리
+  wisps: t => { tone(t, 0.35, 420, 880, 0.07, 'sine'); tone(t + 0.06, 0.35, 630, 1320, 0.05, 'sine'); noise(t, 0.3, 1500, 4000, 0.15, 2); },   // 도깨비불: 맑게 울림
+  orb: t => { tone(t, 0.12, 700, 1300, 0.06, 'sine'); noise(t, 0.1, 2000, 4500, 0.15, 2); },   // 달 평타 던지기
+  orbHit: t => { tone(t, 0.12, 1100, 500, 0.08, 'triangle'); noise(t, 0.12, 3000, 800, 0.3, 1); },
   death: t => { tone(t, 0.8, 220, 40, 0.4, 'sawtooth'); noise(t, 0.6, 600, 60, 0.5, 0.5, 'lowpass'); },
 };
 export function sfx(name) {

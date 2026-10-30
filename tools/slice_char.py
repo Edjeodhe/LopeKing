@@ -12,6 +12,7 @@ import json
 import os
 import sys
 
+import cv2
 import numpy as np
 from PIL import Image, ImageDraw
 from scipy import ndimage
@@ -29,6 +30,14 @@ def key_magenta(path):
     r, g, b = a[..., 0], a[..., 1], a[..., 2]
     bg = (r > 170) & (b > 170) & (g < 110) & (np.abs(r - b) < 70)
     # 캐릭터 디자인에 마젠타는 쓰지 않으니 머리카락 사이에 갇힌 배경 조각까지 전부 지움
+    # 단 갇힌 조각이 보라 쪽(파랑이 빨강보다 뚜렷이 높음 — 달 도깨비 가면 눈빛·보라 옷)이면 배경이 아니라 그림 (배경은 r ≈ b)
+    lab, n = ndimage.label(bg)
+    if n > 1:
+        edge_ids = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))) - {0}
+        lean = ndimage.mean((b - r).astype(float), lab, range(1, n + 1))
+        violet = [i + 1 for i in range(n) if i + 1 not in edge_ids and lean[i] > 20]
+        if violet:
+            bg = bg & ~np.isin(lab, violet)
     keep = bg
     # 가장자리: 반쯤 섞인 마젠타 테두리까지 지움 (빨강·파랑이 초록보다 많이 높은 픽셀)
     fringe = ndimage.binary_dilation(keep, iterations=2) & ~keep & (r > g + 70) & (b > g + 70)
@@ -150,6 +159,10 @@ def main():
         prev = old.get('parts', {}).get(n)
         j = prev if keep and prev else auto_joints(n, img)
         j['src'] = f'parts/{n}.png'
+        if n == 'head' and not (keep and prev and 'eye' in prev.get('joints', {})):
+            e = find_eye(img, cid)
+            if e:
+                j.setdefault('joints', {})['eye'] = e
         if n in SIZE and 'size' not in j:
             j['size'] = SIZE[n]
         rig['parts'][n] = j
@@ -187,7 +200,7 @@ def main():
 
 def slice_death(root, rig, old, keep, full_h):
     d = key_magenta(os.path.join(root, 'death.png'))
-    dparts, _ = slice_grid(d, *DEATH_GRID, 0)
+    dparts, _ = slice_grid(d, *DEATH_GRID, 48)   # 여유: 칸 경계를 조금 넘는 컷이 잘리지 않게 (덩어리는 무게중심 칸으로만 가니 옆 컷이 섞이진 않음)
     frames = []
     for i in range(4):
         img = dparts[f'death_{i}']
@@ -207,20 +220,94 @@ def slice_death(root, rig, old, keep, full_h):
 
 
 ANIM_SHEETS = {'idle': ('pose_idle.png', 8, 6), 'run': ('pose_run.png', 8, 12), 'walk': ('pose_walk.png', 8, 8)}   # 이름: (시트, 장수, 초당 장수) — 4×2 칸. walk = 보스
+# 프레임 축척 보정 (캐릭터별 곱): 대기 첫 장 키로 맞추면 웅크린 대기(물)·벌린 다리(불)는 머리가 통 이미지보다 커 보여 줄임.
+# 기준 = 기본 도깨비의 '머리 맞춤 축척 × 1.1' 쯤 (몸 키가 리그와 너무 벌어지지 않게 그 사이)
+ANIM_FIT = {'dokkaebi_fire': 0.95, 'dokkaebi_water': 0.88}
+# 가면 눈빛 색 (캐릭터별): 머리 부위의 눈 자리(eye — main.js drawEye·eyefire.js)를 이 색 덩어리로 잼. 없으면 안 잼 (손으로 적은 값을 --keep-joints 로 지킴)
+# 프레임마다 눈은 색이 아니라 머리 부위 눈 둘레를 본으로 찾음(match_eye) — 프레임엔 눈빛이 없기도 하고(달) 뿔·머리끝이 같은 색이라
+EYE_COLOR = {
+    'dokkaebi_fire': lambda r, g, b: (r > 230) & (g > 140) & (b < 70),     # 숯불 주황 (살색은 파랑이 높아 빠짐)
+    'dokkaebi_water': lambda r, g, b: (g > 230) & (b > 230) & (r < 160),   # 밝은 물빛 (흰 소용돌이 무늬·이빨은 빨강이 높아 빠짐)
+    'dokkaebi_moon': lambda r, g, b: (b > 180) & (r > 120) & (g < 110),    # 보라
+}
+
+
+def find_eye(img, cid, region=None):
+    """눈빛 색 덩어리 중 머리 앞쪽(오른쪽)·아래쪽에 가까운 것 (뿔·머리카락 끝의 비슷한 색은 위·뒤에 있음). region = (x0, y0, x1, y1)"""
+    if cid not in EYE_COLOR:
+        return None
+    x0, y0, x1, y1 = region or (0, 0, img.shape[1], img.shape[0])
+    sub = img[y0:y1, x0:x1].astype(int)
+    m = EYE_COLOR[cid](sub[..., 0], sub[..., 1], sub[..., 2]) & (sub[..., 3] > 128)
+    lab, n = ndimage.label(m, structure=np.ones((3, 3)))
+    best = None
+    for i in range(1, n + 1):
+        ys, xs = np.nonzero(lab == i)
+        if len(xs) < 3:
+            continue
+        score = xs.mean() + ys.mean() * 0.5 + min(len(xs), 40) * 2
+        if best is None or score > best[0]:
+            best = (score, xs.mean(), ys.mean())
+    if not best:
+        return None
+    # 눈빛이 여러 조각으로 갈라져 있으면 둘레 조각까지 합친 가운데
+    ys, xs = np.nonzero(m)
+    near = (xs - best[1]) ** 2 + (ys - best[2]) ** 2 < 18 ** 2
+    return [round(float(xs[near].mean()) + x0, 1), round(float(ys[near].mean()) + y0, 1)]
+
+
+def match_eye(frame, head, eye, region, box=(80, 70, 50, 60), scales=None):
+    """머리 부위의 눈 둘레(box = 눈에서 왼·위·오른·아래 px)를 축척을 바꿔 가며 프레임 region 안에서 찾음 → 프레임 속 눈 자리, 축척"""
+    def comp(a):   # 어두운 바탕에 얹어 비교
+        al = a[..., 3:4].astype(np.float32) / 255
+        return a[..., :3].astype(np.float32) * al + np.float32([40, 40, 52]) * (1 - al)
+    ex, ey = eye
+    px0, py0 = int(ex - box[0]), int(ey - box[1])
+    patch = comp(head[max(0, py0):int(ey + box[3]), max(0, px0):int(ex + box[2])])
+    px0, py0 = max(0, px0), max(0, py0)
+    x0, y0, x1, y1 = region
+    reg = comp(frame[y0:y1, x0:x1])
+    best = None
+    for s in (np.arange(0.25, 0.8, 0.02) if scales is None else scales):
+        t = cv2.resize(patch, None, fx=s, fy=s, interpolation=cv2.INTER_AREA)
+        if t.shape[0] >= reg.shape[0] or t.shape[1] >= reg.shape[1]:
+            continue
+        _, mv, _, ml = cv2.minMaxLoc(cv2.matchTemplate(reg, t, cv2.TM_CCOEFF_NORMED))
+        if best is None or mv > best[0]:
+            best = (mv, s, ml)
+    if best is None:
+        return None, None
+    _, s, (mx, my) = best
+    return [round(float(x0 + mx + (ex - px0) * s), 1), round(float(y0 + my + (ey - py0) * s), 1)], s
+
+
+def frame_eye(c, head, eye, ax):
+    """프레임 한 장의 눈: 머리 둘레로 크게 찾고(위 40%, 몸통 가운데 조금 뒤부터 앞) → 그 둘레에서 눈만 좁게 다시"""
+    e, s = match_eye(c, head, eye, (max(0, int(ax) - 40), 0, c.shape[1], int(c.shape[0] * 0.4)))
+    if e is None:
+        return None
+    rg = (max(0, int(e[0] - 40)), max(0, int(e[1] - 40)), min(c.shape[1], int(e[0] + 40)), min(c.shape[0], int(e[1] + 40)))
+    e2, _ = match_eye(c, head, eye, rg, (34, 30, 30, 30), np.arange(s - 0.06, s + 0.2, 0.01))
+    return e2 or e
 
 
 def slice_anims(root, rig, full_h):
     """프레임 애니메이션 시트(4×2 칸) → anims/<이름>_<n>.png + rig['anims'].
     장마다 발 기준점을 같게 둬야 재생할 때 안 떨림: 바닥 = 시트 전체에서 가장 아래 발끝, 가로 = 장마다 몸통(키의 30~60% 줄) 가운데의 가운데값.
     입 자리(mouth): 머리 쪽 붉은 가면 덩어리의 앞 끝 아래 — 가면 숨(steam.js)이 나오는 곳.
+    눈 자리(eye): 머리 부위에 eye 관절이 있으면 그 둘레를 본으로 찾음 (frame_eye).
     축척: 대기 첫 장 키 ≈ 통 이미지 키 (달리기도 같은 축척)"""
+    cid = os.path.basename(os.path.normpath(root))
+    hd = rig['parts'].get('head', {})
+    eye = hd.get('joints', {}).get('eye')
+    head = np.array(Image.open(os.path.join(root, hd['src'])).convert('RGBA')) if eye else None
     out, size = {}, None
     for name, (src, n, fps) in ANIM_SHEETS.items():
         path = os.path.join(root, src)
         if not os.path.exists(path):
             continue
         sheet = key_magenta(path)
-        cells, _ = slice_grid(sheet, 4, 2, [f'{name}_{i}' for i in range(n)], 0)
+        cells, _ = slice_grid(sheet, 4, 2, [f'{name}_{i}' for i in range(n)], 48)   # 여유 = 사망 컷과 같음
         imgs = [cells[f'{name}_{i}'] for i in range(n) if f'{name}_{i}' in cells]
         boxes = [bbox(im) for im in imgs]
         ground = max(b[3] for b in boxes)
@@ -230,7 +317,7 @@ def slice_anims(root, rig, full_h):
             mids.append(row_center(im, y0 + h * 0.3, y0 + h * 0.6))
         ax = float(np.median(mids))
         if size is None:
-            size = round(rig['scale'] * full_h / max(1, (boxes[0][3] - boxes[0][1]) * 1.02), 5)
+            size = round(rig['scale'] * full_h / max(1, (boxes[0][3] - boxes[0][1]) * 1.02) * ANIM_FIT.get(cid, 1), 5)
         os.makedirs(os.path.join(root, 'anims'), exist_ok=True)
         frames = []
         for i, (im, (x0, y0, x1, y1)) in enumerate(zip(imgs, boxes)):
@@ -242,7 +329,11 @@ def slice_anims(root, rig, full_h):
             r, g, b, a = [top[..., k].astype(int) for k in range(4)]
             ys, xs = np.nonzero((a > 128) & (r > 140) & (g < 90) & (b < 90))
             mouth = [round(float(xs.max()) + x0 - cx0 - 1, 1), round(float(np.median(ys)) + y0 + 3 - cy0, 1)] if len(xs) else None
-            frames.append({'src': f'anims/{name}_{i}.png', 'pivot': [round(ax - cx0, 1), float(ground - cy0)], 'w': c.shape[1], 'h': c.shape[0], 'mouth': mouth})
+            fr = {'src': f'anims/{name}_{i}.png', 'pivot': [round(ax - cx0, 1), float(ground - cy0)], 'w': c.shape[1], 'h': c.shape[0], 'mouth': mouth}
+            e = frame_eye(c, head, eye, ax - cx0) if eye else None
+            if e:
+                fr['eye'] = e
+            frames.append(fr)
         out[name] = {'frames': frames, 'size': size, 'fps': fps}
         print(name, len(frames), '장, 축척', size)
     if out:
